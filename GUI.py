@@ -285,7 +285,7 @@ Button(tab3,
        ).grid(row = 7,padx =5, pady = 5)
 
 Label(tab3, 
-      text="Initial Price:").grid(row=1,sticky = E,pady = 5,padx = 5)
+      text="Initial Price:").grid(row=2,sticky = E,pady = 5,padx = 5)
 single = Entry(tab3)
 single.grid(row=1, column=1,pady = 5,padx = 5)   
 
@@ -295,23 +295,23 @@ years = Entry(tab3)
 years.grid(row=0, column=1,pady = 5,padx = 5)    
 
 Label(tab3, 
-      text="CAGR[%]:").grid(row=2,sticky = E,pady = 5,padx = 5)
+      text="CAGR[%]:").grid(row=3,sticky = E,pady = 5,padx = 5)
 grow = Entry(tab3)
 grow.grid(row=2, column=1,pady = 5,padx = 5)  
 
 Label(tab3, 
-      text="mean residuals:").grid(row=3,sticky = E,pady = 5,padx = 5)
+      text="mean residuals:").grid(row=4,sticky = E,pady = 5,padx = 5)
 mu_res = Entry(tab3)
 mu_res.grid(row=3, column=1,pady = 5,padx = 5) 
 
 Label(tab3, 
-      text="std residuals:").grid(row=4,sticky = E,pady = 5,padx = 5)
+      text="std residuals:").grid(row=5,sticky = E,pady = 5,padx = 5)
 sig_res = Entry(tab3)
 sig_res.grid(row=4, column=1,pady = 5,padx = 5)
 
-Label(tab3).grid(row = 0, column = 1, sticky = E)
+Label(tab3).grid(row = 1, column = 0, sticky = E)
 datatype_lf = ttk.Labelframe(tab3, text='Data Type:')
-datatype_lf.grid(row = 0,column = 2,sticky = W,pady = 10,padx = 20)
+datatype_lf.grid(row = 1,column = 1,sticky = W,pady = 10,padx = 20)
 
 spacing = IntVar()
 Radiobutton(datatype_lf, text="Monthly", variable=spacing,value = 1).grid(row=0,column=0 , sticky=W)
