@@ -342,13 +342,10 @@ data = Entry(tab2)
 
 data.grid(row=0,column = 1, sticky = W)
 
-Label(tab2, text="Number of Months:").grid(row=1, sticky = E)
-years = Entry(tab2)
-years.grid(row=1, column=1,sticky = W)
 
-Label(tab2, text="Use Column:").grid(row=2,sticky = E)
+Label(tab2, text="Use Column:").grid(row=1,sticky = E)
 data_col = Entry(tab2)
-data_col.grid(row=2, column=1,sticky = W,pady = 10)
+data_col.grid(row=1, column=1,sticky = W,pady = 10)
 
 #####################CUSTOM PARAMS####################################
 custom_lf = ttk.Labelframe(tab2, text='Custom Paramters:')
