@@ -40,7 +40,7 @@ def run_predict():
                             volatility*.01,
                             time_type,
                             cutoff,
-                            make_plot.get())
+                            make_plot.get(),spacing)
     
     np.savetxt(str(data.get())[:-4]+'_out.csv', gen_data, delimiter=',')  
  
@@ -339,13 +339,22 @@ Button(tab2,
         column=0, sticky = E,padx = 5,pady = 5)
         
 data = Entry(tab2)
-
 data.grid(row=0,column = 1, sticky = W)
 
 
 Label(tab2, text="Use Column:").grid(row=1,sticky = E)
 data_col = Entry(tab2)
 data_col.grid(row=1, column=1,sticky = W,pady = 10)
+
+Label(tab2,text="Data Type:").grid(row = 2, sticky = E)
+datatype_lf = ttk.Labelframe(tab2, text='')
+datatype_lf.grid(row = 2,column = 1,sticky = W,pady = 10,padx = 20)
+
+spacing = IntVar()
+Radiobutton(datatype_lf, text="Monthly", variable=spacing,value = 1).grid(row=0,column=0 , sticky=W)
+Radiobutton(datatype_lf, text="Quarterly", variable=spacing,value = 2).grid(row=0,column = 1, sticky=W)
+Radiobutton(datatype_lf, text="Yearly", variable=spacing,value = 3).grid(row=0, column = 2, sticky=W)
+
 
 #####################CUSTOM PARAMS####################################
 custom_lf = ttk.Labelframe(tab2, text='Custom Paramters:')
