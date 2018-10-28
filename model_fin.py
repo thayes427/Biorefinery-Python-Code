@@ -297,6 +297,7 @@ def plot_as_time_series(dep,ind,dates,abt,lqsr,show_ind = False):
     plt.legend()
     plt.xlabel('year')
     plt.ylabel('Unit Price')
+    plt.savefig('Model.jpg')
     plt.show()
 
 #given a best_abt and best_abt_lsqr can add randomness to some model generated data 
@@ -401,6 +402,7 @@ def predict(abt, ind, mu, std, vol = 0,span = 'month',cutoff = None, plot=False,
         plt.xlabel('Time (' + str(time) + 's)')
         plt.ylabel('Unit Price')
         plt.legend()
+        plt.savefig('Prediction.jpg')
         plt.show()
         print('And you ask yourself, How did I get here')
     return new_model
@@ -429,6 +431,7 @@ def single_point_predict(value,mu,std,vol,CAGR,num_months,plot= False):
         plt.plot(time_span,monthly_preds_with_resid[1:])
         plt.ylabel('Unit Price')
         plt.xlabel('Time (months)')
+        plt.savefig('Single_Point_Prediction.jpg')
         plt.show()
     return (monthly_preds_with_resid)
     
