@@ -334,25 +334,25 @@ oil = Radiobutton(chem_lf,
               text="Oil -> MA",
               padx = 20, 
               variable=v, 
-              value=1).grid(row = 9,column = 0)
+              value=1).grid(row = 9,column = 0, sticky= W)
               
 MA = Radiobutton(chem_lf, 
               text="MA -> SA",
               padx = 20, 
               variable=v, 
-              value=2).grid(row = 10, column = 0)
+              value=2).grid(row = 10, column = 0,sticky= W)
               
 SA = Radiobutton(chem_lf, 
               text="Oil -> SA",
               padx = 20, 
               variable=v, 
-              value=3).grid(row = 9, column = 1)
+              value=3).grid(row = 9, column = 1,sticky= W)
                    
 SA = Radiobutton(chem_lf, 
               text="Use Custom",
               padx = 20, 
               variable=v, 
-              value=4).grid(row = 10, column = 1)         
+              value=4).grid(row = 10, column = 1,sticky= W)         
 
               
 
@@ -367,12 +367,12 @@ data = Entry(tab2)
 data.grid(row=0,column = 1, sticky = W)
 
 
-Label(tab2, text="Use Column:").grid(row=1,sticky = E)
+Label(tab2, text="Independent Variable Column #(Col A = 0):").grid(row=1,sticky = E)
 data_col = Entry(tab2)
 data_col.grid(row=1, column=1,sticky = W,pady = 10)
 
 ttk.Labelframe(tab2).grid(row = 2, column=0, sticky = W)
-datatype_lf = ttk.Labelframe(tab2, text='Data Sampling Space')
+datatype_lf = ttk.Labelframe(tab2, text='Data Sampling Rate')
 datatype_lf.grid(row = 3,column = 0,sticky = W,pady = 10,padx = 20)
 
 spacing = IntVar()
