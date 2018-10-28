@@ -1,7 +1,7 @@
 from tkinter import *
 from tkinter import messagebox
 import numpy as np
-import model_random_walk as mod
+import model_fin as mod
 from tkinter import ttk
 from tkinter.filedialog import askopenfilename
 #reload(mod)
@@ -277,27 +277,37 @@ show_plot = IntVar()
 Checkbutton(tab1, text="Show Plot", variable=show_plot).grid(row=5, sticky=W)
 
 
-############# VOLATILITY SLIDER ################
+############# TAB 3 ################
 
-vol_lf = ttk.Labelframe(tab2, text='Single Data Point')
-vol_lf.grid(row =4, sticky = N)
-
-vol2 = Scale(vol_lf, from_=0, to=100, orient=HORIZONTAL)
-Label(vol_lf, text="Volatility [%]").grid(row=5,sticky = W)
-vol2.grid(row = 6,sticky = W)
-
-grow = Scale(vol_lf, from_=0, to=100, orient=HORIZONTAL)
-Label(vol_lf,text="CAGR [%]").grid(row=3,sticky = W)
-grow.grid(row = 4,sticky = W)
-
-Button(vol_lf, 
+Button(tab3, 
        text='Gen Model from Point', 
        command=run_single_point_predict
        ).grid(row = 7,padx =5, pady = 5)
 
-Label(vol_lf, text="value:").grid(row = 1, column = 0,sticky = W,pady = 5,padx = 5)
-single = Entry(vol_lf)
-single.grid(row = 2,sticky = W)       
+Label(tab3, 
+      text="Initial Price:").grid(row=1,sticky = E,pady = 5,padx = 5)
+single = Entry(tab3)
+single.grid(row=1, column=1,pady = 5,padx = 5)   
+
+Label(tab3, 
+      text="Prediction Time:").grid(row=0,sticky = E,pady = 5,padx = 5)
+years = Entry(tab3)
+years.grid(row=0, column=1,pady = 5,padx = 5)    
+
+Label(tab3, 
+      text="CAGR[%]:").grid(row=2,sticky = E,pady = 5,padx = 5)
+grow = Entry(tab3)
+grow.grid(row=2, column=1,pady = 5,padx = 5)  
+
+Label(tab3, 
+      text="mean residuals:").grid(row=3,sticky = E,pady = 5,padx = 5)
+mu_res = Entry(tab3)
+mu_res.grid(row=3, column=1,pady = 5,padx = 5) 
+
+Label(tab3, 
+      text="std residuals:").grid(row=4,sticky = E,pady = 5,padx = 5)
+sig_res = Entry(tab3)
+sig_res.grid(row=4, column=1,pady = 5,padx = 5)
 
 ######### BUILTIN PARAM BUTTONS ################
 
@@ -349,7 +359,7 @@ data_col.grid(row=1, column=1,sticky = W,pady = 10)
 
 #####################CUSTOM PARAMS####################################
 custom_lf = ttk.Labelframe(tab2, text='Custom Paramters:')
-custom_lf.grid(row = 4,column = 1,sticky = N)
+custom_lf.grid(row = 4,column = 0,sticky = N)
 
 Label(custom_lf, text="a:").grid(row = 0,sticky = E)
 a = Entry(custom_lf)
