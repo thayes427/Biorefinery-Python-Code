@@ -37,7 +37,7 @@ def run_predict():
                             np.asarray(indpt),
                             mu,
                             std,
-                            volatility*.01,
+                            0,
                             time_type,
                             cutoff,
                             make_plot.get(),time_type)
