@@ -40,7 +40,7 @@ def run_predict():
                             volatility*.01,
                             time_type,
                             cutoff,
-                            make_plot.get(),spacing)
+                            make_plot.get(),time_type)
     
     np.savetxt(str(data.get())[:-4]+'_out.csv', gen_data, delimiter=',')  
  

@@ -372,7 +372,7 @@ def get_summary_stats(best_abt, ind, dep, conf = 95):
     return mean_res, std_res, std_err, margin_err_slope
         
 #used to generate data if fed a csv of hisorical data    
-def predict(abt, ind, mu, std, vol = 0,span = 'month',cutoff = None, plot=False, time):
+def predict(abt, ind, mu, std, vol = 0,span = 'month',cutoff = None, plot=False, time='Month'):
     '''
     This function would only be used if one wanted to generate future data
     of price/MT for a chemical. The function outputs an array of $/MT points 
@@ -398,7 +398,7 @@ def predict(abt, ind, mu, std, vol = 0,span = 'month',cutoff = None, plot=False,
         #x_ax = np.arange(len(new_model))
         plt.plot(ind,label = 'Independent')
         plt.plot(new_model,label = 'Dependent')
-        plt.xlabel(time)
+        plt.xlabel('Time (' + str(time) + 's)')
         plt.ylabel('Unit Price')
         plt.legend()
         plt.show()
