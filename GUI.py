@@ -362,12 +362,12 @@ data = Entry(tab2)
 data.grid(row=0,column = 1, sticky = W)
 
 
-Label(tab2, text="Use Column:").grid(row=1,sticky = E)
+Label(tab2, text="Independent Variable Column #(Col A = 0):").grid(row=1,sticky = E)
 data_col = Entry(tab2)
 data_col.grid(row=1, column=1,sticky = W,pady = 10)
 
 ttk.Labelframe(tab2).grid(row = 2, column=0, sticky = W)
-datatype_lf = ttk.Labelframe(tab2, text='Data Sampling Space')
+datatype_lf = ttk.Labelframe(tab2, text='Data Sampling Rate')
 datatype_lf.grid(row = 3,column = 0,sticky = W,pady = 10,padx = 20)
 
 spacing = IntVar()
