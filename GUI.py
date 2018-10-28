@@ -26,7 +26,7 @@ def run_predict():
     #print(len(indpt))
     print(indpt)
     
-    volatility = get_slider_val()
+
     abt = get_preset_params()
     
     mu = float(mu_res.get())
