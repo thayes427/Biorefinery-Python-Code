@@ -242,17 +242,17 @@ name.grid(row=0, column=1)
 Label(tab1, 
       text="Independent Data Column:").grid(row=2,sticky = E,pady = 5,padx = 5)
 indpt = Entry(tab1)
-indpt.grid(row=1, column=1,pady = 5,padx = 5)
+indpt.grid(row=2, column=1,pady = 5,padx = 5)
 
 Label(tab1, 
       text="Dependent Data Column:").grid(row=3,sticky = E,pady = 5,padx = 5)
 dep = Entry(tab1)
-dep.grid(row=2, column=1,pady = 5,padx = 5)
+dep.grid(row=3, column=1,pady = 5,padx = 5)
 
 Label(tab1, 
       text="Date Column:").grid(row=1,sticky = E,pady = 5,padx = 5)
 days = Entry(tab1)
-days.grid(row=3, column=1,pady = 5,padx = 5)
+days.grid(row=1, column=1,pady = 5,padx = 5)
 
 
 ###############TAB 1 BUTTONS#################
