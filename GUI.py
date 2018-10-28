@@ -329,25 +329,25 @@ oil = Radiobutton(chem_lf,
               text="Oil -> MA",
               padx = 20, 
               variable=v, 
-              value=1).grid(row = 9,column = 0)
+              value=1).grid(row = 9,column = 0, sticky= W)
               
 MA = Radiobutton(chem_lf, 
               text="MA -> SA",
               padx = 20, 
               variable=v, 
-              value=2).grid(row = 10, column = 0)
+              value=2).grid(row = 10, column = 0,sticky= W)
               
 SA = Radiobutton(chem_lf, 
               text="Oil -> SA",
               padx = 20, 
               variable=v, 
-              value=3).grid(row = 9, column = 1)
+              value=3).grid(row = 9, column = 1,sticky= W)
                    
 SA = Radiobutton(chem_lf, 
               text="Use Custom",
               padx = 20, 
               variable=v, 
-              value=4).grid(row = 10, column = 1)         
+              value=4).grid(row = 10, column = 1,sticky= W)         
 
               
 
