@@ -406,13 +406,7 @@ vol.grid(row = 6,column = 1, sticky = S)
 
 
 ############### DATATYPE ######################
-datatype_lf = ttk.Labelframe(tab2, text='Data Type:')
-datatype_lf.grid(row = 5,column = 0,sticky = E,pady = 10,padx = 10)
 
-spacing = IntVar()
-Radiobutton(datatype_lf, text="Monthly", variable=spacing,value = 1).grid(row=9,column= 0, sticky=W)
-Radiobutton(datatype_lf, text="Quarterly", variable=spacing,value = 2).grid(row=10,column = 0, sticky=W)
-Radiobutton(datatype_lf, text="Yearly", variable=spacing,value = 3).grid(row=9, column = 1, sticky=W)
 
 
 ###############TAB 2 BUTTONS#################
