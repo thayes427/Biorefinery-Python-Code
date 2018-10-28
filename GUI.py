@@ -22,7 +22,7 @@ def run_predict():
 
     
     indpt = mod.upload(data.get(),data_col.get())
-    cutoff = int(years.get())
+    cutoff = len(indpt)
     #print(len(indpt))
     print(indpt)
     
