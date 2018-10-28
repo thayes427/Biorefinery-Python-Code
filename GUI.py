@@ -309,6 +309,16 @@ Label(tab3,
 sig_res = Entry(tab3)
 sig_res.grid(row=4, column=1,pady = 5,padx = 5)
 
+Label(tab3).grid(row = 0, column = 1, sticky = E)
+datatype_lf = ttk.Labelframe(tab3, text='Data Type:')
+datatype_lf.grid(row = 0,column = 2,sticky = W,pady = 10,padx = 20)
+
+spacing = IntVar()
+Radiobutton(datatype_lf, text="Monthly", variable=spacing,value = 1).grid(row=0,column=0 , sticky=W)
+Radiobutton(datatype_lf, text="Quarterly", variable=spacing,value = 2).grid(row=0,column = 1, sticky=W)
+Radiobutton(datatype_lf, text="Yearly", variable=spacing,value = 3).grid(row=0, column = 2, sticky=W)
+
+
 ######### BUILTIN PARAM BUTTONS ################
 
 v = IntVar()
