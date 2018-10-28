@@ -313,8 +313,8 @@ sig_res.grid(row=4, column=1,pady = 5,padx = 5)
 
 v = IntVar()
 
-chem_lf = ttk.Labelframe(tab2, text='Use Existing Model:')
-chem_lf.grid(row = 5,column = 1,sticky = W)
+chem_lf = ttk.Labelframe(tab2, text='Choose a Model:')
+chem_lf.grid(row = 3,column = 1,sticky = W)
 oil = Radiobutton(chem_lf, 
               text="Oil -> MA",
               padx = 20, 
@@ -356,19 +356,19 @@ Label(tab2, text="Use Column:").grid(row=1,sticky = E)
 data_col = Entry(tab2)
 data_col.grid(row=1, column=1,sticky = W,pady = 10)
 
-Label(tab2,text="Data Type:").grid(row = 2, sticky = E)
-datatype_lf = ttk.Labelframe(tab2, text='')
-datatype_lf.grid(row = 2,column = 1,sticky = W,pady = 10,padx = 20)
+ttk.Labelframe(tab2).grid(row = 2, column=0, sticky = W)
+datatype_lf = ttk.Labelframe(tab2, text='Data Sampling Space')
+datatype_lf.grid(row = 3,column = 0,sticky = W,pady = 10,padx = 20)
 
 spacing = IntVar()
-Radiobutton(datatype_lf, text="Monthly", variable=spacing,value = 1).grid(row=0,column=0 , sticky=W)
-Radiobutton(datatype_lf, text="Quarterly", variable=spacing,value = 2).grid(row=0,column = 1, sticky=W)
-Radiobutton(datatype_lf, text="Yearly", variable=spacing,value = 3).grid(row=0, column = 2, sticky=W)
+Radiobutton(datatype_lf, text="Month", variable=spacing,value = 1).grid(row=0,column=0 , sticky=W)
+Radiobutton(datatype_lf, text="Quarter", variable=spacing,value = 2).grid(row=0,column = 1, sticky=W)
+Radiobutton(datatype_lf, text="Year", variable=spacing,value = 3).grid(row=0, column = 2, sticky=W)
 
 
 #####################CUSTOM PARAMS####################################
-custom_lf = ttk.Labelframe(tab2, text='Custom Paramters:')
-custom_lf.grid(row = 4,column = 0,sticky = N)
+custom_lf = ttk.Labelframe(tab2, text='Custom Parameters:')
+custom_lf.grid(row = 5,column = 0, columnspan = 2,sticky = N)
 
 Label(custom_lf, text="a:").grid(row = 0,sticky = E)
 a = Entry(custom_lf)
@@ -389,10 +389,6 @@ mu_res.grid(row = 3, column = 1)
 Label(custom_lf, text="std res:").grid(row = 4, sticky = E,pady = 5,padx = 5)
 sig_res = Entry(custom_lf)
 sig_res.grid(row = 4, column = 1)
-
-vol = Scale(custom_lf, from_=0, to=100, orient=HORIZONTAL)
-Label(custom_lf, text="Volatility [%]").grid(row=5,column  = 1,sticky = S)
-vol.grid(row = 6,column = 1, sticky = S)
 
 
 ############### DATATYPE ######################
