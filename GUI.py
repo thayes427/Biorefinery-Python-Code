@@ -5,10 +5,7 @@ import model_random_walk as mod
 from tkinter import ttk
 from tkinter.filedialog import askopenfilename
 #reload(mod)
-## TOM COMMENTTTTTTTTAAAAAA
 
-## COMMENT TEST
-## Dino Addition HAHAHAA
 ################Global Constants###############
 OIL_TO_MA = (1.378,648.5,3)
 MA_TO_SA = (.7465,1050,3)
