@@ -16,11 +16,9 @@ def upload(filename, ind_col, dep_col='', date_col=''):
     if len(np.shape(data)) == 1:
         
         data = [float(x) for x in data]
-        print(data)
         return np.asarray(data)
         
     ind = data[int(ind_col)]
-    print(ind)
     ind = [float(x) for x in ind]
     ind = np.asarray(ind)
 
@@ -33,7 +31,6 @@ def upload(filename, ind_col, dep_col='', date_col=''):
    
     if dep_col != '':
         dep = data[int(dep_col)]
-        print(dep)
         dep = [float(x) for x in dep]
         dep = np.asarray(dep)
         
@@ -310,7 +307,6 @@ def add_randomness(mu, std, model,vol):
     
     #add in CAGR
     #mu *= (1+growth_pre)
-    #print(model)
     for i,val in enumerate(model):
         
         resid = np.random.normal(mu, std)
@@ -389,8 +385,6 @@ def predict(abt, ind, mu, std, vol = 0,span = 'month',cutoff = None, plot=False,
         dep: historical dependent data but could be skipped and use only abt
     '''
     ind = gen_linspace(ind,span,cutoff) # user written function to parse data into months
-    #print('got here')
-    print(ind)
     model = gen_model_data(abt,ind) # generate data from model
 
     #mu, std, std_err, margin_err_slope = get_summary_stats(abt, ind, dep, conf = 95)
@@ -404,12 +398,10 @@ def predict(abt, ind, mu, std, vol = 0,span = 'month',cutoff = None, plot=False,
         plt.legend()
         plt.savefig('Prediction.jpg')
         plt.show()
-        print('And you ask yourself, How did I get here')
     return new_model
 
 def single_point_predict(value,mu,std,vol,CAGR,num_months,plot= False):
 
-    print(plot,'SAY SOMETHING')
     CMGR = (CAGR + 1.0)**(1/12.0) - 1.0 # convert CAGR to monthly
     time_span = range(num_months - 1)
     monthly_preds = [value]
@@ -423,7 +415,6 @@ def single_point_predict(value,mu,std,vol,CAGR,num_months,plot= False):
         value = pred 
         point_std = std*(1 + CMGR)**month 
         
-        print(point_std)
         resid = np.random.normal(mu, point_std)# determine a residual
         monthly_preds_with_resid.append(pred + resid)
 
@@ -440,7 +431,6 @@ def gen_model_data(best_abt,ind):
     generate model data from oil prices and best parameters
     return: model values
     '''
-    print(best_abt,ind)
     a,b,t = best_abt
     
     model = a*ind + b
@@ -448,12 +438,10 @@ def gen_model_data(best_abt,ind):
     return model
 
 def gen_linspace(ind,span = 'month', cutoff= None):
-    print('SPAN: '+ span)
     if span == 'month':
         return ind[:cutoff]
         
     if span == 'year': # if data is read in with increments of a year
-        print('ici')
         interp_ind  = []
         
         for i,val in enumerate(ind[:-1]):
@@ -462,7 +450,6 @@ def gen_linspace(ind,span = 'month', cutoff= None):
             months = months[:-1]
             for j,item in enumerate(months): # IS THIS FOR LOOP NECESSARY?
                 interp_ind.append(months[j])
-            #print(interp_ind) 
             
         return np.array(interp_ind[:cutoff])
         

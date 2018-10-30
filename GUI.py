@@ -23,15 +23,12 @@ def run_predict():
     
     indpt = mod.upload(data.get(),data_col.get())
     cutoff = len(indpt)
-    #print(len(indpt))
-    print(indpt)
     
-
+    volatility = 0
     abt = get_preset_params()
     
     mu = float(mu_res.get())
     std = float(sig_res.get())
-    print(make_plot.get())
     time_type = get_span()
     gen_data = mod.predict(abt, 
                             np.asarray(indpt),
@@ -45,24 +42,28 @@ def run_predict():
     np.savetxt(str(data.get())[:-4]+'_out.csv', gen_data, delimiter=',')  
  
 def run_single_point_predict():
-    #print('here')
     pt = float(single.get())
-    volatility,growth = get_single_slider_vals()
+    #volatility,growth = get_single_slider_vals()
+    growth = float(grow.get())
+    volatility = 0
     get_mean_std()
 
-    mu = float(mu_res.get())
-    std = float(sig_res.get())
-        
-    print(make_plot.get(),'LOOK')
+    mu = float(mu_res2.get())
+    std = float(sig_res2.get())
+    
+    time_length = int(years.get())
+    if date_unit.get() == 'Years':
+        time_length = int(years.get())*12
+    elif date_unit.get() == 'Quarters':
+        time_length = int(years.get())*4
+    
     pred_data = mod.single_point_predict(pt,
                             mu,
                             std,
                             volatility*.01,
                             growth*.01,
-                            int(years.get()),
-                            make_plot.get())
-    #print('heresies')
-    print(pred_data,'HI')
+                            time_length,
+                            make_plot2.get())
     np.savetxt('single_pred_out.csv', pred_data, delimiter=',')       
     
 def get_slider_val():
@@ -279,10 +280,13 @@ Checkbutton(tab1, text="Show Plot", variable=show_plot).grid(row=5, sticky=W)
 
 ############# TAB 3 ################
 
+make_plot2 = IntVar()
+Checkbutton(tab3, text="Show Plot", variable=make_plot2).grid(row=7, column = 0, sticky=W)
+
 Button(tab3, 
        text='Gen Model from Point', 
        command=run_single_point_predict
-       ).grid(row = 7,padx =5, pady = 5)
+       ).grid(row = 7,column = 1,padx =5, pady = 5)
 
 Label(tab3, 
       text="Initial Price:").grid(row=1,sticky = E,pady = 5,padx = 5)
@@ -301,13 +305,13 @@ grow.grid(row=2, column=1,pady = 5,padx = 5)
 
 Label(tab3, 
       text="mean residuals:").grid(row=3,sticky = E,pady = 5,padx = 5)
-mu_res = Entry(tab3)
-mu_res.grid(row=3, column=1,pady = 5,padx = 5) 
+mu_res2 = Entry(tab3)
+mu_res2.grid(row=3, column=1,pady = 5,padx = 5) 
 
 Label(tab3, 
       text="std residuals:").grid(row=4,sticky = E,pady = 5,padx = 5)
-sig_res = Entry(tab3)
-sig_res.grid(row=4, column=1,pady = 5,padx = 5)
+sig_res2 = Entry(tab3)
+sig_res2.grid(row=4, column=1,pady = 5,padx = 5)
 '''
 Label(tab3).grid(row = 1, column = 0, sticky = E)
 datatype_lf = ttk.Labelframe(tab3, text='Data Sampling Rate:')
@@ -319,10 +323,10 @@ Radiobutton(datatype_lf, text="Quarterly", variable=spacing,value = 2).grid(row=
 Radiobutton(datatype_lf, text="Yearly", variable=spacing,value = 3).grid(row=0, column = 2, sticky=W)
 '''
 master = tab3
-variable = StringVar(master)
-variable.set("Monthly") # default value
+date_unit = StringVar(master)
+date_unit.set("Months") # default value
 
-w = OptionMenu(tab3, variable, "Monthly", "Quarterly", "Yearly").grid(row = 0,sticky = W,column = 2,padx =5, pady = 5)
+w = OptionMenu(tab3, date_unit, "Months", "Quarters", "Years").grid(row = 0,sticky = W,column = 2,padx =5, pady = 5)
 
 ######### BUILTIN PARAM BUTTONS ################
 
@@ -376,9 +380,9 @@ datatype_lf = ttk.Labelframe(tab2, text='Data Sampling Rate')
 datatype_lf.grid(row = 3,column = 0,sticky = W,pady = 10,padx = 20)
 
 spacing = IntVar()
-Radiobutton(datatype_lf, text="Month", variable=spacing,value = 1).grid(row=0,column=0 , sticky=W)
-Radiobutton(datatype_lf, text="Quarter", variable=spacing,value = 2).grid(row=0,column = 1, sticky=W)
-Radiobutton(datatype_lf, text="Year", variable=spacing,value = 3).grid(row=0, column = 2, sticky=W)
+Radiobutton(datatype_lf, text="Monthly", variable=spacing,value = 1).grid(row=0,column=0 , sticky=W)
+Radiobutton(datatype_lf, text="Quarterly", variable=spacing,value = 2).grid(row=0,column = 1, sticky=W)
+Radiobutton(datatype_lf, text="Yearly", variable=spacing,value = 3).grid(row=0, column = 2, sticky=W)
 
 
 #####################CUSTOM PARAMS####################################
