@@ -72,6 +72,7 @@ def fill_streams_dataframe(aspenfilename, excelfilename):
     dfstreams = pd.DataFrame(columns=columns)
 
     succ_fracs = np.linspace(0,.5,51)
+    succ_fracs = [25]
     old_time = time()
     for case in succ_fracs:
         
