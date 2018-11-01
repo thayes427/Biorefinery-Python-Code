@@ -11,7 +11,7 @@ import win32com.client as win32
 import os
 import pandas as pd
 import numpy as np
-#import model
+import model_fin as model
 import matplotlib.pyplot as plt
 from time import time
 from math import ceil
