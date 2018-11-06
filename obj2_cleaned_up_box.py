@@ -71,18 +71,22 @@ def fill_streams_dataframe(aspenfilename, excelfilename):
     
     dfstreams = pd.DataFrame(columns=columns)
 
-    succ_fracs = np.linspace(0,.5,51)
-    succ_fracs = [25]
+    #succ_fracs = np.linspace(0,.5,51)
+    #succ_fracs = [25]
+    ENZYME_LOADING = r"\Data\Blocks\A300\Data\Blocks\F300SAC\Input\CONV\3"
+    enzyme_loadings = [0.95, 0.9, 0.85]
     old_time = time()
-    for case in succ_fracs:
+    obj.FindNode(SUC_LOC).Value = 0.4
+    for case in enzyme_loadings:
         
-        print("succinic acid Fraction: " +str(case))
+        print("enzyme loading: " +str(case))
         print(time() - old_time)
         old_time = time()
-        succ_frac = case
+        #succ_frac = case
+        obj.FindNode(ENZYME_LOADING).Value = case
         
         #stream splitting
-        obj.FindNode(SUC_LOC).Value = succ_frac
+        #obj.FindNode(SUC_LOC).Value = succ_frac
         
         aspen.Reinit()
         aspen.Engine.Run2()

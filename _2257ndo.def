@@ -1,0 +1,10 @@
+SLAVE:
+INPUT: _2257ndo.inm
+MODNAME: apmain
+RUNID: _2257ndo
+NEW_RUNID: _2257ndo
+OLD_RUNID: _2257ndo
+PDF: _2257ndo.appdf
+USERNAME: MENGstudents
+XMOD: C:\Program Files (x86)\AspenTech\Aspen Plus V10.0\Engine\xeq\apmain
+SPONLY:
