@@ -45,9 +45,33 @@ def get_distributions(gui_excel_input):
     the user wants to change as well as their distributions that should be 
     randomly sampled from. 
     '''
+    
+    gauss_vars = {}
+    other_dist_vars = {}
+    for row in gui_excel_input:
+        dist_type = row[3].lower()
+        aspen_call = row[1]
+        if 'normal' in dist_type or 'gaussian' in dist_type:
+            dist_variables = row[2].split(',')
+            gauss_vars[aspen_call] = (float(dist_variables[0].strip()),
+                      float(dist_variables[1].strip()))
+        else:
+            if 'list' in dist_type:
+                lst = row[2].split(',')
+                distribution = []
+                for l in lst:
+                    distribution.append(float(l.strip()))
+            elif 'distribution' in dist_type:
+                linspace_vals = row[2].split(',')
+                distribution = np.linspace(float(linspace_vals[0].strip()),
+                                           float(linspace_vals[1].strip()),
+                                           float(linspace_vals[2].strip()))
+            other_dist_vars[aspen_call] = distribution
+    return gauss_vars, other_dist_vars
+    
 
 def multivariate_sensitivity_analysis(aspenfilename, excelfilename, 
-    norm_dist_variables, norm_dist, other_dist_variables, other_dist, num_trials, output_file_name):
+    gui_excel_input, num_trials, output_file_name):
     
     aspen,obj,excel,book = open_COMS(aspenfilename,excelfilename)
     
@@ -58,6 +82,8 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
               'Capital Investment with Interest','Loan Payment per Year','Depreciation','Cash on Hand',\
               'Steam Plant Value','Bag Cost']
     
+    gauss_vars, other_dist_vars = get_distributions(gui_excel_input)
+    
     dfstreams = pd.DataFrame(columns=columns)
     obj.FindNode(SUC_LOC).Value = 0.4
     
@@ -66,13 +92,12 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
     for trial in range(num_trials):
         
         ####### DRAW RANDOMLY FROM GAUSSIAN DIST VARIABLES ########
-        norm_random_draw = np.random.normal(means, std_devs)
-        for i, aspen_var in enumerate(norm_dist_variables):
-            obj.FindNode(aspen_var).Value = norm_random_draw[i]
+        for aspen_var, (mean,std) in gauss_vars.items():
+            obj.FindNode(aspen_var).Value = np.random.normal(mean,std)
             
         ####### DRAW RANDOMLY FROM OTHER VARIABLE DISTRIBUTIONS ##########
-        for i, aspen_var in enumerate(other_dist_variables):
-            obj.FindNode(aspen_var).Value = random.choice(other_dist[i])
+        for aspen_var, lst in other_dist_vars.items():
+            obj.FindNode(aspen_var).Value = random.choice(lst)
         
         ######### KEEP TRACK OF RUN TIME PER TRIAL ########
         print(time() - old_time)
