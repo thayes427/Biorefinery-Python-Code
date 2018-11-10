@@ -39,6 +39,83 @@ def open_COMS(aspenfilename, excelfilename):
     
     return aspen,obj,excel,book
 
+def get_distributions(gui_excel_input):
+    '''
+    Given the excel input from the user in the GUI, produce a list_of_variables
+    the user wants to change as well as their distributions that should be 
+    randomly sampled from. 
+    '''
+
+def multivariate_sensitivity_analysis(aspenfilename, excelfilename, 
+    norm_dist_variables, norm_dist, other_dist_variables, other_dist, num_trials, output_file_name):
+    
+    aspen,obj,excel,book = open_COMS(aspenfilename,excelfilename)
+    
+    SUC_LOC = r"\Data\Blocks\A300\Data\Blocks\B1\Input\FRAC\TOC5"
+    
+    columns= ['Biofuel Output', 'Succinic Acid Output', 'Fixed Op Costs',\
+              'Var OpCosts', ' Capital Costs', 'MFSP','Fixed Capital Investment',\
+              'Capital Investment with Interest','Loan Payment per Year','Depreciation','Cash on Hand',\
+              'Steam Plant Value','Bag Cost']
+    
+    dfstreams = pd.DataFrame(columns=columns)
+    obj.FindNode(SUC_LOC).Value = 0.4
+    
+    ###### RUN SIMULATION   #########
+    old_time = time()
+    for trial in range(num_trials):
+        
+        ####### DRAW RANDOMLY FROM GAUSSIAN DIST VARIABLES ########
+        norm_random_draw = np.random.normal(means, std_devs)
+        for i, aspen_var in enumerate(norm_dist_variables):
+            obj.FindNode(aspen_var).Value = norm_random_draw[i]
+            
+        ####### DRAW RANDOMLY FROM OTHER VARIABLE DISTRIBUTIONS ##########
+        for i, aspen_var in enumerate(other_dist_variables):
+            obj.FindNode(aspen_var).Value = random.choice(other_dist[i])
+        
+        ######### KEEP TRACK OF RUN TIME PER TRIAL ########
+        print(time() - old_time)
+        old_time = time()
+        
+        ######## RUN ASPEN SIMULATION WITH RANDOMLY SAMPLED VARIABLES #######
+        aspen.Reinit()
+        aspen.Engine.Run2()
+        stop = CheckConverge(aspen)
+        
+        if stop:
+            writer = pd.ExcelWriter(output_file_name)
+            dfstreams.to_excel(writer,'Sheet1')
+            writer.save()
+            return dfstreams
+        
+        
+        column = [x for x in book.Sheets('Aspen_Streams').Evaluate("D1:D100") if x.Value != None] 
+        
+        if obj.FindNode(column[0]) == None:
+                print('ERROR in Trial Number '+ str(trial))
+                continue
+
+        stream_values = []
+
+        for index,stream in enumerate(column):
+            stream_value = obj.FindNode(stream).Value
+            stream_values.append((stream_value,))
+        
+        cell_string = "C1:C" + str(len(column))
+        book.Sheets('ASPEN_Streams').Evaluate(cell_string).Value = stream_values
+ 
+        excel.Calculate()
+        excel.Run('SOLVE_DCFROR')
+        
+        dfstreams.loc[trial] = [x.Value for x in book.Sheets('Output').Evaluate("C3:C15")]
+    
+    writer = pd.ExcelWriter(output_file_name)
+    dfstreams.to_excel(writer,'Sheet1')
+    writer.save()
+    return dfstreams
+        
+        
 
 def fill_streams_dataframe(aspenfilename, excelfilename):
     '''
