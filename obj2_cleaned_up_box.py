@@ -73,17 +73,17 @@ def fill_streams_dataframe(aspenfilename, excelfilename):
 
     #succ_fracs = np.linspace(0,.5,51)
     #succ_fracs = [25]
-    ENZYME_LOADING = r"\Data\Blocks\A300\Data\Blocks\F300SAC\Input\CONV\3"
-    enzyme_loadings = [0.95, 0.9, 0.85]
+    VAL = r"\Data\Blocks\A200\Data\Flowsheeting Options\Calculator\ACIDFLO\Input\FORTRAN_EXEC\#2"
+    values = ['F     ALOAD = 0.0045 / 0.93','F     ALOAD = 0.009 / 0.93','F     ALOAD = 0.018 / 0.93']
     old_time = time()
     obj.FindNode(SUC_LOC).Value = 0.4
-    for case in enzyme_loadings:
+    for case in values:
         
-        print("enzyme loading: " +str(case))
+        print("variable value: " +str(case))
         print(time() - old_time)
         old_time = time()
         #succ_frac = case
-        obj.FindNode(ENZYME_LOADING).Value = case
+        obj.FindNode(VAL).Value = case
         
         #stream splitting
         #obj.FindNode(SUC_LOC).Value = succ_frac
@@ -109,7 +109,7 @@ def fill_streams_dataframe(aspenfilename, excelfilename):
         stream_values = []
 
         for index,stream in enumerate(column):
-            print(stream,obj.FindNode(stream))
+            #print(stream,obj.FindNode(stream))
             
 
 
@@ -125,7 +125,7 @@ def fill_streams_dataframe(aspenfilename, excelfilename):
         
         dfstreams.loc[case] = [x.Value for x in book.Sheets('Output').Evaluate("C3:C15")]
     
-    writer = pd.ExcelWriter('3-7-2018_df_final.xlsx')
+    writer = pd.ExcelWriter('Pretreatment Acid Loading.xlsx')
     dfstreams.to_excel(writer,'Sheet1')
     writer.save()
     return dfstreams
