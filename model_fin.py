@@ -282,7 +282,7 @@ def plot_as_time_series(dep,ind,dates,abt,lqsr,show_ind = False):
     if show_ind:
         ax.plot(dates,ind,'r-',label= 'Independent')
         
-    ax.plot(dates,dep,'b-',label = 'Dependent')
+    #ax.plot(dates,dep,'b-',label = 'Dependent')
     
     if t > 0:
         
