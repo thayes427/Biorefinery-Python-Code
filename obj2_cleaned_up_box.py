@@ -15,6 +15,7 @@ import model_fin as model
 import matplotlib.pyplot as plt
 from time import time
 from math import ceil
+import random
 
 aspenfilename =  'BC1508F-BC_FY17Target._Final_5ptoC5_updated022618.bkp'
 excelfilename = 'DESIGN_OBJ2_test_MFSP-updated.xlsm' 
@@ -50,10 +51,11 @@ def get_distributions(gui_excel_input):
     other_dist_vars = {}
     for row in gui_excel_input:
         dist_type = row[3].lower()
+        aspen_variable = row[0]
         aspen_call = row[1]
         if 'normal' in dist_type or 'gaussian' in dist_type:
             dist_variables = row[2].split(',')
-            gauss_vars[aspen_call] = (float(dist_variables[0].strip()),
+            gauss_vars[(aspen_variable, aspen_call)] = (float(dist_variables[0].strip()),
                       float(dist_variables[1].strip()))
         else:
             if 'list' in dist_type:
@@ -66,7 +68,7 @@ def get_distributions(gui_excel_input):
                 distribution = np.linspace(float(linspace_vals[0].strip()),
                                            float(linspace_vals[1].strip()),
                                            float(linspace_vals[2].strip()))
-            other_dist_vars[aspen_call] = distribution
+            other_dist_vars[(aspen_variable, aspen_call)] = distribution
     return gauss_vars, other_dist_vars
     
 
@@ -77,7 +79,12 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
     
     SUC_LOC = r"\Data\Blocks\A300\Data\Blocks\B1\Input\FRAC\TOC5"
     
-    columns= ['Biofuel Output', 'Succinic Acid Output', 'Fixed Op Costs',\
+    vars_to_change = []
+    for row in gui_excel_input:
+        vars_to_change.append(row[0])
+    variable_values = {} # a dictionary to store the values each variable takes for each simulation
+    
+    columns = vars_to_change + ['Biofuel Output', 'Succinic Acid Output', 'Fixed Op Costs',\
               'Var OpCosts', ' Capital Costs', 'MFSP','Fixed Capital Investment',\
               'Capital Investment with Interest','Loan Payment per Year','Depreciation','Cash on Hand',\
               'Steam Plant Value','Bag Cost']
@@ -92,12 +99,23 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
     for trial in range(num_trials):
         
         ####### DRAW RANDOMLY FROM GAUSSIAN DIST VARIABLES ########
-        for aspen_var, (mean,std) in gauss_vars.items():
-            obj.FindNode(aspen_var).Value = np.random.normal(mean,std)
+        for (aspen_variable, aspen_call), (mean, std) in gauss_vars.items():
+            rand_sample = np.random.normal(mean,std)
+            obj.FindNode(aspen_call).Value = rand_sample
+            variable_values[aspen_variable] = rand_sample
+            
             
         ####### DRAW RANDOMLY FROM OTHER VARIABLE DISTRIBUTIONS ##########
-        for aspen_var, lst in other_dist_vars.items():
-            obj.FindNode(aspen_var).Value = random.choice(lst)
+        for (aspen_variable, aspen_call), dist in other_dist_vars.items():
+            rand_sample = random.choice(dist)
+            obj.FindNode(aspen_call).Value = rand_sample
+            variable_values[aspen_variable] = rand_sample
+            
+        ########## STORE THE RANDOMLY SAMPLED VARIABLE VALUES  ##########
+        case_values = []
+        for v in vars_to_change:
+            case_values.append(variable_values[v])
+            
         
         ######### KEEP TRACK OF RUN TIME PER TRIAL ########
         print(time() - old_time)
@@ -113,7 +131,6 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
             dfstreams.to_excel(writer,'Sheet1')
             writer.save()
             return dfstreams
-        
         
         column = [x for x in book.Sheets('Aspen_Streams').Evaluate("D1:D100") if x.Value != None] 
         
@@ -133,7 +150,7 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         excel.Calculate()
         excel.Run('SOLVE_DCFROR')
         
-        dfstreams.loc[trial] = [x.Value for x in book.Sheets('Output').Evaluate("C3:C15")]
+        dfstreams.loc[trial] = case_values + [x.Value for x in book.Sheets('Output').Evaluate("C3:C15")]
     
     writer = pd.ExcelWriter(output_file_name)
     dfstreams.to_excel(writer,'Sheet1')
