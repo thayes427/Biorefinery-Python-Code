@@ -16,20 +16,19 @@ def quit():
 
 def open_excel_file():
     root.filename = askopenfilename(initialdir = "/",
-                                                title = "Select file",
-                                                filetypes = (("csv files","*.csv"),("all files","*.*")))
+                                                title = "Select file")
+                                    
     excel.insert(0,root.filename)
     
 def open_aspen_file():
     root.filename = askopenfilename(initialdir = "/",
-                                                title = "Select file",
-                                                filetypes = (("csv files","*.csv"),("all files","*.*")))
+                                                title = "Select file")
     aspen.insert(0,root.filename)
 
 def open_solver_file():
     root.filename = askopenfilename(initialdir = "/",
                                                 title = "Select file",
-                                                filetypes = (("csv files","*.csv"),("all files","*.*")))
+                                                filetypes = (("csv files","*.csv")))
     solver.insert(0,root.filename)
 
 def run_multivar_sens():

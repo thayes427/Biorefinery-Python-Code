@@ -83,8 +83,10 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
     SUC_LOC = r"\Data\Blocks\A300\Data\Blocks\B1\Input\FRAC\TOC5"
     
     vars_to_change = []
-    for row in gui_excel_input:
-        vars_to_change.append(row[0])
+    with open(gui_excel_input) as f:
+        reader = csv.DictReader(f)# Skip the header row
+        for row in reader:
+            vars_to_change.append(row["Variable Name"])
     variable_values = {} # a dictionary to store the values each variable takes for each simulation
     
     columns = vars_to_change + ['Biofuel Output', 'Succinic Acid Output', 'Fixed Op Costs',\
