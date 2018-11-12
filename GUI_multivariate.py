@@ -37,8 +37,8 @@ def run_multivar_sens():
     solverfile= str(solver.get())
     numtrial= int(sim.get())
     outputfile= str(save.get())
-    hola= 5 ##### IMPORT THE INPUT EXCEL SHEET AND MAKE IT A DATA FRAME
-    msens.multivariate_sensitivity_analysis(aspenfile,solverfile,hola,numtrial,outputfile)
+    sens_vars = str(excel.get())
+    msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars,numtrial,outputfile)
 ##############INITIALIZE ROOT AND TABS###############
 root = Tk()
 

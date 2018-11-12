@@ -47,9 +47,11 @@ def get_distributions(gui_excel_input):
     randomly sampled from. 
     '''
     
+    with open(gui_excel_input) as f:
+...     header = f.readline() # Skip the header row
     gauss_vars = {}
     other_dist_vars = {}
-    for row in gui_excel_input:
+    for row in f:
         dist_type = row[3].lower()
         aspen_variable = row[0]
         aspen_call = row[1]
