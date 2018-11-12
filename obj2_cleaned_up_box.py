@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 from time import time
 from math import ceil
 import random
+import csv
 
 aspenfilename =  'BC1508F-BC_FY17Target._Final_5ptoC5_updated022618.bkp'
 excelfilename = 'DESIGN_OBJ2_test_MFSP-updated.xlsm' 
@@ -48,25 +49,25 @@ def get_distributions(gui_excel_input):
     '''
     
     with open(gui_excel_input) as f:
-        header = f.readline() # Skip the header row
+        reader = csv.DictReader(f)# Skip the header row
         gauss_vars = {}
         other_dist_vars = {}
-        for row in f:
-            dist_type = row[3].lower()
-            aspen_variable = row[0]
-            aspen_call = row[1]
+        for row in reader:
+            dist_type = row['Format of Range'].lower()
+            aspen_variable = row['Variable Name']
+            aspen_call = row['Variable Aspen Call']
             if 'normal' in dist_type or 'gaussian' in dist_type:
-                dist_variables = row[2].split(',')
+                dist_variables = row['Range of Values'].split(',')
                 gauss_vars[(aspen_variable, aspen_call)] = (float(dist_variables[0].strip()),
                           float(dist_variables[1].strip()))
             else:
                 if 'list' in dist_type:
-                    lst = row[2].split(',')
+                    lst = row['Range of Values'].split(',')
                     distribution = []
                     for l in lst:
                         distribution.append(float(l.strip()))
                 elif 'distribution' in dist_type:
-                    linspace_vals = row[2].split(',')
+                    linspace_vals = row['Range of Values'].split(',')
                     distribution = np.linspace(float(linspace_vals[0].strip()),
                                                float(linspace_vals[1].strip()),
                                                float(linspace_vals[2].strip()))
