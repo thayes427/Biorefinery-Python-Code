@@ -92,7 +92,7 @@ save.grid(row=4, column=2,pady = 5,padx = 5)
        
 Button(tab1,
        text='Run Monte Carlo Simulation',
-       command=msens.).grid(row=7,
+       command=run_multivar_sens).grid(row=7,
        column=4, columnspan=3,
        sticky=W, 
        pady=4)

@@ -48,29 +48,29 @@ def get_distributions(gui_excel_input):
     '''
     
     with open(gui_excel_input) as f:
-...     header = f.readline() # Skip the header row
-    gauss_vars = {}
-    other_dist_vars = {}
-    for row in f:
-        dist_type = row[3].lower()
-        aspen_variable = row[0]
-        aspen_call = row[1]
-        if 'normal' in dist_type or 'gaussian' in dist_type:
-            dist_variables = row[2].split(',')
-            gauss_vars[(aspen_variable, aspen_call)] = (float(dist_variables[0].strip()),
-                      float(dist_variables[1].strip()))
-        else:
-            if 'list' in dist_type:
-                lst = row[2].split(',')
-                distribution = []
-                for l in lst:
-                    distribution.append(float(l.strip()))
-            elif 'distribution' in dist_type:
-                linspace_vals = row[2].split(',')
-                distribution = np.linspace(float(linspace_vals[0].strip()),
-                                           float(linspace_vals[1].strip()),
-                                           float(linspace_vals[2].strip()))
-            other_dist_vars[(aspen_variable, aspen_call)] = distribution
+        header = f.readline() # Skip the header row
+        gauss_vars = {}
+        other_dist_vars = {}
+        for row in f:
+            dist_type = row[3].lower()
+            aspen_variable = row[0]
+            aspen_call = row[1]
+            if 'normal' in dist_type or 'gaussian' in dist_type:
+                dist_variables = row[2].split(',')
+                gauss_vars[(aspen_variable, aspen_call)] = (float(dist_variables[0].strip()),
+                          float(dist_variables[1].strip()))
+            else:
+                if 'list' in dist_type:
+                    lst = row[2].split(',')
+                    distribution = []
+                    for l in lst:
+                        distribution.append(float(l.strip()))
+                elif 'distribution' in dist_type:
+                    linspace_vals = row[2].split(',')
+                    distribution = np.linspace(float(linspace_vals[0].strip()),
+                                               float(linspace_vals[1].strip()),
+                                               float(linspace_vals[2].strip()))
+                other_dist_vars[(aspen_variable, aspen_call)] = distribution
     return gauss_vars, other_dist_vars
     
 
