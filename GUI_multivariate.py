@@ -27,8 +27,7 @@ def open_aspen_file():
 
 def open_solver_file():
     root.filename = askopenfilename(initialdir = "/",
-                                                title = "Select file",
-                                                filetypes = (("csv files","*.csv")))
+                                                title = "Select file")
     solver.insert(0,root.filename)
 
 def run_multivar_sens():

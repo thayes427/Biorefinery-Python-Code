@@ -113,13 +113,20 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         ####### DRAW RANDOMLY FROM OTHER VARIABLE DISTRIBUTIONS ##########
         for (aspen_variable, aspen_call), dist in other_dist_vars.items():
             rand_sample = random.choice(dist)
+            print(obj.FindNode(aspen_call).Value, 'BEFORE')
             obj.FindNode(aspen_call).Value = rand_sample
+            print(obj.FindNode(r"\Data\Blocks\A200\Data\Blocks\M207\Input\CONV\16").Value, "AFTER")
             variable_values[aspen_variable] = rand_sample
+            print('rand_sample', rand_sample)
+            print('aspen_varaible', aspen_variable)
+            print('aspen call', aspen_call)
+            print('dist', dist)
             
         ########## STORE THE RANDOMLY SAMPLED VARIABLE VALUES  ##########
         case_values = []
         for v in vars_to_change:
             case_values.append(variable_values[v])
+        print('case', case_values)
             
         
         ######### KEEP TRACK OF RUN TIME PER TRIAL ########
@@ -157,9 +164,10 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         
         dfstreams.loc[trial] = case_values + [x.Value for x in book.Sheets('Output').Evaluate("C3:C15")]
     
-    writer = pd.ExcelWriter(output_file_name)
+    writer = pd.ExcelWriter(output_file_name + '.xlsx')
     dfstreams.to_excel(writer,'Sheet1')
     writer.save()
+    print("FINISHED")
     return dfstreams
         
         
