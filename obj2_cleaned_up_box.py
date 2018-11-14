@@ -53,25 +53,29 @@ def get_distributions(gui_excel_input):
         gauss_vars = {}
         other_dist_vars = {}
         for row in reader:
-            dist_type = row['Format of Range'].lower()
-            aspen_variable = row['Variable Name']
-            aspen_call = row['Variable Aspen Call']
-            if 'normal' in dist_type or 'gaussian' in dist_type:
-                dist_variables = row['Range of Values'].split(',')
-                gauss_vars[(aspen_variable, aspen_call)] = (float(dist_variables[0].strip()),
-                          float(dist_variables[1].strip()))
-            else:
-                if 'list' in dist_type:
-                    lst = row['Range of Values'].split(',')
-                    distribution = []
-                    for l in lst:
-                        distribution.append(float(l.strip()))
-                elif 'distribution' in dist_type:
-                    linspace_vals = row['Range of Values'].split(',')
-                    distribution = np.linspace(float(linspace_vals[0].strip()),
-                                               float(linspace_vals[1].strip()),
-                                               float(linspace_vals[2].strip()))
-                other_dist_vars[(aspen_variable, aspen_call)] = distribution
+            if row['Toggle'].lower().strip() == 'true':
+                dist_type = row['Format of Range'].lower()
+                aspen_variable = row['Variable Name']
+                aspen_call = row['Variable Aspen Call']
+                bounds = row['Bounds'].split(',')
+                lb = float(bounds[0].strip())
+                ub = float(bounds[1].strip())
+                if 'normal' in dist_type or 'gaussian' in dist_type:
+                    dist_variables = row['Range of Values'].split(',')
+                    gauss_vars[(aspen_variable, aspen_call)] = (float(dist_variables[0].strip()),
+                              float(dist_variables[1].strip()), lb, ub)
+                else:
+                    if 'list' in dist_type:
+                        lst = row['Range of Values'].split(',')
+                        distribution = []
+                        for l in lst:
+                            distribution.append(float(l.strip()))
+                    elif 'distribution' in dist_type:
+                        linspace_vals = row['Range of Values'].split(',')
+                        distribution = np.linspace(float(linspace_vals[0].strip()),
+                                                   float(linspace_vals[1].strip()),
+                                                   float(linspace_vals[2].strip()))
+                    other_dist_vars[(aspen_variable, aspen_call)] = (distribution, lb, ub)
     return gauss_vars, other_dist_vars
     
 
@@ -86,7 +90,8 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
     with open(gui_excel_input) as f:
         reader = csv.DictReader(f)# Skip the header row
         for row in reader:
-            vars_to_change.append(row["Variable Name"])
+            if row['Toggle'].lower().strip() == 'true':
+                vars_to_change.append(row["Variable Name"])
     variable_values = {} # a dictionary to store the values each variable takes for each simulation
     
     columns = vars_to_change + ['Biofuel Output', 'Succinic Acid Output', 'Fixed Op Costs',\
@@ -104,24 +109,22 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
     for trial in range(num_trials):
         
         ####### DRAW RANDOMLY FROM GAUSSIAN DIST VARIABLES ########
-        for (aspen_variable, aspen_call), (mean, std) in gauss_vars.items():
+        for (aspen_variable, aspen_call), (mean, std, lb, ub) in gauss_vars.items():
             rand_sample = np.random.normal(mean,std)
+            while(rand_sample < lb or rand_sample > ub):
+                rand_sample = np.random.normal(mean,std)
             obj.FindNode(aspen_call).Value = rand_sample
             variable_values[aspen_variable] = rand_sample
             
             
         ####### DRAW RANDOMLY FROM OTHER VARIABLE DISTRIBUTIONS ##########
-        for (aspen_variable, aspen_call), dist in other_dist_vars.items():
+        for (aspen_variable, aspen_call), (dist, lb, ub) in other_dist_vars.items():
             rand_sample = random.choice(dist)
-            print(obj.FindNode(aspen_call).Value, 'BEFORE')
+            while(rand_sample < lb or rand_sample > ub):
+                rand_sample = random.choice(dist)
             obj.FindNode(aspen_call).Value = rand_sample
-            print(obj.FindNode(r"\Data\Blocks\A200\Data\Blocks\M207\Input\CONV\16").Value, "AFTER")
             variable_values[aspen_variable] = rand_sample
-            print('rand_sample', rand_sample)
-            print('aspen_varaible', aspen_variable)
-            print('aspen call', aspen_call)
-            print('dist', dist)
-            
+ 
         ########## STORE THE RANDOMLY SAMPLED VARIABLE VALUES  ##########
         case_values = []
         for v in vars_to_change:
