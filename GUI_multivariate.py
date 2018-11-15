@@ -4,10 +4,14 @@ import numpy as np
 import obj2_cleaned_up_box as msens
 from tkinter import ttk
 from tkinter.filedialog import askopenfilename
+import matplotlib
+#matplotlib.use("TkAgg")
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+from matplotlib.figure import Figure
 
 #reload(mod)
 
-################Tab 1 Funcitons###############
+################Tab 1 Functions###############
  
 def quit():
     global root
@@ -29,6 +33,26 @@ def open_solver_file():
     root.filename = askopenfilename(initialdir = "/",
                                                 title = "Select file")
     solver.insert(0,root.filename)
+    
+def plot_on_GUI():
+    x=np.array ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+    v= np.array ([16,16.31925,17.6394,16.003,17.2861,17.3131,19.1259,18.9694,22.0003,22.81226])
+    p= np.array ([16.23697,     17.31653,     17.22094,     17.68631,     17.73641 ,    18.6368,
+        19.32125,     19.31756 ,    21.20247  ,   22.41444   ,  22.11718  ,   22.12453])
+
+    fig = Figure(figsize=(6,6))
+    a = fig.add_subplot(111)
+    a.scatter(v,x,color='red')
+    a.plot(p, range(2 +max(x)),color='blue')
+    a.invert_yaxis()
+
+    a.set_title ("Estimation Grid", fontsize=16)
+    a.set_ylabel("Y", fontsize=14)
+    a.set_xlabel("X", fontsize=14)
+
+    canvas = FigureCanvasTkAgg(fig)
+    canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 2, rowspan = 2, sticky= W+E+N+S, pady = 5,padx = 5,)
+    #canvas.draw()
 
 def run_multivar_sens():
     aspenfile= str(aspen.get())
@@ -38,6 +62,8 @@ def run_multivar_sens():
     sens_vars = str(excel.get())
     graph_plot = int(show_plot.get())
     msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars,numtrial,outputfile, graph_plot)
+    if graph_plot == 1:
+        plot_on_GUI()
 ##############INITIALIZE ROOT AND TABS###############
 root = Tk()
 
