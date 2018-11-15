@@ -80,7 +80,7 @@ def get_distributions(gui_excel_input):
     
 
 def multivariate_sensitivity_analysis(aspenfilename, excelfilename, 
-    gui_excel_input, num_trials, output_file_name):
+    gui_excel_input, num_trials, output_file_name, graph_plot):
     
     aspen,obj,excel,book = open_COMS(aspenfilename,excelfilename)
     
@@ -171,16 +171,19 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
     dfstreams.to_excel(writer,'Sheet1')
     writer.save()
     
-    output_data = pd.read_excel(output_file_name + '.xlsx')
-    total_MFSP = output_data["MFSP"]
-    print(total_MFSP)
+    if graph_plot == 1:
+        output_data = pd.read_excel(output_file_name + '.xlsx')
+        total_MFSP = output_data["MFSP"]
     
-    num_bins = 100
-    n, bins, patches = plt.hist(total_MFSP, num_bins, facecolor='blue', alpha=0.5)
-    plt.show()
-    plt.xlabel('MFSP Price ($)')
-    plt.ylabel('Count of simulations')
-    plt.title('Historgram of MFSP prices based on simulations')
+        num_bins = 100
+        n, bins, patches = plt.hist(total_MFSP, num_bins, facecolor='blue', alpha=0.5)
+        plt.xlabel('MFSP Price ($)')
+        plt.ylabel('Count of simulations')
+        plt.title('Historgram of MFSP prices based on simulations')
+        plt.savefig(output_file_name + '.png')
+        plt.show()
+    
+    
     print("FINISHED")
     return dfstreams
         
