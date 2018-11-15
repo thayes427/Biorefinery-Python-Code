@@ -5,9 +5,8 @@ import obj2_cleaned_up_box as msens
 from tkinter import ttk
 from tkinter.filedialog import askopenfilename
 import matplotlib
-#matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
-from matplotlib.figure import Figure
+from matplotlib import pyplot as pplt
 
 #reload(mod)
 
@@ -34,18 +33,19 @@ def open_solver_file():
                                                 title = "Select file")
     solver.insert(0,root.filename)
     
-def plot_on_GUI():
+def plot_on_GUI(d_f_output):
     
-    fig = Figure(figsize=(6,6))
+    fig = pplt.figure()
     a = fig.add_subplot(111)
-
+    total_MFSP = d_f_output["MFSP"]
+    num_bins = 100
+    n, bins, patches = pplt.hist(total_MFSP, num_bins, facecolor='blue', alpha=0.5)
     a.set_title ("MFSP Histogram", fontsize=16)
-    a.set_ylabel("", fontsize=14)
-    a.set_xlabel("X", fontsize=14)
-
+    a.set_ylabel("Count", fontsize=14)
+    a.set_xlabel("MFSP ($)", fontsize=14)
+        
     canvas = FigureCanvasTkAgg(fig)
     canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 2, rowspan = 2, sticky= W+E+N+S, pady = 5,padx = 5,)
-    #canvas.draw()
 
 def run_multivar_sens():
     aspenfile= str(aspen.get())
@@ -54,9 +54,9 @@ def run_multivar_sens():
     outputfile= str(save.get())
     sens_vars = str(excel.get())
     graph_plot = int(show_plot.get())
-    msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars,numtrial,outputfile, graph_plot)
+    d_f_output = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars,numtrial,outputfile, graph_plot)
     if graph_plot == 1:
-        plot_on_GUI()
+        plot_on_GUI(d_f_output)
 ##############INITIALIZE ROOT AND TABS###############
 root = Tk()
 
