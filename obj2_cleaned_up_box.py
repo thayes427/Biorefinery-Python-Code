@@ -60,9 +60,22 @@ def get_distributions(gui_excel_input):
                 bounds = row['Bounds'].split(',')
                 lb = float(bounds[0].strip())
                 ub = float(bounds[1].strip())
+                if row['Fortran Call'] is None:
+                    is_fortran = False
+                    fortran_call = None
+                    change_index = None
+                if row['Fortran Call'] is not None:
+                    is_fortran = True
+                    fortran_call = row['Fortran Call']
+                    value_to_change = row['Fortran Value to Change'].strip()
+                    len_val = len(value_to_change)
+                    change_index = (0,0)
+                    for i in range(len(fortran_call)):
+                        if fortran_call[i:i+len_val] == value_to_change:
+                            change_index = (i, i+len_val) #NOT INCLUSIVE     
                 if 'normal' in dist_type or 'gaussian' in dist_type:
                     dist_variables = row['Range of Values'].split(',')
-                    gauss_vars[(aspen_variable, aspen_call)] = (float(dist_variables[0].strip()),
+                    gauss_vars[(aspen_variable, aspen_call, (is_fortran, fortran_call, change_index))] = (float(dist_variables[0].strip()),
                               float(dist_variables[1].strip()), lb, ub)
                 else:
                     if 'list' in dist_type:
@@ -75,7 +88,7 @@ def get_distributions(gui_excel_input):
                         distribution = np.linspace(float(linspace_vals[0].strip()),
                                                    float(linspace_vals[1].strip()),
                                                    float(linspace_vals[2].strip()))
-                    other_dist_vars[(aspen_variable, aspen_call)] = (distribution, lb, ub)
+                    other_dist_vars[(aspen_variable, aspen_call, (is_fortran, fortran_call, change_index))] = (distribution, lb, ub)
     return gauss_vars, other_dist_vars
     
 
@@ -109,20 +122,28 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
     for trial in range(num_trials):
         
         ####### DRAW RANDOMLY FROM GAUSSIAN DIST VARIABLES ########
-        for (aspen_variable, aspen_call), (mean, std, lb, ub) in gauss_vars.items():
+        for (aspen_variable, aspen_call,  (is_fortran, fortran_call, change_index)), (mean, std, lb, ub) in gauss_vars.items():
             rand_sample = np.random.normal(mean,std)
             while(rand_sample < lb or rand_sample > ub):
                 rand_sample = np.random.normal(mean,std)
-            obj.FindNode(aspen_call).Value = rand_sample
+            if is_fortran:
+                modified_var = fortran_call[:change_index[0] - 1] + str(rand_sample) + fortran_call[change_index[1] + 1:]
+                obj.FindNode(aspen_call).Value = modified_var
+            else:
+                obj.FindNode(aspen_call).Value = rand_sample
             variable_values[aspen_variable] = rand_sample
             
             
         ####### DRAW RANDOMLY FROM OTHER VARIABLE DISTRIBUTIONS ##########
-        for (aspen_variable, aspen_call), (dist, lb, ub) in other_dist_vars.items():
+        for (aspen_variable, aspen_call,  (is_fortran, fortran_call, change_index)), (dist, lb, ub) in other_dist_vars.items():
             rand_sample = random.choice(dist)
             while(rand_sample < lb or rand_sample > ub):
                 rand_sample = random.choice(dist)
-            obj.FindNode(aspen_call).Value = rand_sample
+            if is_fortran:
+                modified_var = fortran_call[:change_index[0] - 1] + str(rand_sample) + fortran_call[change_index[1] + 1:]
+                obj.FindNode(aspen_call).Value = modified_var
+            else:
+                obj.FindNode(aspen_call).Value = rand_sample
             variable_values[aspen_variable] = rand_sample
  
         ########## STORE THE RANDOMLY SAMPLED VARIABLE VALUES  ##########
