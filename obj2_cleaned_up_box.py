@@ -52,6 +52,7 @@ def get_distributions(gui_excel_input):
         reader = csv.DictReader(f)# Skip the header row
         gauss_vars = {}
         other_dist_vars = {}
+        uniform_vars = {}
         for row in reader:
             if row['Toggle'].lower().strip() == 'true':
                 dist_type = row['Format of Range'].lower()
@@ -60,11 +61,11 @@ def get_distributions(gui_excel_input):
                 bounds = row['Bounds'].split(',')
                 lb = float(bounds[0].strip())
                 ub = float(bounds[1].strip())
-                if row['Fortran Call'] is None:
+                if row['Fortran Call'].strip() == "":
                     is_fortran = False
                     fortran_call = None
                     change_index = None
-                if row['Fortran Call'] is not None:
+                if row['Fortran Call'].strip() != "":
                     is_fortran = True
                     fortran_call = row['Fortran Call']
                     value_to_change = row['Fortran Value to Change'].strip()
@@ -77,19 +78,22 @@ def get_distributions(gui_excel_input):
                     dist_variables = row['Range of Values'].split(',')
                     gauss_vars[(aspen_variable, aspen_call, (is_fortran, fortran_call, change_index))] = (float(dist_variables[0].strip()),
                               float(dist_variables[1].strip()), lb, ub)
-                else:
-                    if 'list' in dist_type:
-                        lst = row['Range of Values'].split(',')
-                        distribution = []
-                        for l in lst:
-                            distribution.append(float(l.strip()))
-                    elif 'distribution' in dist_type:
-                        linspace_vals = row['Range of Values'].split(',')
-                        distribution = np.linspace(float(linspace_vals[0].strip()),
-                                                   float(linspace_vals[1].strip()),
-                                                   float(linspace_vals[2].strip()))
+                if 'list' in dist_type:
+                    lst = row['Range of Values'].split(',')
+                    distribution = []
+                    for l in lst:
+                        distribution.append(float(l.strip()))
                     other_dist_vars[(aspen_variable, aspen_call, (is_fortran, fortran_call, change_index))] = (distribution, lb, ub)
-    return gauss_vars, other_dist_vars
+                    
+                if 'uniform' in dist_type:
+                    lb_ub = row['Range of Values'].split(',')
+                    lb_uniform, ub_uniform = float(lb_ub[0].strip()), float(lb_ub[1].strip())
+                    uniform_vars[(aspen_variable, aspen_call, 
+                                  (is_fortran, fortran_call, 
+                                   change_index))] = (lb_uniform, ub_uniform, lb, ub)
+                                        
+                    
+    return gauss_vars, uniform_vars, other_dist_vars
     
 
 def multivariate_sensitivity_analysis(aspenfilename, excelfilename, 
@@ -112,7 +116,7 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
               'Capital Investment with Interest','Loan Payment per Year','Depreciation','Cash on Hand',\
               'Steam Plant Value','Bag Cost']
     
-    gauss_vars, other_dist_vars = get_distributions(gui_excel_input)
+    gauss_vars, uniform_vars, other_dist_vars = get_distributions(gui_excel_input)
     
     dfstreams = pd.DataFrame(columns=columns)
     obj.FindNode(SUC_LOC).Value = 0.4
@@ -124,6 +128,18 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         ####### DRAW RANDOMLY FROM GAUSSIAN DIST VARIABLES ########
         for (aspen_variable, aspen_call,  (is_fortran, fortran_call, change_index)), (mean, std, lb, ub) in gauss_vars.items():
             rand_sample = np.random.normal(mean,std)
+            while(rand_sample < lb or rand_sample > ub):
+                rand_sample = np.random.normal(mean,std)
+            if is_fortran:
+                modified_var = fortran_call[:change_index[0] - 1] + str(rand_sample) + fortran_call[change_index[1] + 1:]
+                obj.FindNode(aspen_call).Value = modified_var
+            else:
+                obj.FindNode(aspen_call).Value = rand_sample
+            variable_values[aspen_variable] = rand_sample
+            
+        ####### DRAW RANDOMLY FROM UNIFORM DIST VARIABLES ########
+        for (aspen_variable, aspen_call,  (is_fortran, fortran_call, change_index)), (lb_uniform, ub_uniform, lb, ub) in uniform_vars.items():
+            rand_sample = np.random.uniform(lb_uniform, ub_uniform)
             while(rand_sample < lb or rand_sample > ub):
                 rand_sample = np.random.normal(mean,std)
             if is_fortran:
@@ -150,7 +166,6 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         case_values = []
         for v in vars_to_change:
             case_values.append(variable_values[v])
-        print('case', case_values)
             
         
         ######### KEEP TRACK OF RUN TIME PER TRIAL ########
@@ -205,7 +220,7 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         plt.show()
     
     
-    print("FINISHED")
+    print("-----------FINISHED-----------")
     return dfstreams
         
         
