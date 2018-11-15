@@ -170,6 +170,14 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
     writer = pd.ExcelWriter(output_file_name + '.xlsx')
     dfstreams.to_excel(writer,'Sheet1')
     writer.save()
+    
+    output_data = pd.read_excel(output_file_name + '.xlsx')
+    total_MFSP = output_data["MFSP"]
+    print(total_MFSP)
+    
+    num_bins = 100
+    n, bins, patches = plt.hist(total_MFSP, num_bins, facecolor='blue', alpha=0.5)
+    plt.show()
     print("FINISHED")
     return dfstreams
         
