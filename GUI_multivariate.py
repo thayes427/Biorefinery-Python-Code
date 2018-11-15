@@ -35,15 +35,12 @@ def open_solver_file():
     solver.insert(0,root.filename)
     
 def plot_on_GUI():
-    x=np.array ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-    v= np.array ([16,16.31925,17.6394,16.003,17.2861,17.3131,19.1259,18.9694,22.0003,22.81226])
-
+    
     fig = Figure(figsize=(6,6))
     a = fig.add_subplot(111)
-    a.scatter(v,x,color='red')
 
-    a.set_title ("Estimation Grid", fontsize=16)
-    a.set_ylabel("Y", fontsize=14)
+    a.set_title ("MFSP Histogram", fontsize=16)
+    a.set_ylabel("", fontsize=14)
     a.set_xlabel("X", fontsize=14)
 
     canvas = FigureCanvasTkAgg(fig)

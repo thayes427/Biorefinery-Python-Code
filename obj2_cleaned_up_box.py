@@ -172,8 +172,8 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
     writer.save()
     
     if graph_plot == 1:
-        output_data = pd.read_excel(output_file_name + '.xlsx')
-        total_MFSP = output_data["MFSP"]
+        #output_data = pd.read_excel(output_file_name + '.xlsx')
+        total_MFSP = dfstreams["MFSP"]
     
         num_bins = 100
         n, bins, patches = plt.hist(total_MFSP, num_bins, facecolor='blue', alpha=0.5)
