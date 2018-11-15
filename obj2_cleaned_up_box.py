@@ -178,6 +178,9 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
     num_bins = 100
     n, bins, patches = plt.hist(total_MFSP, num_bins, facecolor='blue', alpha=0.5)
     plt.show()
+    plt.xlabel('MFSP Price ($)')
+    plt.ylabel('Count of simulations')
+    plt.title('Historgram of MFSP prices based on simulations')
     print("FINISHED")
     return dfstreams
         
