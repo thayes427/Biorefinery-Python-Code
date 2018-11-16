@@ -95,10 +95,10 @@ def get_distributions(gui_excel_input):
                     
     return gauss_vars, uniform_vars, other_dist_vars
     
-
+dfstreams = None
 def multivariate_sensitivity_analysis(aspenfilename, excelfilename, 
     gui_excel_input, num_trials, output_file_name, graph_plot):
-    
+    global dfstreams
     aspen,obj,excel,book = open_COMS(aspenfilename,excelfilename)
     
     SUC_LOC = r"\Data\Blocks\A300\Data\Blocks\B1\Input\FRAC\TOC5"
