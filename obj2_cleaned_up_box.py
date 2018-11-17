@@ -54,6 +54,8 @@ def get_distributions(gui_excel_input):
         gauss_vars = {}
         other_dist_vars = {}
         uniform_vars = {}
+        poisson_vars = {}
+        pareto_vars = {}
         for row in reader:
             if row['Toggle'].lower().strip() == 'true':
                 dist_type = row['Format of Range'].lower()
@@ -79,6 +81,20 @@ def get_distributions(gui_excel_input):
                     dist_variables = row['Range of Values'].split(',')
                     gauss_vars[(aspen_variable, aspen_call, (is_fortran, fortran_call, change_index))] = (float(dist_variables[0].strip()),
                               float(dist_variables[1].strip()), lb, ub)
+                if 'linspace' in dist_type:
+                    linspace_vars = row['Range of Values'].split(',')
+                    distribution = np.linspace(float(linspace_vars[0].strip()), 
+                                               float(linspace_vars[1].strip()),
+                                               float(linspace_vars[2].strip()))
+                    other_dist_vars[(aspen_variable, aspen_call, (is_fortran, fortran_call, change_index))] = (distribution, lb, ub)
+                if 'poisson' in dist_type:
+                    lambda_p = float(row['Range of Values'].strip())
+                    poisson_vars[(aspen_variable, aspen_call, (is_fortran, fortran_call, change_index))] = (lambda_p, lb, ub)
+                if 'pareto' in dist_type:
+                    pareto_vals = row['Range of Values'].split(',')
+                    shape = float(pareto_vals[0].strip())
+                    scale = float(pareto_vals[1].strip())
+                    pareto_vars[(aspen_variable, aspen_call, (is_fortran, fortran_call, change_index))] = (shape, scale, lb, ub)
                 if 'list' in dist_type:
                     lst = row['Range of Values'].split(',')
                     distribution = []
@@ -92,11 +108,41 @@ def get_distributions(gui_excel_input):
                     uniform_vars[(aspen_variable, aspen_call, 
                                   (is_fortran, fortran_call, 
                                    change_index))] = (lb_uniform, ub_uniform, lb, ub)
-                                        
-                    
-    return gauss_vars, uniform_vars, other_dist_vars
+    return gauss_vars, uniform_vars, poisson_vars, pareto_vars, other_dist_vars
     
-dfstreams = None
+def sample_gauss(mean, std, lb, ub):
+    rand_sample = np.random.normal(mean,std)
+    while(rand_sample < lb or rand_sample > ub):
+        rand_sample = np.random.normal(mean,std)
+    return rand_sample
+
+def sample_uniform(lb_uniform, ub_uniform, lb, ub):
+    rand_sample = np.random.uniform(lb_uniform, ub_uniform)
+    while(rand_sample < lb or rand_sample > ub):
+        rand_sample = np.random.uniform(lb_uniform, ub_uniform)
+    return rand_sample
+
+def sample_list(dist, lb, ub):
+    rand_sample = random.choice(dist)
+    while(rand_sample < lb or rand_sample > ub):
+        rand_sample = random.choice(dist)
+    return rand_sample
+
+def sample_poisson(lambda_p, lb, ub):
+    rand_sample = np.random.poisson(1000*lambda_p)/1000
+    while(rand_sample < lb or rand_sample > ub):
+        rand_sample = np.random.poisson(1000*lambda_p)/1000
+    return rand_sample
+
+def sample_pareto(shape, scale, lb, ub):
+    rand_sample = (np.random.pareto(shape) + 1) * scale
+    while(rand_sample < lb or rand_sample > ub):
+        rand_sample = (np.random.pareto(shape) + 1) * scale
+    return rand_sample
+
+def make_fortran(is_fortran, fortran_call, change_index, val):
+    return fortran_call[:change_index[0] - 1] + str(val) + fortran_call[change_index[1] + 1:]
+
 def multivariate_sensitivity_analysis(aspenfilename, excelfilename, 
     gui_excel_input, num_trials, output_file_name, graph_plot):
     global dfstreams
@@ -117,7 +163,7 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
               'Capital Investment with Interest','Loan Payment per Year','Depreciation','Cash on Hand',\
               'Steam Plant Value','Bag Cost']
     
-    gauss_vars, uniform_vars, other_dist_vars = get_distributions(gui_excel_input)
+    gauss_vars, uniform_vars, poisson_vars, pareto_vars, other_dist_vars = get_distributions(gui_excel_input)
     
     dfstreams = pd.DataFrame(columns=columns)
     obj.FindNode(SUC_LOC).Value = 0.4
@@ -128,11 +174,9 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         
         ####### DRAW RANDOMLY FROM GAUSSIAN DIST VARIABLES ########
         for (aspen_variable, aspen_call,  (is_fortran, fortran_call, change_index)), (mean, std, lb, ub) in gauss_vars.items():
-            rand_sample = np.random.normal(mean,std)
-            while(rand_sample < lb or rand_sample > ub):
-                rand_sample = np.random.normal(mean,std)
+            rand_sample = sample_gauss(mean, std, lb, ub)
             if is_fortran:
-                modified_var = fortran_call[:change_index[0] - 1] + str(rand_sample) + fortran_call[change_index[1] + 1:]
+                modified_var = make_fortran(is_fortran, fortran_call, change_index, rand_sample)
                 obj.FindNode(aspen_call).Value = modified_var
             else:
                 obj.FindNode(aspen_call).Value = rand_sample
@@ -140,29 +184,44 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
             
         ####### DRAW RANDOMLY FROM UNIFORM DIST VARIABLES ########
         for (aspen_variable, aspen_call,  (is_fortran, fortran_call, change_index)), (lb_uniform, ub_uniform, lb, ub) in uniform_vars.items():
-            rand_sample = np.random.uniform(lb_uniform, ub_uniform)
-            while(rand_sample < lb or rand_sample > ub):
-                rand_sample = np.random.normal(mean,std)
+            rand_sample = sample_uniform(lb_uniform, ub_uniform, lb, ub)
             if is_fortran:
-                modified_var = fortran_call[:change_index[0] - 1] + str(rand_sample) + fortran_call[change_index[1] + 1:]
+                modified_var = make_fortran(is_fortran, fortran_call, change_index, rand_sample)
                 obj.FindNode(aspen_call).Value = modified_var
             else:
                 obj.FindNode(aspen_call).Value = rand_sample
             variable_values[aspen_variable] = rand_sample
-            
             
         ####### DRAW RANDOMLY FROM OTHER VARIABLE DISTRIBUTIONS ##########
         for (aspen_variable, aspen_call,  (is_fortran, fortran_call, change_index)), (dist, lb, ub) in other_dist_vars.items():
-            rand_sample = random.choice(dist)
-            while(rand_sample < lb or rand_sample > ub):
-                rand_sample = random.choice(dist)
+            rand_sample = sample_list(dist, lb, ub)
             if is_fortran:
-                modified_var = fortran_call[:change_index[0] - 1] + str(rand_sample) + fortran_call[change_index[1] + 1:]
+                modified_var = make_fortran(is_fortran, fortran_call, change_index, rand_sample)
                 obj.FindNode(aspen_call).Value = modified_var
             else:
                 obj.FindNode(aspen_call).Value = rand_sample
             variable_values[aspen_variable] = rand_sample
- 
+            
+        ############ DRAW RANDOMLY FROM PARETO DISTRIBUTIONS ###########
+        for (aspen_variable, aspen_call,  (is_fortran, fortran_call, change_index)), (shape, scale, lb, ub) in pareto_vars.items():
+            rand_sample = sample_pareto(shape, scale, lb, ub)
+            if is_fortran:
+                modified_var = make_fortran(is_fortran, fortran_call, change_index, rand_sample)
+                obj.FindNode(aspen_call).Value = modified_var
+            else:
+                obj.FindNode(aspen_call).Value = rand_sample
+            variable_values[aspen_variable] = rand_sample
+            
+        ########### DRAW RANDOMLY FROM POISSON DISTRIBUTIONS ###########
+        for (aspen_variable, aspen_call,  (is_fortran, fortran_call, change_index)), (lambda_p, lb, ub) in poisson_vars.items():
+            rand_sample = sample_poisson(lambda_p, lb, ub)
+            if is_fortran:
+                modified_var = make_fortran(is_fortran, fortran_call, change_index, rand_sample)
+                obj.FindNode(aspen_call).Value = modified_var
+            else:
+                obj.FindNode(aspen_call).Value = rand_sample
+            variable_values[aspen_variable] = rand_sample
+        
         ########## STORE THE RANDOMLY SAMPLED VARIABLE VALUES  ##########
         case_values = []
         for v in vars_to_change:
@@ -203,7 +262,8 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         excel.Run('SOLVE_DCFROR')
         
         dfstreams.loc[trial] = case_values + [x.Value for x in book.Sheets('Output').Evaluate("C3:C15")]
-        GUI.plot_on_GUI(dfstreams)
+        if graph_plot == 1:
+            GUI.plot_on_GUI(dfstreams)
         
         ######### KEEP TRACK OF RUN TIME PER TRIAL ########
         print(time() - old_time)

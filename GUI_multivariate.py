@@ -43,10 +43,10 @@ def plot_on_GUI(d_f_output):
     a.set_title ("MFSP Histogram", fontsize=16)
     a.set_ylabel("Count", fontsize=14)
     a.set_xlabel("MFSP ($)", fontsize=14)
-        
     canvas = FigureCanvasTkAgg(fig)
     canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 2, rowspan = 2, sticky= W+E+N+S, pady = 5,padx = 5,)
-
+    root.update_idletasks()
+    
 def run_multivar_sens():
     aspenfile= str(aspen.get())
     solverfile= str(solver.get())
@@ -55,8 +55,6 @@ def run_multivar_sens():
     sens_vars = str(excel.get())
     graph_plot = int(show_plot.get())
     d_f_output = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars,numtrial,outputfile, graph_plot)
-    if graph_plot == 1:
-        plot_on_GUI(d_f_output)
         
 def run_univ_sens():
     aspenfile= str(aspen.get())
