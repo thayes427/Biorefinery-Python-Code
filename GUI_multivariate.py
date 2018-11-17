@@ -58,12 +58,7 @@ def run_multivar_sens():
     if graph_plot == 1:
         plot_on_GUI(d_f_output)
         
-def run_univ_sens():
-    aspenfile= str(aspen.get())
-    solverfile= str(solver.get())
-    numtrial= int(sim.get())
-    outputfile= str(save.get())
-    sens_vars = str(excel.get())
+
 
 ##############INITIALIZE ROOT AND TABS###############
 root = Tk()
@@ -138,32 +133,32 @@ Button(tab2,
         sticky = E,  
         pady = 5,padx = 5)
 
-excel = Entry(tab2)
-excel.grid(row=0, column=2)
+excel2 = Entry(tab2)
+excel2.grid(row=0, column=2)
 
 Button(tab2, 
       text="Upload Aspen Model",
       command=open_aspen_file).grid(row=1, column = 1,sticky = E,
       pady = 5,padx = 5)
-aspen = Entry(tab2)
-aspen.grid(row=1, column=2,pady = 5,padx = 5)
+aspen2 = Entry(tab2)
+aspen2.grid(row=1, column=2,pady = 5,padx = 5)
 
 Button(tab2, 
       text="Upload Excel Model",
       command=open_solver_file).grid(row=2,column = 1,sticky = E,
       pady = 5,padx = 5)
-solver = Entry(tab2)
-solver.grid(row=2, column=2,pady = 5,padx = 5)
+solver2 = Entry(tab2)
+solver2.grid(row=2, column=2,pady = 5,padx = 5)
 
 Label(tab2, 
       text="Number of Simulations :").grid(row=3, column= 1, sticky = E,pady = 5,padx = 5)
-sim = Entry(tab2)
-sim.grid(row=3, column=2,pady = 5,padx = 5)
+sim2 = Entry(tab2)
+sim2.grid(row=3, column=2,pady = 5,padx = 5)
 
 Label(tab2, 
       text="Save As :").grid(row=4, column= 1, sticky = E,pady = 5,padx = 5)
-save = Entry(tab2)
-save.grid(row=4, column=2,pady = 5,padx = 5)
+save2 = Entry(tab2)
+save2.grid(row=4, column=2,pady = 5,padx = 5)
 
 
 mainloop()

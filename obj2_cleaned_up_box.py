@@ -252,7 +252,7 @@ def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name,
     
     aspen,obj,excel,book = open_COMS(aspenfilename,excelfilename)
     
-    SUC_LOC = r"\Data\Blocks\A300\Data\Blocks\B1\Input\FRAC\TOC5"
+    
     
     columns= ['Biofuel Output', 'Succinic Acid Output', 'Fixed Op Costs',\
               'Var OpCosts', ' Capital Costs', 'MFSP','Fixed Capital Investment',\
@@ -265,7 +265,7 @@ def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name,
 
     #succ_fracs = np.linspace(0,.5,51)
     #succ_fracs = [25]
-
+    SUC_LOC = r"\Data\Blocks\A300\Data\Blocks\B1\Input\FRAC\TOC5"
     obj.FindNode(SUC_LOC).Value = 0.4
     
     for case in values:
