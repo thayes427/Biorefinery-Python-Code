@@ -43,10 +43,10 @@ def plot_on_GUI(d_f_output):
     a.set_title ("MFSP Histogram", fontsize=16)
     a.set_ylabel("Count", fontsize=14)
     a.set_xlabel("MFSP ($)", fontsize=14)
-        
     canvas = FigureCanvasTkAgg(fig)
     canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 2, rowspan = 2, sticky= W+E+N+S, pady = 5,padx = 5,)
-
+    root.update_idletasks()
+    
 def run_multivar_sens():
     aspenfile= str(aspen.get())
     solverfile= str(solver.get())
@@ -55,15 +55,13 @@ def run_multivar_sens():
     sens_vars = str(excel.get())
     graph_plot = int(show_plot.get())
     d_f_output = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars,numtrial,outputfile, graph_plot)
-    if graph_plot == 1:
-        plot_on_GUI(d_f_output)
         
-def run_univ_sens():
-    aspenfile= str(aspen.get())
-    solverfile= str(solver.get())
-    numtrial= int(sim.get())
-    outputfile= str(save.get())
-    sens_vars = str(excel.get())
+#def run_univ_sens():
+#    aspenfile= str(aspen2.get())
+#    solverfile= str(solver2.get())
+#    numtrial= int(sim2.get())
+#    outputfile= str(save2.get())
+#    sens_vars = str(excel2.get())
 
 ##############INITIALIZE ROOT AND TABS###############
 root = Tk()
@@ -157,13 +155,13 @@ solver2.grid(row=2, column=2,pady = 5,padx = 5)
 
 Label(tab2, 
       text="Number of Simulations :").grid(row=3, column= 1, sticky = E,pady = 5,padx = 5)
-sim = Entry(tab2)
-sim.grid(row=3, column=2,pady = 5,padx = 5)
+sim2 = Entry(tab2)
+sim2.grid(row=3, column=2,pady = 5,padx = 5)
 
 Label(tab2, 
       text="Save As :").grid(row=4, column= 1, sticky = E,pady = 5,padx = 5)
-save = Entry(tab2)
-save.grid(row=4, column=2,pady = 5,padx = 5)
+save2 = Entry(tab2)
+save2.grid(row=4, column=2,pady = 5,padx = 5)
 
 
 mainloop()
