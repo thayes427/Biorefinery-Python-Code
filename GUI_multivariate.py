@@ -138,22 +138,22 @@ Button(tab2,
         sticky = E,  
         pady = 5,padx = 5)
 
-excel = Entry(tab2)
-excel.grid(row=0, column=2)
+excel2 = Entry(tab2)
+excel2.grid(row=0, column=2)
 
 Button(tab2, 
       text="Upload Aspen Model",
       command=open_aspen_file).grid(row=1, column = 1,sticky = E,
       pady = 5,padx = 5)
-aspen = Entry(tab2)
-aspen.grid(row=1, column=2,pady = 5,padx = 5)
+aspen2 = Entry(tab2)
+aspen2.grid(row=1, column=2,pady = 5,padx = 5)
 
 Button(tab2, 
       text="Upload Excel Model",
       command=open_solver_file).grid(row=2,column = 1,sticky = E,
       pady = 5,padx = 5)
-solver = Entry(tab2)
-solver.grid(row=2, column=2,pady = 5,padx = 5)
+solver2 = Entry(tab2)
+solver2.grid(row=2, column=2,pady = 5,padx = 5)
 
 Label(tab2, 
       text="Number of Simulations :").grid(row=3, column= 1, sticky = E,pady = 5,padx = 5)
