@@ -233,7 +233,6 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         aspen.Engine.Run2()
         stop = CheckConverge(aspen)
         errors = FindErrors(aspen)
-        print(errors)
         for e in errors:
             print(e)
         
