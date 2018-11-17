@@ -60,6 +60,17 @@ def run_multivar_sens():
     msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars,numtrial,outputfile, graph_plot)
     if graph_plot == 1:
         plot_on_GUI()
+        
+def run_univ_sens():
+    aspenfile= str(aspen.get())
+    solverfile= str(solver.get())
+    numtrial= int(sim.get())
+    outputfile= str(save.get())
+    sens_vars = str(excel.get())
+    
+    
+    
+    
 ##############INITIALIZE ROOT AND TABS###############
 root = Tk()
 
@@ -68,6 +79,10 @@ note.grid()
 
 tab1 = ttk.Frame(note)
 note.add(tab1,text = "Sensitivity Analysis")
+
+tab2 = ttk.Frame(note)
+note.add(tab2,text = "Univariate Analysis")
+
 
 
 ###############TAB 1 LABELS#################
@@ -121,6 +136,40 @@ Button(tab1,
 show_plot = IntVar()
 Checkbutton(tab1, text="Generate MFSP Distribution (Graph)", variable=show_plot).grid(row=5,columnspan = 2, column = 0, sticky=W)
 
+##############Tab 2 LABELS##################
+Button(tab2, 
+        text='Upload Excel Data',
+        command=open_excel_file).grid(row=0,
+        column=1,
+        sticky = E,  
+        pady = 5,padx = 5)
+
+excel = Entry(tab2)
+excel.grid(row=0, column=2)
+
+Button(tab2, 
+      text="Upload Aspen Model",
+      command=open_aspen_file).grid(row=1, column = 1,sticky = E,
+      pady = 5,padx = 5)
+aspen = Entry(tab2)
+aspen.grid(row=1, column=2,pady = 5,padx = 5)
+
+Button(tab2, 
+      text="Upload Excel Model",
+      command=open_solver_file).grid(row=2,column = 1,sticky = E,
+      pady = 5,padx = 5)
+solver = Entry(tab2)
+solver.grid(row=2, column=2,pady = 5,padx = 5)
+
+Label(tab2, 
+      text="Number of Simulations :").grid(row=3, column= 1, sticky = E,pady = 5,padx = 5)
+sim = Entry(tab2)
+sim.grid(row=3, column=2,pady = 5,padx = 5)
+
+Label(tab2, 
+      text="Save As :").grid(row=4, column= 1, sticky = E,pady = 5,padx = 5)
+save = Entry(tab2)
+save.grid(row=4, column=2,pady = 5,padx = 5)
 
 
 mainloop()

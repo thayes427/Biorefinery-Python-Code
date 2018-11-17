@@ -168,14 +168,14 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
             case_values.append(variable_values[v])
             
         
-        ######### KEEP TRACK OF RUN TIME PER TRIAL ########
-        print(time() - old_time)
-        old_time = time()
-        
         ######## RUN ASPEN SIMULATION WITH RANDOMLY SAMPLED VARIABLES #######
         aspen.Reinit()
         aspen.Engine.Run2()
         stop = CheckConverge(aspen)
+        errors = FindErrors(aspen)
+        print(errors)
+        for e in errors:
+            print(e)
         
         if stop:
             writer = pd.ExcelWriter(output_file_name)
@@ -202,6 +202,10 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         excel.Run('SOLVE_DCFROR')
         
         dfstreams.loc[trial] = case_values + [x.Value for x in book.Sheets('Output').Evaluate("C3:C15")]
+        
+        ######### KEEP TRACK OF RUN TIME PER TRIAL ########
+        print(time() - old_time)
+        old_time = time()
     
     writer = pd.ExcelWriter(output_file_name + '.xlsx')
     dfstreams.to_excel(writer,'Sheet1')
@@ -219,13 +223,13 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         plt.savefig(output_file_name + '.png')
         plt.show()
     
-    
+    aspen.Close()
     print("-----------FINISHED-----------")
     return dfstreams
         
         
 
-def fill_streams_dataframe(aspenfilename, excelfilename):
+def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name, values, output_file_name):
     '''
     THIS FUNCTION ONLY NEEDS TO BE RUN ONCE
     
@@ -255,20 +259,21 @@ def fill_streams_dataframe(aspenfilename, excelfilename):
               'Steam Plant Value','Bag Cost']
     
     dfstreams = pd.DataFrame(columns=columns)
+    
+   
 
     #succ_fracs = np.linspace(0,.5,51)
     #succ_fracs = [25]
-    VAL = r"\Data\Blocks\A200\Data\Flowsheeting Options\Calculator\ACIDFLO\Input\FORTRAN_EXEC\#2"
-    values = ['F     ALOAD = 0.0045 / 0.93','F     ALOAD = 0.009 / 0.93','F     ALOAD = 0.018 / 0.93']
-    old_time = time()
+
     obj.FindNode(SUC_LOC).Value = 0.4
+    
     for case in values:
         
         print("variable value: " +str(case))
         print(time() - old_time)
         old_time = time()
         #succ_frac = case
-        obj.FindNode(VAL).Value = case
+        obj.FindNode(aspencall).Value = case
         
         #stream splitting
         #obj.FindNode(SUC_LOC).Value = succ_frac
@@ -276,6 +281,9 @@ def fill_streams_dataframe(aspenfilename, excelfilename):
         aspen.Reinit()
         aspen.Engine.Run2()
         stop = CheckConverge(aspen)
+        errors = FindErrors(aspen)
+        for e in errors:
+            print(e)
         
         if stop:
             writer = pd.ExcelWriter('3-7-2018_df_final.xlsx')
@@ -310,10 +318,38 @@ def fill_streams_dataframe(aspenfilename, excelfilename):
         
         dfstreams.loc[case] = [x.Value for x in book.Sheets('Output').Evaluate("C3:C15")]
     
-    writer = pd.ExcelWriter('Pretreatment Acid Loading.xlsx')
+    writer = pd.ExcelWriter(output_file_name + 'xlsx')
     dfstreams.to_excel(writer,'Sheet1')
     writer.save()
     return dfstreams
+
+def FindErrors(aspen):
+    obj = aspen.Tree
+    error = r'\Data\Results Summary\Run-Status\Output\PER_ERROR'
+    not_done = True
+    counter = 1
+    error_number = 0
+    error_statements = []
+    while not_done:
+        try:
+            check_for_errors = obj.FindNode(error + '\\' +  str(counter)).Value
+            if "error" in check_for_errors.lower():
+                error_statements.append(check_for_errors)
+                scan_errors = True
+                counter += 1
+                while scan_errors:
+                    if len(obj.FindNode(error + '\\' + str(counter)).Value.lower()) > 0:
+                        error_statements[error_number] = error_statements[error_number] + obj.FindNode(error + '\\' + str(counter)).Value
+                        counter += 1
+                    else:
+                        scan_errors = False
+                        error_number += 1
+                        counter += 1
+            else:
+                counter += 1
+        except:
+            not_done = False
+    return error_statements
 
 def CheckConverge(aspen):
     
