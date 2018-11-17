@@ -58,7 +58,16 @@ def run_multivar_sens():
     if graph_plot == 1:
         plot_on_GUI(d_f_output)
         
+<<<<<<< HEAD
 
+=======
+#def run_univ_sens():
+#    aspenfile= str(aspen2.get())
+#    solverfile= str(solver2.get())
+#    numtrial= int(sim2.get())
+#    outputfile= str(save2.get())
+#    sens_vars = str(excel2.get())
+>>>>>>> 57650c48e2ec94045a232a3f9562a42b06f6ec29
 
 ##############INITIALIZE ROOT AND TABS###############
 root = Tk()
