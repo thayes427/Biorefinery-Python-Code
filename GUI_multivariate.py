@@ -58,16 +58,68 @@ def run_multivar_sens():
     if graph_plot == 1:
         plot_on_GUI(d_f_output)
         
-<<<<<<< HEAD
+def run_univ_sens():
+    aspenfile= str(aspen.get())
+    solverfile= str(solver.get())
+    numtrial= int(sim2.get())
+    outputfile= str(save2.get())
+    sens_vars = str(excel.get())
+    values = []
+    vars= {}
+    gauss,uniform,poisson,pareto,list = msens.get_distributions(sens_vars)
+    for (aspen_variable, aspen_call,(is_fortran, fortran_call, change_index)), (mean, std, lb, ub) in gauss.items():
+        values = []
+        for n in numtrial:
+            if is_fortran:
+                values.append(msens.makefortran(is_fortran, fortran_call,change_index,msens.sample_gauss(mean,std,lb,ub)))
+            else:
+                values.append(msense.sample_gauss)
+            
+        vars[(aspen_variable, aspen_call,  (is_fortran, fortran_call, change_index))] = values
+    values = []
+    for (aspen_variable, aspen_call,(is_fortran, fortran_call, change_index)), (lb_uniform, ub_uniform, lb, ub) in uniform.items():
+        values = []
+        for n in numtrial:
+            if is_fortran:
+                values.append(msens.makefortran(is_fortran, fortran_call,change_index,msens.sample_uniform(lb_uniform, ub_uniform,lb,ub)))
+            else:
+                values.append(msense.sample_uniform(lb_uniform, ub_uniform, lb, ub))
+        vars[(aspen_variable, aspen_call,  (is_fortran, fortran_call, change_index))] = values
+    values = []
+    for (aspen_variable, aspen_call,(is_fortran, fortran_call, change_index)), (lambda_p, lb, ub) in poisson.items():
+        values = []
+        for n in numtrial:
+            if is_fortran:
+                values.append(msens.makefortran(is_fortran, fortran_call,change_index,msens.sample_poisson(lambda_p, lb, ub)))
+            else:
+                values.append(msense.sample_poisson(lambda_p, lb, ub))
+        vars[(aspen_variable, aspen_call,  (is_fortran, fortran_call, change_index))] = values
+    values = []   
+    for (aspen_variable, aspen_call,(is_fortran, fortran_call, change_index)), (shape, scale, lb, ub) in pareto.items():
+        values = []
+        for n in numtrial:
+            if is_fortran:
+                values.append(msens.makefortran(is_fortran, fortran_call,change_index,msens.sample_pareto(shape,scale, lb, ub)))
+            else:
+                values.append(msense.sample_pareto(shape,scale,lb,ub))
+        vars[(aspen_variable, aspen_call,  (is_fortran, fortran_call, change_index))] = values
+    values = []
+    for (aspen_variable, aspen_call,(is_fortran, fortran_call, change_index)), (dist, lb, ub) in list.items():
+        values = []
+        for n in numtrial:
+            if is_fortran:
+                values.append(msens.makefortran(is_fortran, fortran_call,change_index,msens.sample_list(dist,lb, ub)))
+            else:
+                values.append(msense.sample_list(dist,lb,ub))
+        vars[(aspen_variable, aspen_call,  (is_fortran, fortran_call, change_index))] = values   
 
-=======
-#def run_univ_sens():
-#    aspenfile= str(aspen2.get())
-#    solverfile= str(solver2.get())
-#    numtrial= int(sim2.get())
-#    outputfile= str(save2.get())
-#    sens_vars = str(excel2.get())
->>>>>>> 57650c48e2ec94045a232a3f9562a42b06f6ec29
+    for (aspen_variable, aspen_call,(is_fortran, fortran_call, change_index)), values in vars.items():
+        results = msens.univariate_analysis(aspenfilename, solverfile, aspen_call , aspen_variable, values, outputfile)
+        
+       
+               
+       
+
 
 ##############INITIALIZE ROOT AND TABS###############
 root = Tk()
@@ -75,38 +127,43 @@ root = Tk()
 note = ttk.Notebook(root)
 note.grid()
 
+tab0 = ttk.Frame(note)
+note.add(tab0, text = "File Upload")
+
 tab1 = ttk.Frame(note)
 note.add(tab1,text = "Sensitivity Analysis")
 
 tab2 = ttk.Frame(note)
 note.add(tab2,text = "Univariate Analysis")
 
-
-
-###############TAB 1 LABELS#################
-Button(tab1, 
+###############TAB 0 LABEL##################
+Button(tab0, 
         text='Upload Excel Data',
         command=open_excel_file).grid(row=0,
         column=1,
         sticky = E,  
         pady = 5,padx = 5)
 
-excel = Entry(tab1)
+excel = Entry(tab0)
 excel.grid(row=0, column=2)
 
-Button(tab1, 
+Button(tab0, 
       text="Upload Aspen Model",
       command=open_aspen_file).grid(row=1, column = 1,sticky = E,
       pady = 5,padx = 5)
-aspen = Entry(tab1)
+aspen = Entry(tab0)
 aspen.grid(row=1, column=2,pady = 5,padx = 5)
 
-Button(tab1, 
+Button(tab0, 
       text="Upload Excel Model",
       command=open_solver_file).grid(row=2,column = 1,sticky = E,
       pady = 5,padx = 5)
-solver = Entry(tab1)
+solver = Entry(tab0)
 solver.grid(row=2, column=2,pady = 5,padx = 5)
+
+Label(tab0,text = ".csv").grid(row = 2, column = 3, sticky = W)
+###############TAB 1 LABELS#################
+
 
 Label(tab1, 
       text="Number of Simulations :").grid(row=3, column= 1, sticky = E,pady = 5,padx = 5)
@@ -135,29 +192,6 @@ show_plot = IntVar()
 Checkbutton(tab1, text="Generate MFSP Distribution (Graph)", variable=show_plot).grid(row=5,columnspan = 2, column = 0, sticky=W)
 
 ##############Tab 2 LABELS##################
-Button(tab2, 
-        text='Upload Excel Data',
-        command=open_excel_file).grid(row=0,
-        column=1,
-        sticky = E,  
-        pady = 5,padx = 5)
-
-excel2 = Entry(tab2)
-excel2.grid(row=0, column=2)
-
-Button(tab2, 
-      text="Upload Aspen Model",
-      command=open_aspen_file).grid(row=1, column = 1,sticky = E,
-      pady = 5,padx = 5)
-aspen2 = Entry(tab2)
-aspen2.grid(row=1, column=2,pady = 5,padx = 5)
-
-Button(tab2, 
-      text="Upload Excel Model",
-      command=open_solver_file).grid(row=2,column = 1,sticky = E,
-      pady = 5,padx = 5)
-solver2 = Entry(tab2)
-solver2.grid(row=2, column=2,pady = 5,padx = 5)
 
 Label(tab2, 
       text="Number of Simulations :").grid(row=3, column= 1, sticky = E,pady = 5,padx = 5)
@@ -168,6 +202,14 @@ Label(tab2,
       text="Save As :").grid(row=4, column= 1, sticky = E,pady = 5,padx = 5)
 save2 = Entry(tab2)
 save2.grid(row=4, column=2,pady = 5,padx = 5)
+
+##############Tab 2 Buttons###############
+Button(tab2,
+       text='Univariate Sensitivity',
+       command=run_univ_sens).grid(row=7,
+       column=4, columnspan=3,
+       sticky=W, 
+       pady=4)
 
 
 mainloop()
