@@ -55,8 +55,8 @@ def run_multivar_sens():
     sens_vars = str(excel.get())
     graph_plot = int(show_plot.get())
     d_f_output = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars,numtrial,outputfile, graph_plot)
-    if graph_plot == 1:
-        plot_on_GUI(d_f_output)
+    #if graph_plot == 1:
+    #    plot_on_GUI(d_f_output)
 ##############INITIALIZE ROOT AND TABS###############
 root = Tk()
 

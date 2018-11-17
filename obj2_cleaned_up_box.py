@@ -17,6 +17,7 @@ from time import time
 from math import ceil
 import random
 import csv
+import GUI_multivariate as GUI
 
 aspenfilename =  'BC1508F-BC_FY17Target._Final_5ptoC5_updated022618.bkp'
 excelfilename = 'DESIGN_OBJ2_test_MFSP-updated.xlsm' 
@@ -202,7 +203,8 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         excel.Run('SOLVE_DCFROR')
         
         dfstreams.loc[trial] = case_values + [x.Value for x in book.Sheets('Output').Evaluate("C3:C15")]
-    
+        GUI.plot_on_GUI(dfstreams)
+        
     writer = pd.ExcelWriter(output_file_name + '.xlsx')
     dfstreams.to_excel(writer,'Sheet1')
     writer.save()
