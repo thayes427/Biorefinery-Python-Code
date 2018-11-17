@@ -108,6 +108,7 @@ def get_distributions(gui_excel_input):
                     uniform_vars[(aspen_variable, aspen_call, 
                                   (is_fortran, fortran_call, 
                                    change_index))] = (lb_uniform, ub_uniform, lb, ub)
+    
     return gauss_vars, uniform_vars, poisson_vars, pareto_vars, other_dist_vars
     
 def sample_gauss(mean, std, lb, ub):
@@ -310,8 +311,8 @@ def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name,
     '''
     
     aspen,obj,excel,book = open_COMS(aspenfilename,excelfilename)
-    
-    SUC_LOC = r"\Data\Blocks\A300\Data\Blocks\B1\Input\FRAC\TOC5"
+    v = aspen_var_name
+    old_time= time()
     
     columns= ['Biofuel Output', 'Succinic Acid Output', 'Fixed Op Costs',\
               'Var OpCosts', ' Capital Costs', 'MFSP','Fixed Capital Investment',\
@@ -324,7 +325,7 @@ def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name,
 
     #succ_fracs = np.linspace(0,.5,51)
     #succ_fracs = [25]
-
+    SUC_LOC = r"\Data\Blocks\A300\Data\Blocks\B1\Input\FRAC\TOC5"
     obj.FindNode(SUC_LOC).Value = 0.4
     
     for case in values:
@@ -378,7 +379,7 @@ def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name,
         
         dfstreams.loc[case] = [x.Value for x in book.Sheets('Output').Evaluate("C3:C15")]
     
-    writer = pd.ExcelWriter(output_file_name + 'xlsx')
+    writer = pd.ExcelWriter(output_file_name + '_' + v + '.xlsx')
     dfstreams.to_excel(writer,'Sheet1')
     writer.save()
     return dfstreams
