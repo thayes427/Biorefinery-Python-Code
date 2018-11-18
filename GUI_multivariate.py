@@ -65,6 +65,7 @@ def run_univ_sens():
     simulation_vars = msens.get_distributions(sens_vars, numtrial)
     for (aspen_variable, aspen_call, fortran_index), values in simulation_vars.items():
         msens.univariate_analysis(aspenfile, solverfile, aspen_call, aspen_variable, values, fortran_index, outputfile)
+    print('-----------FINISHED-------------')
         
        
                
