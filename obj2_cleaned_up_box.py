@@ -228,7 +228,7 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
             GUI.plot_on_GUI(dfstreams)
         
         ######### KEEP TRACK OF RUN TIME PER TRIAL ########
-        print(time() - old_time)
+        print('Elapsed Time: ', time() - old_time)
         old_time = time()
     
     writer = pd.ExcelWriter(output_file_name + '.xlsx')
@@ -288,8 +288,6 @@ def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name,
     
     for case in values:
         print("variable value: " +str(case))
-        print(time() - old_time)
-        old_time = time()
         obj.FindNode(aspencall).Value = case
         
         aspen.Reinit()
@@ -326,6 +324,8 @@ def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name,
             case = float(case[fortran_index[0]:fortran_index[1]])
         
         dfstreams.loc[case] = [x.Value for x in book.Sheets('Output').Evaluate("C3:C15")]
+        print('Elapsed Time: ', time() - old_time)
+        old_time = time()
     
     writer = pd.ExcelWriter(output_file_name + '_' + v + '.xlsx')
     dfstreams.to_excel(writer,'Sheet1')
@@ -381,8 +381,8 @@ def CheckConverge(aspen):
         obj.FindNode(stm_stage).Value = "ON-STAGE"
         obj.FindNode(fracfd).Value = ceil(nstage.Value/2)
         
-        print(nstage.Value)
-        print(obj.FindNode(fracfd).Value)
+        print('Number of Stages: ', nstage.Value)
+        print('Feed Stage: ', obj.FindNode(fracfd).Value)
         
         if nstage.Value < 2:
             return True
@@ -390,8 +390,8 @@ def CheckConverge(aspen):
         aspen.Reinit()
         aspen.Engine.Run2()
         
-    print("Converged: " + str(nstage.Value))
-    print(obj.FindNode(fracfd).Value)
+    print("Converged with " + str(nstage.Value) + ' stages')
+    print('Feed Stage: ', obj.FindNode(fracfd).Value)
     return False
 
 def get_price_preds(file,data_col):
