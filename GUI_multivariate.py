@@ -62,10 +62,57 @@ def run_univ_sens():
     numtrial= int(sim2.get())
     outputfile= str(save2.get())
     sens_vars = str(excel.get())
-    simulation_vars = msens.get_distributions(sens_vars, numtrial)
-    for (aspen_variable, aspen_call, fortran_index), values in simulation_vars.items():
-        msens.univariate_analysis(aspenfile, solverfile, aspen_call, aspen_variable, values, fortran_index, outputfile)
-    print('-----------FINISHED-------------')
+    values = []
+    vars= {}
+    gauss,uniform,poisson,pareto,list = msens.get_distributions(sens_vars)
+    for (aspen_variable, aspen_call,(is_fortran, fortran_call, change_index)), (mean, std, lb, ub) in gauss.items():
+        values = []
+        for n in range(numtrial):
+            if is_fortran:
+                values.append(msens.makefortran(is_fortran, fortran_call,change_index,msens.sample_gauss(mean,std,lb,ub)))
+            else:
+                values.append(msens.sample_gauss(mean,std,lb,ub))
+            
+        vars[(aspen_variable, aspen_call,  (is_fortran, fortran_call, change_index))] = values
+    values = []
+    for (aspen_variable, aspen_call,(is_fortran, fortran_call, change_index)), (lb_uniform, ub_uniform, lb, ub) in uniform.items():
+        values = []
+        for n in range(numtrial):
+            if is_fortran:
+                values.append(msens.makefortran(is_fortran, fortran_call,change_index,msens.sample_uniform(lb_uniform, ub_uniform,lb,ub)))
+            else:
+                values.append(msens.sample_uniform(lb_uniform, ub_uniform, lb, ub))
+        vars[(aspen_variable, aspen_call,  (is_fortran, fortran_call, change_index))] = values
+    values = []
+    for (aspen_variable, aspen_call,(is_fortran, fortran_call, change_index)), (lambda_p, lb, ub) in poisson.items():
+        values = []
+        for n in range(numtrial):
+            if is_fortran:
+                values.append(msens.makefortran(is_fortran, fortran_call,change_index,msens.sample_poisson(lambda_p, lb, ub)))
+            else:
+                values.append(msens.sample_poisson(lambda_p, lb, ub))
+        vars[(aspen_variable, aspen_call,  (is_fortran, fortran_call, change_index))] = values
+    values = []   
+    for (aspen_variable, aspen_call,(is_fortran, fortran_call, change_index)), (shape, scale, lb, ub) in pareto.items():
+        values = []
+        for n in range(numtrial):
+            if is_fortran:
+                values.append(msens.makefortran(is_fortran, fortran_call,change_index,msens.sample_pareto(shape,scale, lb, ub)))
+            else:
+                values.append(msens.sample_pareto(shape,scale,lb,ub))
+        vars[(aspen_variable, aspen_call,  (is_fortran, fortran_call, change_index))] = values
+    values = []
+    for (aspen_variable, aspen_call,(is_fortran, fortran_call, change_index)), (dist, lb, ub) in list.items():
+        values = []
+        for n in range(numtrial):
+            if is_fortran:
+                values.append(msens.makefortran(is_fortran, fortran_call,change_index,msens.sample_list(dist,lb, ub)))
+            else:
+                values.append(msens.sample_list(dist,lb,ub))
+        vars[(aspen_variable, aspen_call,  (is_fortran, fortran_call, change_index))] = values   
+
+    for (aspen_variable, aspen_call,(is_fortran, fortran_call, change_index)), values in vars.items():
+        results = msens.univariate_analysis(aspenfile, solverfile, aspen_call , aspen_variable, values, outputfile)
         
        
                
@@ -80,6 +127,9 @@ note.grid()
 
 tab0 = ttk.Frame(note)
 note.add(tab0, text = "File Upload")
+
+tab3 = ttk.Frame(note)
+note.add(tab3, text = 'Single Point')
 
 tab1 = ttk.Frame(note)
 note.add(tab1,text = "Sensitivity Analysis")
