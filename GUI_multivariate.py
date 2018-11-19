@@ -40,7 +40,8 @@ def plot_on_GUI(d_f_output):
     total_MFSP = d_f_output["MFSP"]
     num_bins = 100
     n, bins, patches = pplt.hist(total_MFSP, num_bins, facecolor='blue', alpha=0.5)
-    a.set_title ("MFSP Histogram", fontsize=16)
+    #pplt.boxplot(total_MFSP)
+    a.set_title ("MFSP Distribution", fontsize=16)
     a.set_ylabel("Count", fontsize=14)
     a.set_xlabel("MFSP ($)", fontsize=14)
     canvas = FigureCanvasTkAgg(fig)
