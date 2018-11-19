@@ -57,12 +57,23 @@ def run_multivar_sens():
     graph_plot = int(show_plot.get())
     d_f_output = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars,numtrial,outputfile, graph_plot)
         
-#def run_univ_sens():
-#    aspenfile= str(aspen2.get())
-#    solverfile= str(solver2.get())
-#    numtrial= int(sim2.get())
-#    outputfile= str(save2.get())
-#    sens_vars = str(excel2.get())
+def run_univ_sens():
+    aspenfile= str(aspen.get())
+    solverfile= str(solver.get())
+    numtrial= int(sim2.get())
+    outputfile= str(save2.get())
+    sens_vars = str(excel.get())
+    simulation_vars = msens.get_distributions(sens_vars, numtrial)
+    for (aspen_variable, aspen_call, fortran_index), values in simulation_vars.items():
+        msens.univariate_analysis(aspenfile, solverfile, aspen_call, aspen_variable, values, fortran_index, outputfile)
+        print('Finished Analysis for Variable: ', aspen_variable)
+    print('-----------FINISHED-------------')
+
+        
+       
+               
+       
+
 
 ##############INITIALIZE ROOT AND TABS###############
 root = Tk()
@@ -70,38 +81,46 @@ root = Tk()
 note = ttk.Notebook(root)
 note.grid()
 
+tab0 = ttk.Frame(note)
+note.add(tab0, text = "File Upload")
+
+tab3 = ttk.Frame(note)
+note.add(tab3, text = 'Single Point')
+
 tab1 = ttk.Frame(note)
-note.add(tab1,text = "Sensitivity Analysis")
+note.add(tab1,text = "Multivariate Analysis")
 
 tab2 = ttk.Frame(note)
 note.add(tab2,text = "Univariate Analysis")
 
-
-
-###############TAB 1 LABELS#################
-Button(tab1, 
+###############TAB 0 LABEL##################
+Button(tab0, 
         text='Upload Excel Data',
         command=open_excel_file).grid(row=0,
         column=1,
         sticky = E,  
         pady = 5,padx = 5)
 
-excel = Entry(tab1)
+excel = Entry(tab0)
 excel.grid(row=0, column=2)
 
-Button(tab1, 
+Button(tab0, 
       text="Upload Aspen Model",
       command=open_aspen_file).grid(row=1, column = 1,sticky = E,
       pady = 5,padx = 5)
-aspen = Entry(tab1)
+aspen = Entry(tab0)
 aspen.grid(row=1, column=2,pady = 5,padx = 5)
 
-Button(tab1, 
+Button(tab0, 
       text="Upload Excel Model",
       command=open_solver_file).grid(row=2,column = 1,sticky = E,
       pady = 5,padx = 5)
-solver = Entry(tab1)
+solver = Entry(tab0)
 solver.grid(row=2, column=2,pady = 5,padx = 5)
+
+Label(tab1,text = ".csv").grid(row = 4, column = 3, sticky = W)
+###############TAB 1 LABELS#################
+
 
 Label(tab1, 
       text="Number of Simulations :").grid(row=3, column= 1, sticky = E,pady = 5,padx = 5)
@@ -130,29 +149,6 @@ show_plot = IntVar()
 Checkbutton(tab1, text="Generate MFSP Distribution (Graph)", variable=show_plot).grid(row=5,columnspan = 2, column = 0, sticky=W)
 
 ##############Tab 2 LABELS##################
-Button(tab2, 
-        text='Upload Excel Data',
-        command=open_excel_file).grid(row=0,
-        column=1,
-        sticky = E,  
-        pady = 5,padx = 5)
-
-excel2 = Entry(tab2)
-excel2.grid(row=0, column=2)
-
-Button(tab2, 
-      text="Upload Aspen Model",
-      command=open_aspen_file).grid(row=1, column = 1,sticky = E,
-      pady = 5,padx = 5)
-aspen2 = Entry(tab2)
-aspen2.grid(row=1, column=2,pady = 5,padx = 5)
-
-Button(tab2, 
-      text="Upload Excel Model",
-      command=open_solver_file).grid(row=2,column = 1,sticky = E,
-      pady = 5,padx = 5)
-solver2 = Entry(tab2)
-solver2.grid(row=2, column=2,pady = 5,padx = 5)
 
 Label(tab2, 
       text="Number of Simulations :").grid(row=3, column= 1, sticky = E,pady = 5,padx = 5)
@@ -163,6 +159,19 @@ Label(tab2,
       text="Save As :").grid(row=4, column= 1, sticky = E,pady = 5,padx = 5)
 save2 = Entry(tab2)
 save2.grid(row=4, column=2,pady = 5,padx = 5)
+
+Label(tab2,text = ".csv").grid(row = 4, column = 3, sticky = W)
+
+##############Tab 2 Buttons###############
+Button(tab2,
+       text='Univariate Sensitivity Analysis',
+       command=run_univ_sens).grid(row=7,
+       column=4, columnspan=3,
+       sticky=W, 
+       pady=4)
+show_plot = IntVar()
+Checkbutton(tab2, text="Generate MFSP Distribution (Graph)", variable=show_plot).grid(row=5,columnspan = 2, column = 0, sticky=E)
+
 
 
 mainloop()
