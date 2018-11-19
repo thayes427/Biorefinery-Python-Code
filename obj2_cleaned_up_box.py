@@ -381,7 +381,7 @@ def CheckConverge(aspen):
         obj.FindNode(stm_stage).Value = "ON-STAGE"
         obj.FindNode(fracfd).Value = ceil(nstage.Value/2)
         
-        print('Failed to Converge, Adjusting nstages and Feed Stage #')
+        print('Failed to Converge, Adjusting stages and Feed Stage #')
         print('Number of Stages: ', nstage.Value)
         print('Feed Stage: ', obj.FindNode(fracfd).Value)
         

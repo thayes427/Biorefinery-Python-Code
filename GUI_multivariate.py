@@ -65,6 +65,7 @@ def run_univ_sens():
     simulation_vars = msens.get_distributions(sens_vars, numtrial)
     for (aspen_variable, aspen_call, fortran_index), values in simulation_vars.items():
         msens.univariate_analysis(aspenfile, solverfile, aspen_call, aspen_variable, values, fortran_index, outputfile)
+        print('Finished Analysis for Variable: ', aspen_variable)
     print('-----------FINISHED-------------')
         
        
@@ -82,7 +83,7 @@ tab0 = ttk.Frame(note)
 note.add(tab0, text = "File Upload")
 
 tab1 = ttk.Frame(note)
-note.add(tab1,text = "Sensitivity Analysis")
+note.add(tab1,text = "Multivariate Analysis")
 
 tab2 = ttk.Frame(note)
 note.add(tab2,text = "Univariate Analysis")
@@ -112,7 +113,7 @@ Button(tab0,
 solver = Entry(tab0)
 solver.grid(row=2, column=2,pady = 5,padx = 5)
 
-Label(tab0,text = ".csv").grid(row = 2, column = 3, sticky = W)
+Label(tab1,text = ".csv").grid(row = 4, column = 3, sticky = W)
 ###############TAB 1 LABELS#################
 
 
@@ -154,13 +155,18 @@ Label(tab2,
 save2 = Entry(tab2)
 save2.grid(row=4, column=2,pady = 5,padx = 5)
 
+Label(tab2,text = ".csv").grid(row = 4, column = 3, sticky = W)
+
 ##############Tab 2 Buttons###############
 Button(tab2,
-       text='Univariate Sensitivity',
+       text='Univariate Sensitivity Analysis',
        command=run_univ_sens).grid(row=7,
        column=4, columnspan=3,
        sticky=W, 
        pady=4)
+show_plot = IntVar()
+Checkbutton(tab2, text="Generate MFSP Distribution (Graph)", variable=show_plot).grid(row=5,columnspan = 2, column = 0, sticky=E)
+
 
 
 mainloop()
