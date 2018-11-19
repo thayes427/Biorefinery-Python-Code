@@ -67,6 +67,7 @@ def run_univ_sens():
         msens.univariate_analysis(aspenfile, solverfile, aspen_call, aspen_variable, values, fortran_index, outputfile)
         print('Finished Analysis for Variable: ', aspen_variable)
     print('-----------FINISHED-------------')
+
         
        
                
@@ -81,6 +82,9 @@ note.grid()
 
 tab0 = ttk.Frame(note)
 note.add(tab0, text = "File Upload")
+
+tab3 = ttk.Frame(note)
+note.add(tab3, text = 'Single Point')
 
 tab1 = ttk.Frame(note)
 note.add(tab1,text = "Multivariate Analysis")
