@@ -117,13 +117,96 @@ def run_univ_sens():
         print('Finished Analysis for Variable: ', aspen_variable)
     print('-----------FINISHED-------------')
 
+
+def make_new_tab():
+    print('hello')
+    if sens_unit.get() == 'Choose Analysis Type':
+        print("Select an Analysis")
+    elif  sens_unit.get() == 'Univariate Sensitivity':
+        print('helllo')
+        tab2 = ttk.Frame(note)
+        note.add(tab2,text = "Univariate Analysis")
+        ##############Tab 2 LABELS##################
         
-       
+        Label(tab2, 
+              text="Number of Simulations :").grid(row=3, column= 1, sticky = E,pady = 5,padx = 5)
+        sim2 = Entry(tab2)
+        sim2.grid(row=3, column=2,pady = 5,padx = 5)
+        
+        Label(tab2, 
+              text="Save As :").grid(row=4, column= 1, sticky = E,pady = 5,padx = 5)
+        save2 = Entry(tab2)
+        save2.grid(row=4, column=2,pady = 5,padx = 5)
+        
+        Label(tab2,text = ".csv").grid(row = 4, column = 3, sticky = W)
+        
+        ##############Tab 2 Buttons###############
+        Button(tab2,
+               text='Univariate Sensitivity Analysis',
+               command=run_univ_sens).grid(row=8,
+               column=0, columnspan=3,
+               sticky=W, 
+               pady=4)
+        Button(tab2,
+               text='Display Variable Distrbutions',
+               command=run_univ_sens).grid(row=7,
+               column=2, columnspan=3,
+               sticky=W, 
+               pady=4)
+        
+        show_plot = IntVar()
+        Checkbutton(tab2, text="Generate MFSP Distribution (Graph)", variable=show_plot).grid(row=6,columnspan = 2, column = 0, sticky=W)
+        
+        boolvar = IntVar()
+        boolvar.set(False)
+        cb = Checkbutton(tab2, text = "Next Variable", variable = boolvar).grid(row=8,columnspan = 1, column = 2, sticky=W)
+        
+        otherbool = IntVar()
+        otherbool.set(False)
+        
+        cb = Checkbutton(tab2, text = "Abort", variable = otherbool).grid(row= 8,columnspan = 1, column = 3, sticky=W)
+        
+    elif  sens_unit.get() == 'Single Point Sensitivity':
+        tab3 = ttk.Frame(note)
+        note.add(tab3, text = 'Single Point')
+        
+    elif  sens_unit.get() == 'Multivariate Sensitivity':
+        tab1 = ttk.Frame(note)
+        note.add(tab1,text = "Multivariate Analysis")
+        ###############TAB 1 LABELS#################
+
+
+        Label(tab1, 
+              text="Number of Simulations :").grid(row=3, column= 1, sticky = E,pady = 5,padx = 5)
+        sim = Entry(tab1)
+        sim.grid(row=3, column=2,pady = 5,padx = 5)
+        
+        Label(tab1, 
+              text="Save As :").grid(row=4, column= 1, sticky = E,pady = 5,padx = 5)
+        save = Entry(tab1)
+        save.grid(row=4, column=2,pady = 5,padx = 5)
+        
+        Label(tab1,text = ".csv").grid(row = 4, column = 3, sticky = W)
+        
+        otherbool = IntVar()
+        otherbool.set(False)
+        
+        cb = Checkbutton(tab1, text = "Abort", variable = otherbool).grid(row=6,columnspan = 1, column = 3, sticky=W)
+        
+        
+        ###############TAB 1 BUTTONS#################
                
-       
-
-
-##############INITIALIZE ROOT AND TABS###############
+        Button(tab1,
+               text='Run Monte Carlo Simulation',
+               command=run_multivar_sens).grid(row=6,
+               column=1, columnspan=3,
+               sticky=W, 
+               pady=4)
+        
+        show_plot = IntVar()
+        Checkbutton(tab1, text="Generate MFSP Distribution (Graph)", variable=show_plot).grid(row=5,columnspan = 2, column = 0, sticky=W)
+        
+##############INITIALIZE MAIN ROOT AND TAB###############
 root = Tk()
 
 note = ttk.Notebook(root)
@@ -132,16 +215,7 @@ note.grid()
 tab0 = ttk.Frame(note)
 note.add(tab0, text = "File Upload")
 
-tab3 = ttk.Frame(note)
-note.add(tab3, text = 'Single Point')
-
-tab1 = ttk.Frame(note)
-note.add(tab1,text = "Multivariate Analysis")
-
-tab2 = ttk.Frame(note)
-note.add(tab2,text = "Univariate Analysis")
-
-###############TAB 0 LABEL##################
+###############TAB 0 Buttons##################
 Button(tab0, 
         text='Upload Excel Data',
         command=open_excel_file).grid(row=0,
@@ -166,59 +240,22 @@ Button(tab0,
 solver = Entry(tab0)
 solver.grid(row=2, column=2,pady = 5,padx = 5)
 
-Label(tab1,text = ".csv").grid(row = 4, column = 3, sticky = W)
-###############TAB 1 LABELS#################
+Button(tab0, 
+      text="Load Data",
+      command=make_new_tab).grid(row=5,column = 4,sticky = E,
+      pady = 5,padx = 5)
+solver = Entry(tab0)
+solver.grid(row=2, column=2,pady = 5,padx = 5)
+
+master = tab0
+sens_unit = StringVar(master)
+sens_unit.set("Choose Analysis Type") # default value
+
+analysis_type = OptionMenu(tab0, sens_unit, "Univariate Sensitivity", "Single Point Sensitivity", "Multivariate Sensitivity").grid(row = 5,sticky = E,column = 2,padx =5, pady = 5)
+
+        
 
 
-Label(tab1, 
-      text="Number of Simulations :").grid(row=3, column= 1, sticky = E,pady = 5,padx = 5)
-sim = Entry(tab1)
-sim.grid(row=3, column=2,pady = 5,padx = 5)
-
-Label(tab1, 
-      text="Save As :").grid(row=4, column= 1, sticky = E,pady = 5,padx = 5)
-save = Entry(tab1)
-save.grid(row=4, column=2,pady = 5,padx = 5)
-
-
-
-
-
-###############TAB 1 BUTTONS#################
-       
-Button(tab1,
-       text='Run Monte Carlo Simulation',
-       command=run_multivar_sens).grid(row=7,
-       column=4, columnspan=3,
-       sticky=W, 
-       pady=4)
-
-show_plot = IntVar()
-Checkbutton(tab1, text="Generate MFSP Distribution (Graph)", variable=show_plot).grid(row=5,columnspan = 2, column = 0, sticky=W)
-
-##############Tab 2 LABELS##################
-
-Label(tab2, 
-      text="Number of Simulations :").grid(row=3, column= 1, sticky = E,pady = 5,padx = 5)
-sim2 = Entry(tab2)
-sim2.grid(row=3, column=2,pady = 5,padx = 5)
-
-Label(tab2, 
-      text="Save As :").grid(row=4, column= 1, sticky = E,pady = 5,padx = 5)
-save2 = Entry(tab2)
-save2.grid(row=4, column=2,pady = 5,padx = 5)
-
-Label(tab2,text = ".csv").grid(row = 4, column = 3, sticky = W)
-
-##############Tab 2 Buttons###############
-Button(tab2,
-       text='Univariate Sensitivity Analysis',
-       command=run_univ_sens).grid(row=7,
-       column=4, columnspan=3,
-       sticky=W, 
-       pady=4)
-show_plot = IntVar()
-Checkbutton(tab2, text="Generate MFSP Distribution (Graph)", variable=show_plot).grid(row=5,columnspan = 2, column = 0, sticky=E)
 
 
 
