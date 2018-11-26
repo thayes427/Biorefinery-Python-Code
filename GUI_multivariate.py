@@ -16,7 +16,6 @@ def quit():
     global root
     root.destroy()
 
-
 def open_excel_file():
     root.filename = askopenfilename(initialdir = "/",
                                                 title = "Select file")
@@ -71,11 +70,11 @@ def run_univ_sens():
 
 
 def make_new_tab():
-    print('hello')
+    
+    note.forget(tab5)
     if sens_unit.get() == 'Choose Analysis Type':
-        print("Select an Analysis")
+        print("ERROR: Select an Analysis")
     elif  sens_unit.get() == 'Univariate Sensitivity':
-        print('helllo')
         tab2 = ttk.Frame(note)
         note.add(tab2,text = "Univariate Analysis")
         ##############Tab 2 LABELS##################
@@ -166,6 +165,9 @@ note.grid()
 
 tab0 = ttk.Frame(note)
 note.add(tab0, text = "File Upload")
+tab5 = ttk.Frame(note)
+note.add(tab5, text = "add delete")
+
 
 ###############TAB 0 Buttons##################
 Button(tab0, 
