@@ -173,10 +173,10 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
     dfstreams = pd.DataFrame(columns=columns)
     obj.FindNode(SUC_LOC).Value = 0.4
     
-    ###### RUN SIMULATION   #########
+    ########## RUN SIMULATION #########
     old_time = time()
+    start_time = time()
     for trial in range(num_trials):
-        
         ####### UPDATE ASPEN VARIABLES  ########
         for (aspen_variable, aspen_call, fortran_index), dist in simulation_vars.items():
             obj.FindNode(aspen_call).Value = dist[trial]
@@ -230,6 +230,14 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         ######### KEEP TRACK OF RUN TIME PER TRIAL ########
         print('Elapsed Time: ', time() - old_time)
         old_time = time()
+        elapsed_time = start_time - time()
+        time_remaining = (num_trials - trial - 1)*(elapsed_time / (trial + 1))
+        GUI.display_time_remaining(time_remaining)
+        
+        ############### CHECK TO SEE IF USER WANTS TO ABORT ##########
+        abort = GUI.check_abort()
+        if abort:
+            break
     
     writer = pd.ExcelWriter(output_file_name + '.xlsx')
     dfstreams.to_excel(writer,'Sheet1')
@@ -274,7 +282,8 @@ def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name,
     
     aspen,obj,excel,book = open_COMS(aspenfilename,excelfilename)
     v = aspen_var_name
-    old_time= time()
+    
+    
     
     columns= ['Biofuel Output', 'Succinic Acid Output', 'Fixed Op Costs',\
               'Var OpCosts', ' Capital Costs', 'MFSP','Fixed Capital Investment',\
@@ -286,6 +295,9 @@ def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name,
     SUC_LOC = r"\Data\Blocks\A300\Data\Blocks\B1\Input\FRAC\TOC5"
     obj.FindNode(SUC_LOC).Value = 0.4
     
+    old_time = time()
+    start_time = time()
+    trial_counter = 1
     for case in values:
         print("variable value: " +str(case))
         obj.FindNode(aspencall).Value = case
@@ -326,6 +338,15 @@ def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name,
         dfstreams.loc[case] = [x.Value for x in book.Sheets('Output').Evaluate("C3:C15")]
         print('Elapsed Time: ', time() - old_time)
         old_time = time()
+        elapsed_time = start_time - time()
+        time_remaining = (len(values) - trial_counter)*(elapsed_time / (trial_counter))
+        GUI.display_time_remaining(time_remaining)
+        trial_counter += 1
+        
+        ############### CHECK TO SEE IF USER WANTS TO ABORT ##########
+        abort = GUI.check_next_analysis()
+        if abort:
+            break
     
     writer = pd.ExcelWriter(output_file_name + '_' + v + '.xlsx')
     dfstreams.to_excel(writer,'Sheet1')
