@@ -7,6 +7,7 @@ from tkinter.filedialog import askopenfilename
 import matplotlib
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 from matplotlib import pyplot as pplt
+import csv
 
 #reload(mod)
 
@@ -46,6 +47,53 @@ def plot_on_GUI(d_f_output):
     canvas = FigureCanvasTkAgg(fig)
     canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 2, rowspan = 2, sticky= W+E+N+S, pady = 5,padx = 5,)
     root.update_idletasks()
+    
+def load_variables_into_GUI():
+    sens_vars = str(excel.get())
+    single_pt_vars = []
+    univariate_vars = []
+    multivariate_vars = []
+    with open(sens_vars) as f:
+        reader = csv.DictReader(f)# Skip the header row
+        for row in reader:
+            if row['Toggle'].lower().strip() == 'true':                    
+                    single_pt_vars.append((row["Variable Name"], float(row["Range of Values"].strip())))
+                    multivariate_vars.append(row["Variable Name"])
+                    univariate_vars.append((row["Variable Name"], row["Format of Range"], row["Range of Values"]))
+    #now populate the gui with the appropriate tab and variables stored above
+    type_of_analysis = analysis_type.get()
+    if type_of_analysis == 'Single Point Analysis':
+        # print to a new single point tab
+        # We want to print the following:
+        # Variable Name  |  Variable Value (in an editable form)
+    if type_of_analysis == 'Univariate Analysis':
+        # print to a new univariate analysis tab
+        # we want to print the following:
+        # Variable Name |  Distribution Type  |  List of values OR NumTrials entry
+    if type_of_analysis == 'Multivariate Analysis':
+        # print to a new multivariate tab
+        # what we want to print is just the variable name and then an 
+        # auto-updating graph of its distribution
+    
+def display_time_remaining(time_remaining):
+    '''
+    THIS NEEDS TO PRINT OUT ESTIMATED TIME REMAINING
+    '''
+    return None
+
+def check_abort():
+    return abort.get()
+
+def check_next_analysis():
+    '''
+    will be for the univariate analysis so that the user can move onto the next analysis
+    '''
+    # NOTE, YOU WILL ALSO HAVE TO CHANGE THIS BUTTON BACK TO UNPRESSED ONCE YOU MOVE
+    # ONTO THE NEXT VARIABLE
+    move_to_next = next_analysis.get()
+    if move_to_next:
+        # NEED TO UPDATE THE BUTTON TO TURN IT BACK OFF
+    return move_to_next
     
 def run_multivar_sens():
     aspenfile= str(aspen.get())
