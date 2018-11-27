@@ -225,7 +225,7 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         
         dfstreams.loc[trial] = case_values + [x.Value for x in book.Sheets('Output').Evaluate("C3:C15")]
         if graph_plot == 1:
-            GUI.plot_on_GUI(dfstreams)
+            GUI.plot_on_GUI(dfstreams, vars_to_change)
         
         ######### KEEP TRACK OF RUN TIME PER TRIAL ########
         print('Elapsed Time: ', time() - old_time)
@@ -260,7 +260,7 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         
         
 
-def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name, values, fortran_index, output_file_name):
+def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name, values, fortran_index, output_file_name, graph_plot):
     '''
     THIS FUNCTION ONLY NEEDS TO BE RUN ONCE
     
@@ -343,6 +343,9 @@ def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name,
         GUI.display_time_remaining(time_remaining)
         trial_counter += 1
         
+        if graph_plot == 1:
+            GUI.plot_on_GUI(dfstreams)
+        
         ############### CHECK TO SEE IF USER WANTS TO ABORT ##########
         abort = GUI.check_next_analysis()
         if abort:
@@ -351,6 +354,7 @@ def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name,
     writer = pd.ExcelWriter(output_file_name + '_' + v + '.xlsx')
     dfstreams.to_excel(writer,'Sheet1')
     writer.save()
+    
     return dfstreams
 
 def FindErrors(aspen):

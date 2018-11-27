@@ -35,19 +35,34 @@ def open_solver_file():
                                                 title = "Select file")
     solver.insert(0,root.filename)
     
-def plot_on_GUI(d_f_output):
+def plot_on_GUI(d_f_output, vars_to_change = []):
     
+    
+    columns = 3
+    num_rows= (num_vars % columns) + 1
+    counter = 1
     fig = pplt.figure()
-    a = fig.add_subplot(111)
+    a = fig.add_subplot(num_rows,columns,counter)
+    counter += 1
     total_MFSP = d_f_output["MFSP"]
     num_bins = 100
     n, bins, patches = pplt.hist(total_MFSP, num_bins, facecolor='blue', alpha=0.5)
-    #pplt.boxplot(total_MFSP)
     a.set_title ("MFSP Distribution", fontsize=16)
     a.set_ylabel("Count", fontsize=14)
     a.set_xlabel("MFSP ($)", fontsize=14)
+    if len(vars_to_change) != 0:
+        for var in vars_to_change:
+            a = fig.add_subplot(num_rows,columns,counter)
+            counter += 1
+            total_data = d_f_output[var]
+            num_bins = 100
+            n, bins, patches = pplt.hist(total, num_bins, facecolor='blue', alpha=0.5)
+            a.set_title (var + " Distribution", fontsize=16)
+            a.set_ylabel("Count", fontsize=14)
+            a.set_xlabel(var, fontsize=14)
     canvas = FigureCanvasTkAgg(fig)
-    canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 2, rowspan = 2, sticky= W+E+N+S, pady = 5,padx = 5,)
+    canvas.get_tk_widget().grid(row=8, column = 0,columnspan = columns, rowspan = num_rows, sticky= W+E+N+S, pady = 5,padx = 5,)
+        
     root.update_idletasks()
     
 def load_variables_into_GUI(tab_num):
@@ -131,9 +146,11 @@ def run_univ_sens():
     numtrial= int(sim2.get())
     outputfile= str(save2.get())
     sens_vars = str(excel.get())
+    graph_plot = int(show_plot.get())
     simulation_vars = msens.get_distributions(sens_vars, numtrial)
     for (aspen_variable, aspen_call, fortran_index), values in simulation_vars.items():
-        msens.univariate_analysis(aspenfile, solverfile, aspen_call, aspen_variable, values, fortran_index, outputfile)
+        msens.univariate_analysis(aspenfile, solverfile, aspen_call, aspen_variable, values, fortran_index, outputfile, graph_plot)
+        
         print('Finished Analysis for Variable: ', aspen_variable)
     print('-----------FINISHED-------------')
 
