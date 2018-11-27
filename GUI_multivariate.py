@@ -22,18 +22,18 @@ def quit():
 def open_excel_file():
     root.filename = askopenfilename(initialdir = "/",
                                                 title = "Select file")
-                                    
-    excel.insert(0,root.filename)
+                                        
+    excel.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery Code/Variable_Call_Excel.csv')
     
 def open_aspen_file():
     root.filename = askopenfilename(initialdir = "/",
                                                 title = "Select file")
-    aspen.insert(0,root.filename)
+    aspen.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery Code/BC1508F-BC_FY17Target._Final_5ptoC5_updated022618.bkp')
 
 def open_solver_file():
     root.filename = askopenfilename(initialdir = "/",
                                                 title = "Select file")
-    solver.insert(0,root.filename)
+    solver.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery Code/DESIGN_OBJ2_test_MFSP-updated.xlsm')
     
 def plot_on_GUI(d_f_output, vars_to_change = []):
     
@@ -70,16 +70,20 @@ def load_variables_into_GUI(tab_num):
     single_pt_vars = []
     univariate_vars = []
     multivariate_vars = []
+    type_of_analysis = analysis_type.get()
     global single_point_var_val
     with open(sens_vars) as f:
         reader = csv.DictReader(f)# Skip the header row
         for row in reader:
-            if row['Toggle'].lower().strip() == 'true':                    
+            if row['Toggle'].lower().strip() == 'true':          
+                if type_of_analysis =='Single Point Analysis':
+                    
                     single_pt_vars.append((row["Variable Name"], float(row["Range of Values"].strip())))
+                elif type_of_analysis == 'Multivariate Analysis':
                     multivariate_vars.append(row["Variable Name"])
+                else:
                     univariate_vars.append((row["Variable Name"], row["Format of Range"], row["Range of Values"]))
     #now populate the gui with the appropriate tab and variables stored above
-    type_of_analysis = analysis_type.get()
     if type_of_analysis == 'Single Point Analysis':
         print('Hello')
         row_num = 2
@@ -154,8 +158,17 @@ def run_univ_sens():
         print('Finished Analysis for Variable: ', aspen_variable)
     print('-----------FINISHED-------------')
 
+sim = None
+sim2 = None
+save2 = None
+save= None
+otherbool = None
+show_plot = None
+boolvar = None
+cb = None
 
 def make_new_tab():
+    global sim, sim2, save2, save, otherbool, show_plot, boolvar, cb
     
     #note.forget(tab5)
     if analysis_type.get() == 'Choose Analysis Type':
@@ -222,6 +235,7 @@ def make_new_tab():
 
         Label(tab1, 
               text="Number of Simulations :").grid(row=3, column= 1, sticky = E,pady = 5,padx = 5)
+        global sim
         sim = Entry(tab1)
         sim.grid(row=3, column=2,pady = 5,padx = 5)
         
