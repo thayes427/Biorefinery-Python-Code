@@ -140,7 +140,7 @@ def run_univ_sens():
 
 def make_new_tab():
     
-    note.forget(tab5)
+    #note.forget(tab5)
     if analysis_type.get() == 'Choose Analysis Type':
         print("ERROR: Select an Analysis")
     elif  analysis_type.get() == 'Univariate Sensitivity':
@@ -185,7 +185,7 @@ def make_new_tab():
         otherbool.set(False)
         
         cb = Checkbutton(tab2, text = "Abort", variable = otherbool).grid(row= 8,columnspan = 1, column = 3, sticky=W)
-        
+        tab_made = tab2
     elif  analysis_type.get() == 'Single Point Analysis':
         tab3 = ttk.Frame(note)
         note.add(tab3, text = 'Single Point')
@@ -195,7 +195,7 @@ def make_new_tab():
         command=dummy).grid(row=7,
         column=2, columnspan=3,
         sticky=W, pady=4)
-        
+        tab_made  = tab3
         
     elif  analysis_type.get() == 'Multivariate Sensitivity':
         tab1 = ttk.Frame(note)
@@ -232,7 +232,8 @@ def make_new_tab():
         
         show_plot = IntVar()
         Checkbutton(tab1, text="Generate MFSP Distribution (Graph)", variable=show_plot).grid(row=5,columnspan = 2, column = 0, sticky=W)
-    load_variables_into_GUI(tab3)
+        tab_made = tab1
+    load_variables_into_GUI(tab_made)
 ##############INITIALIZE MAIN ROOT AND TAB###############
 root = Tk()
 
