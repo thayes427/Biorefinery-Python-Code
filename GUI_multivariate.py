@@ -9,7 +9,9 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib import pyplot as pplt
 import csv
 
-#reload(mod)
+###################GOBALS####################
+single_point_var_val= {}
+
 
 ################Tab 1 Functions###############
  
@@ -48,11 +50,12 @@ def plot_on_GUI(d_f_output):
     canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 2, rowspan = 2, sticky= W+E+N+S, pady = 5,padx = 5,)
     root.update_idletasks()
     
-def load_variables_into_GUI():
+def load_variables_into_GUI(tab_num):
     sens_vars = str(excel.get())
     single_pt_vars = []
     univariate_vars = []
     multivariate_vars = []
+    global single_point_var_val
     with open(sens_vars) as f:
         reader = csv.DictReader(f)# Skip the header row
         for row in reader:
@@ -63,14 +66,27 @@ def load_variables_into_GUI():
     #now populate the gui with the appropriate tab and variables stored above
     type_of_analysis = analysis_type.get()
     if type_of_analysis == 'Single Point Analysis':
+        print('Hello')
+        row_num = 2
+        for name,value in single_pt_vars:
+            row_num += 1
+            key = str(row_num)
+            Label(tab_num, 
+            text= name).grid(row=row_num, column= 1, sticky = E,pady = 5,padx = 5)
+            key=Entry(tab_num)
+            key.grid(row=row_num, column=2,pady = 5,padx = 5)
+            key.insert(0,str(value))
+            single_point_var_val[name]= key
+            
+           
         # print to a new single point tab
         # We want to print the following:
         # Variable Name  |  Variable Value (in an editable form)
-    if type_of_analysis == 'Univariate Analysis':
+    #if type_of_analysis == 'Univariate Analysis':
         # print to a new univariate analysis tab
         # we want to print the following:
         # Variable Name |  Distribution Type  |  List of values OR NumTrials entry
-    if type_of_analysis == 'Multivariate Analysis':
+    #if type_of_analysis == 'Multivariate Analysis':
         # print to a new multivariate tab
         # what we want to print is just the variable name and then an 
         # auto-updating graph of its distribution
@@ -83,10 +99,15 @@ def display_time_remaining(time_remaining):
 
 def check_abort():
     return abort.get()
+def dummy():
+    for key,value in single_point_var_val.items():
+        print(key,value.get())
 
 def check_next_analysis():
+    return None
     '''
-    will be for the univariate analysis so that the user can move onto the next analysis
+    #will be for the univariate analysis so that the user can move onto the next analysis
+    '''
     '''
     # NOTE, YOU WILL ALSO HAVE TO CHANGE THIS BUTTON BACK TO UNPRESSED ONCE YOU MOVE
     # ONTO THE NEXT VARIABLE
@@ -94,7 +115,7 @@ def check_next_analysis():
     if move_to_next:
         # NEED TO UPDATE THE BUTTON TO TURN IT BACK OFF
     return move_to_next
-    
+'''
 def run_multivar_sens():
     aspenfile= str(aspen.get())
     solverfile= str(solver.get())
@@ -120,9 +141,9 @@ def run_univ_sens():
 def make_new_tab():
     
     note.forget(tab5)
-    if sens_unit.get() == 'Choose Analysis Type':
+    if analysis_type.get() == 'Choose Analysis Type':
         print("ERROR: Select an Analysis")
-    elif  sens_unit.get() == 'Univariate Sensitivity':
+    elif  analysis_type.get() == 'Univariate Sensitivity':
         tab2 = ttk.Frame(note)
         note.add(tab2,text = "Univariate Analysis")
         ##############Tab 2 LABELS##################
@@ -165,11 +186,18 @@ def make_new_tab():
         
         cb = Checkbutton(tab2, text = "Abort", variable = otherbool).grid(row= 8,columnspan = 1, column = 3, sticky=W)
         
-    elif  sens_unit.get() == 'Single Point Sensitivity':
+    elif  analysis_type.get() == 'Single Point Analysis':
         tab3 = ttk.Frame(note)
         note.add(tab3, text = 'Single Point')
         
-    elif  sens_unit.get() == 'Multivariate Sensitivity':
+        Button(tab3,
+        text='Calculate MFSP',
+        command=dummy).grid(row=7,
+        column=2, columnspan=3,
+        sticky=W, pady=4)
+        
+        
+    elif  analysis_type.get() == 'Multivariate Sensitivity':
         tab1 = ttk.Frame(note)
         note.add(tab1,text = "Multivariate Analysis")
         ###############TAB 1 LABELS#################
@@ -204,7 +232,7 @@ def make_new_tab():
         
         show_plot = IntVar()
         Checkbutton(tab1, text="Generate MFSP Distribution (Graph)", variable=show_plot).grid(row=5,columnspan = 2, column = 0, sticky=W)
-        
+    load_variables_into_GUI(tab3)
 ##############INITIALIZE MAIN ROOT AND TAB###############
 root = Tk()
 
@@ -250,10 +278,10 @@ solver = Entry(tab0)
 solver.grid(row=2, column=2,pady = 5,padx = 5)
 
 master = tab0
-sens_unit = StringVar(master)
-sens_unit.set("Choose Analysis Type") # default value
+analysis_type = StringVar(master)
+analysis_type.set("Choose Analysis Type") # default value
 
-analysis_type = OptionMenu(tab0, sens_unit, "Univariate Sensitivity", "Single Point Sensitivity", "Multivariate Sensitivity").grid(row = 5,sticky = E,column = 2,padx =5, pady = 5)
+analysis_type_options = OptionMenu(tab0, analysis_type, "Univariate Sensitivity", "Single Point Analysis", "Multivariate Sensitivity").grid(row = 5,sticky = E,column = 2,padx =5, pady = 5)
 
         
 
