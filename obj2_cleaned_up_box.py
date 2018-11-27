@@ -235,22 +235,22 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         GUI.display_time_remaining(time_remaining)
         
         ############### CHECK TO SEE IF USER WANTS TO ABORT ##########
-        abort = GUI.check_abort()
-        if abort:
-            break
+        #abort = GUI.check_abort()
+        #if abort:
+        #    break
     
     writer = pd.ExcelWriter(output_file_name + '.xlsx')
     dfstreams.to_excel(writer,'Sheet1')
     writer.save()
     
     if graph_plot == 1:
-        total_MFSP = dfstreams["MFSP"]
+        #total_MFSP = dfstreams["MFSP"]
     
-        num_bins = 100
-        n, bins, patches = plt.hist(total_MFSP, num_bins, facecolor='blue', alpha=0.5)
-        plt.xlabel('MFSP Price ($)')
-        plt.ylabel('Count of simulations')
-        plt.title('Historgram of MFSP prices based on simulations')
+        #num_bins = 100
+        #n, bins, patches = plt.hist(total_MFSP, num_bins, facecolor='blue', alpha=0.5)
+        #plt.xlabel('MFSP Price ($)')
+        #plt.ylabel('Count of simulations')
+        #plt.title('Historgram of MFSP prices based on simulations')
         plt.savefig(output_file_name + '.png')
         plt.show()
     
@@ -347,9 +347,9 @@ def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name,
             GUI.plot_on_GUI(dfstreams)
         
         ############### CHECK TO SEE IF USER WANTS TO ABORT ##########
-        abort = GUI.check_next_analysis()
-        if abort:
-            break
+        #abort = GUI.check_next_analysis()
+        #if abort:
+        #    break
     
     writer = pd.ExcelWriter(output_file_name + '_' + v + '.xlsx')
     dfstreams.to_excel(writer,'Sheet1')

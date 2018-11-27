@@ -23,45 +23,41 @@ def open_excel_file():
     root.filename = askopenfilename(initialdir = "/",
                                                 title = "Select file")
                                         
-    excel.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery Code/Variable_Call_Excel.csv')
+    excel.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery Design Project/Variable_Call_Excel.csv')
     
 def open_aspen_file():
     root.filename = askopenfilename(initialdir = "/",
                                                 title = "Select file")
-    aspen.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery Code/BC1508F-BC_FY17Target._Final_5ptoC5_updated022618.bkp')
+    aspen.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery Design Project/BC1508F-BC_FY17Target._Final_5ptoC5_updated022618.apw')
 
 def open_solver_file():
     root.filename = askopenfilename(initialdir = "/",
                                                 title = "Select file")
-    solver.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery Code/DESIGN_OBJ2_test_MFSP-updated.xlsm')
+    solver.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery Design Project/DESIGN_OBJ2_test_MFSP-updated.xlsm')
     
 def plot_on_GUI(d_f_output, vars_to_change = []):
     
-    
-    columns = 3
-    num_rows= (num_vars % columns) + 1
+    columns = 5
+    num_rows= ((len(vars_to_change) + 1) % columns) + 1
     counter = 1
-    fig = pplt.figure()
+    fig = pplt.figure(figsize = (15,7))
     a = fig.add_subplot(num_rows,columns,counter)
     counter += 1
     total_MFSP = d_f_output["MFSP"]
     num_bins = 100
     n, bins, patches = pplt.hist(total_MFSP, num_bins, facecolor='blue', alpha=0.5)
-    a.set_title ("MFSP Distribution", fontsize=16)
-    a.set_ylabel("Count", fontsize=14)
-    a.set_xlabel("MFSP ($)", fontsize=14)
+    a.set_title ("MFSP Distribution")
+    a.set_xlabel("MFSP ($)")
     if len(vars_to_change) != 0:
         for var in vars_to_change:
             a = fig.add_subplot(num_rows,columns,counter)
             counter += 1
             total_data = d_f_output[var]
             num_bins = 100
-            n, bins, patches = pplt.hist(total, num_bins, facecolor='blue', alpha=0.5)
-            a.set_title (var + " Distribution", fontsize=16)
-            a.set_ylabel("Count", fontsize=14)
-            a.set_xlabel(var, fontsize=14)
+            n, bins, patches = pplt.hist(total_data, num_bins, facecolor='blue', alpha=0.5)
+            a.set_title (var + " Distribution")
     canvas = FigureCanvasTkAgg(fig)
-    canvas.get_tk_widget().grid(row=8, column = 0,columnspan = columns, rowspan = num_rows, sticky= W+E+N+S, pady = 5,padx = 5,)
+    canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5,)
         
     root.update_idletasks()
     
@@ -116,8 +112,8 @@ def display_time_remaining(time_remaining):
     '''
     return None
 
-def check_abort():
-    return abort.get()
+#def check_abort():
+#    return abort.get()
 def dummy():
     for key,value in single_point_var_val.items():
         print(key,value.get())
