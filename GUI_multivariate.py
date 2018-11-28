@@ -37,7 +37,18 @@ def open_solver_file():
     solver.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery Design Project/DESIGN_OBJ2_test_MFSP-updated.xlsm')
     
 def plot_on_GUI(d_f_output, vars_to_change = []):
+    '''
+    This function will autoupdate the GUI to display the histogram distribution of MFSP
+    and and histogram distributions of all other variables that were passed to the 
+    function. 
+
+    Inputs: 
+        d_f_outputs: dictionary with output of a single simulation, where the 
+            key is the variable and the value is the output value of the variable
+            after the simulation
+        vars_to_change: list of variables that were input
     
+    '''
     columns = 5
     num_rows= ((len(vars_to_change) + 1) % columns) + 1
     counter = 1
@@ -56,11 +67,37 @@ def plot_on_GUI(d_f_output, vars_to_change = []):
             total_data = d_f_output[var]
             num_bins = 100
             n, bins, patches = pplt.hist(total_data, num_bins, facecolor='blue', alpha=0.5)
-            a.set_title (var + " Distribution")
+            a.set_title(var)
     canvas = FigureCanvasTkAgg(fig)
     canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5,)
         
     root.update_idletasks()
+    
+def plot_init_dist(input_var_dist):
+    '''
+    This function will plot the distribution of variable calls prior to running
+    the simulation. This will enable users to see whether the distributions are as they expected.
+    
+    Inputs:
+        input_var_dist: dictionary where the key is the variable name, and values are
+            lists of the values that will be used in the function.    
+    
+    '''
+    columns = 5
+    num_rows= ((len(input_var_dist) + 1) % columns) + 1
+    counter = 1
+    fig = pplt.figure(figsize = (15,7))
+    for var, values in input_var_dist.items():
+        a = fig.add_subplot(num_rows,columns,counter)
+        counter += 1
+        num_bins = 100
+        n, bins, patches = pplt.hist(values, num_bins, facecolor='blue', alpha=0.5)
+        a.set_title(var)
+    canvas = FigureCanvasTkAgg(fig)
+    canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5,)
+        
+    root.update_idletasks()
+
 sp_row_num = None
 univar_row_num = None
     
@@ -160,8 +197,7 @@ def run_multivar_sens():
     numtrial= int(sim.get())
     outputfile= str(save.get())
     sens_vars = str(excel.get())
-    graph_plot = 1
-    d_f_output = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars,numtrial,outputfile, graph_plot = 1)
+    d_f_output = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars,numtrial,outputfile)
         
 def run_univ_sens():
     aspenfile= str(aspen.get())
@@ -169,10 +205,9 @@ def run_univ_sens():
     numtrial= int(sim2.get())
     outputfile= str(save2.get())
     sens_vars = str(excel.get())
-    graph_plot = 1
     simulation_vars = msens.get_distributions(sens_vars, numtrial)
     for (aspen_variable, aspen_call, fortran_index), values in simulation_vars.items():
-        msens.univariate_analysis(aspenfile, solverfile, aspen_call, aspen_variable, values, fortran_index, outputfile, graph_plot)
+        msens.univariate_analysis(aspenfile, solverfile, aspen_call, aspen_variable, values, fortran_index, outputfile)
         
         print('Finished Analysis for Variable: ', aspen_variable)
     print('-----------FINISHED-------------')

@@ -149,7 +149,7 @@ def make_fortran(fortran_call, fortran_index, val):
 
 
 def multivariate_sensitivity_analysis(aspenfilename, excelfilename, 
-    gui_excel_input, num_trials, output_file_name, graph_plot):
+    gui_excel_input, num_trials, output_file_name):
     global dfstreams
     aspen,obj,excel,book = open_COMS(aspenfilename,excelfilename)
     
@@ -243,24 +243,16 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
     dfstreams.to_excel(writer,'Sheet1')
     writer.save()
     
-    if graph_plot == 1:
-        #total_MFSP = dfstreams["MFSP"]
-    
-        #num_bins = 100
-        #n, bins, patches = plt.hist(total_MFSP, num_bins, facecolor='blue', alpha=0.5)
-        #plt.xlabel('MFSP Price ($)')
-        #plt.ylabel('Count of simulations')
-        #plt.title('Historgram of MFSP prices based on simulations')
-        plt.savefig(output_file_name + '.png')
-        plt.show()
-    
+    plt.savefig(output_file_name + '.png')
+    plt.show()
+        
     aspen.Close()
     print("-----------FINISHED-----------")
     return dfstreams
         
         
 
-def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name, values, fortran_index, output_file_name, graph_plot):
+def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name, values, fortran_index, output_file_name):
     '''
     THIS FUNCTION ONLY NEEDS TO BE RUN ONCE
     
@@ -343,8 +335,7 @@ def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name,
         GUI.display_time_remaining(time_remaining)
         trial_counter += 1
         
-        if graph_plot == 1:
-            GUI.plot_on_GUI(dfstreams)
+        GUI.plot_on_GUI(dfstreams)
         
         ############### CHECK TO SEE IF USER WANTS TO ABORT ##########
         #abort = GUI.check_next_analysis()
