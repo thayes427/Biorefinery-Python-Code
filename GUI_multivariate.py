@@ -24,17 +24,17 @@ def open_excel_file():
     root.filename = askopenfilename(initialdir = "/",
                                                 title = "Select file")
                                         
-    excel.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery Design Project/Variable_Call_Excel.csv')
+    excel.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery-Design-Project/Variable_Call_Excel.csv')
     
 def open_aspen_file():
     root.filename = askopenfilename(initialdir = "/",
                                                 title = "Select file")
-    aspen.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery Design Project/BC1508F-BC_FY17Target._Final_5ptoC5_updated022618.apw')
+    aspen.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery-Design-Project/BC1508F-BC_FY17Target._Final_5ptoC5_updated022618.apw')
 
 def open_solver_file():
     root.filename = askopenfilename(initialdir = "/",
                                                 title = "Select file")
-    solver.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery Design Project/DESIGN_OBJ2_test_MFSP-updated.xlsm')
+    solver.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery-Design-Project/DESIGN_OBJ2_test_MFSP-updated.xlsm')
     
 def plot_on_GUI(d_f_output, vars_to_change = []):
     '''
@@ -123,40 +123,104 @@ def load_variables_into_GUI(tab_num):
     #now populate the gui with the appropriate tab and variables stored above
     if type_of_analysis == 'Single Point Analysis':
         sp_row_num = 2
+        # Create a frame for the canvas with non-zero row&column weights
+        frame_canvas = ttk.Frame(tab_num)
+        frame_canvas.grid(row=sp_row_num, column=1, pady=(5, 0))
+        frame_canvas.grid_rowconfigure(0, weight=1)
+        frame_canvas.grid_columnconfigure(0, weight=1)
+        # Set grid_propagate to False resizing later
+        frame_canvas.grid_propagate(False)
+        
+        # Add a canvas in the canvas frame
+        canvas = Canvas(frame_canvas, bg="yellow")
+        canvas.grid(row=0, column=0, sticky="news")
+        
+        # Link a scrollbar to the canvas
+        vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=canvas.yview)
+        vsb.grid(row=0, column=1,sticky = 'ns')
+        canvas.configure(yscrollcommand=vsb.set)
+        
+        # Create a frame to contain the variables
+        frame_vars = ttk.Frame(canvas)
+        canvas.create_window((0, 0), window=frame_vars, anchor='nw')
+      
+        
+        sp_row_num = 0
         for name,value in single_pt_vars:
             sp_row_num += 1
             key = str(sp_row_num)
-            Label(tab_num, 
+            Label(frame_vars, 
             text= name).grid(row=sp_row_num, column= 1, sticky = E,pady = 5,padx = 5)
-            key=Entry(tab_num)
+            key=Entry(frame_vars)
             key.grid(row=sp_row_num, column=2,pady = 5,padx = 5)
             key.insert(0,str(value))
             single_point_var_val[name]= key
+            
+        # Update vars frames idle tasks to let tkinter calculate variable sizes
+        frame_vars.update_idletasks()
+        # Determine the size of the Canvas
+        
+        frame_canvas.config(width='5c', height='5c')
+        
+        # Set the canvas scrolling region
+        canvas.config(scrollregion=canvas.bbox("all"))
+            
             
 
     if type_of_analysis == 'Univariate Sensitivity':
         univar_row_num = 8
         Label(tab_num, 
-            text= 'Variable Name').grid(row=univar_row_num, column= 1,pady = 5,padx = 5)
+            text= 'Variable Name').grid(row=univar_row_num, column= 1,pady = 5,padx = 5, sticky= E)
         Label(tab_num, 
             text= 'Sampling Type').grid(row=univar_row_num, column= 2,pady = 5,padx = 5)
         Label(tab_num, 
-            text= '# of Trials').grid(row=univar_row_num, column= 3,pady = 5,padx = 5)
+            text= '# of Trials').grid(row=univar_row_num, column= 3,pady = 5,padx = 5, sticky = W)
         univar_row_num += 1
+        # Create a frame for the canvas with non-zero row&column weights
+        frame_canvas = ttk.Frame(tab_num)
+        frame_canvas.grid(row=univar_row_num, column=1, columnspan =3, pady=(5, 0))
+        frame_canvas.grid_rowconfigure(0, weight=1)
+        frame_canvas.grid_columnconfigure(0, weight=1)
+        # Set grid_propagate to False resizing later
+        frame_canvas.grid_propagate(False)
+        
+        # Add a canvas in the canvas frame
+        canvas = Canvas(frame_canvas, bg="yellow")
+        canvas.grid(row=0, column=0, sticky="news")
+        
+        # Link a scrollbar to the canvas
+        vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=canvas.yview)
+        vsb.grid(row=0, column=1,sticky = 'ns')
+        canvas.configure(yscrollcommand=vsb.set)
+        
+        # Create a frame to contain the variables
+        frame_vars = ttk.Frame(canvas)
+        canvas.create_window((0, 0), window=frame_vars, anchor='nw')
+        univar_row_num =0
         for name, format_of_data, vals in univariate_vars:
-            Label(tab_num, 
+            Label(frame_vars, 
             text= name).grid(row=univar_row_num, column= 1,pady = 5,padx = 5)
-            Label(tab_num, 
+            Label(frame_vars, 
             text= format_of_data).grid(row=univar_row_num, column= 2,pady = 5,padx = 5)
             
             if not(format_of_data == 'linspace' or format_of_data == 'list'):
-                key2=Entry(tab_num)
+                key2=Entry(frame_vars)
                 key2.grid(row=univar_row_num, column=3,pady = 5,padx = 5)
                 #key2.insert(0,univariate_sims)
                 univar_var_num_sim[name]= key2
             else:
-                Label(tab_num,text= str(len(vals))).grid(row=univar_row_num, column= 3,pady = 5,padx = 5)
+                Label(frame_vars,text= str(len(vals))).grid(row=univar_row_num, column= 3,pady = 5,padx = 5)
             univar_row_num += 1
+            
+        # Update vars frames idle tasks to let tkinter calculate variable sizes
+        frame_vars.update_idletasks()
+        # Determine the size of the Canvas
+        
+        frame_canvas.config(width='9c', height='5c')
+        
+        # Set the canvas scrolling region
+        canvas.config(scrollregion=canvas.bbox("all"))
+            
             
         
         # print to a new univariate analysis tab
@@ -215,7 +279,7 @@ def run_univ_sens():
 def single_point_analysis():
     global sp_row_num
     mfsp = 3.34 #msens.single_point(________)
-    Label(tab3, text= 'MFSP = ' + str(mfsp)).grid(row=sp_row_num+1, column = 2)
+    Label(tab3, text= 'MFSP = ' + str(mfsp)).grid(row=sp_row_num+1, column = 1)
     
     
     return None
@@ -298,8 +362,7 @@ def make_new_tab():
         Button(tab3,
         text='Calculate MFSP',
         command=single_point_analysis).grid(row=7,
-        column=2, columnspan=3,
-        sticky=W, pady=4)
+        column=1, columnspan=2, pady=4)
         tab_made  = tab3
         
     elif  analysis_type.get() == 'Multivariate Sensitivity':
@@ -352,8 +415,13 @@ note.grid()
 
 tab0 = ttk.Frame(note)
 note.add(tab0, text = "File Upload")
+'''
+frame= ttk.Frame(note)
+note.add(frame,text= 'Scrolling Bar Test')
 
-
+test2= ttk.Frame(note)
+note.add(test2,text= 'Scrolling Test Two')
+'''
 
 ###############TAB 0 Buttons##################
 Button(tab0, 
@@ -382,7 +450,7 @@ solver.grid(row=2, column=2,pady = 5,padx = 5)
 
 Button(tab0, 
       text="Load Data",
-      command=make_new_tab).grid(row=5,column = 4,sticky = E,
+      command=make_new_tab).grid(row=5,column = 3,sticky = E,
       pady = 5,padx = 5)
 solver = Entry(tab0)
 solver.grid(row=2, column=2,pady = 5,padx = 5)
@@ -392,12 +460,92 @@ analysis_type = StringVar(master)
 analysis_type.set("Choose Analysis Type") # default value
 
 analysis_type_options = OptionMenu(tab0, analysis_type, "Univariate Sensitivity", "Single Point Analysis", "Multivariate Sensitivity").grid(row = 5,sticky = E,column = 2,padx =5, pady = 5)
+'''
+###################Scroll BAR#####################
+label1 = ttk.Label(frame, text="Label 1")
+label1.grid(row=0, column=0, pady=(5, 0), sticky='nw')
 
-        
+label2 = ttk.Label(frame, text="Label 2")
+label2.grid(row=1, column=0, pady=(5, 0), sticky='nw')
+
+label3 = ttk.Label(frame, text="Label 3")
+label3.grid(row=3, column=0, pady=5, sticky='nw')
+
+frame_canvas = ttk.Frame(frame)
+frame_canvas.grid(row=2, column=0, pady=(5, 0), sticky='nw')
+frame_canvas.grid_rowconfigure(0, weight=1)
+frame_canvas.grid_columnconfigure(0, weight=1)
+# Set grid_propagate to False to allow 5-by-5 buttons resizing later
+frame_canvas.grid_propagate(False)
+
+canvas=Canvas(frame_canvas,width=300,height=300,scrollregion=(0,0,500,500))
+
+hbar=Scrollbar(frame_canvas,orient=HORIZONTAL)
+hbar.pack(side=BOTTOM,fill=X)
+hbar.config(command=canvas.xview)
+vbar=Scrollbar(frame_canvas,orient=VERTICAL)
+vbar.pack(side=RIGHT,fill=Y)
+vbar.config(command=canvas.yview)
+canvas.config(width=300,height=300)
+canvas.config(xscrollcommand=hbar.set, yscrollcommand=vbar.set)
+canvas.pack(side=LEFT,expand=True,fill=BOTH)
+
+
+####################
 
 
 
 
+label1 = ttk.Label(test2, text="Label 1")
+label1.grid(row=0, column=0, pady=(5, 0), sticky='nw')
 
+label2 = ttk.Label(test2, text="Label 2")
+label2.grid(row=1, column=0, pady=(5, 0), sticky='nw')
+
+label3 = ttk.Label(test2, text="Label 3")
+label3.grid(row=3, column=0, pady=5, sticky='nw')
+
+# Create a frame for the canvas with non-zero row&column weights
+frame_canvas = ttk.Frame(test2)
+frame_canvas.grid(row=2, column=0, pady=(5, 0), sticky='nw')
+frame_canvas.grid_rowconfigure(0, weight=1)
+frame_canvas.grid_columnconfigure(0, weight=1)
+# Set grid_propagate to False to allow 5-by-5 buttons resizing later
+frame_canvas.grid_propagate(False)
+
+# Add a canvas in that frame
+canvas = Canvas(frame_canvas, bg="yellow")
+canvas.grid(row=0, column=0, sticky="news")
+
+# Link a scrollbar to the canvas
+vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=canvas.yview)
+vsb.grid(row=0, column=1, sticky='ns')
+canvas.configure(yscrollcommand=vsb.set)
+
+# Create a frame to contain the buttons
+frame_buttons = ttk.Frame(canvas)
+canvas.create_window((0, 0), window=frame_buttons, anchor='nw')
+
+# Add 9-by-5 buttons to the frame
+rows = 9
+columns = 5
+buttons = [[ttk.Button() for j in range(columns)] for i in range(rows)]
+for i in range(0, rows):
+    for j in range(0, columns):
+        buttons[i][j] = ttk.Button(frame_buttons, text=("%d,%d" % (i+1, j+1)))
+        buttons[i][j].grid(row=i, column=j, sticky='news')
+
+# Update buttons frames idle tasks to let tkinter calculate buttons sizes
+frame_buttons.update_idletasks()
+
+# Resize the canvas frame to show exactly 5-by-5 buttons and the scrollbar
+first5columns_width = sum([buttons[0][j].winfo_width() for j in range(0, 5)])
+first5rows_height = sum([buttons[i][0].winfo_height() for i in range(0, 5)])
+frame_canvas.config(width=first5columns_width + vsb.winfo_width(),
+                    height=first5rows_height)
+
+# Set the canvas scrolling region
+canvas.config(scrollregion=canvas.bbox("all"))
+'''
 mainloop()
   
