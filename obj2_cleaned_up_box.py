@@ -125,9 +125,9 @@ def sample_uniform(lb_uniform, ub_uniform, lb, ub, ntrials):
 def sample_poisson(lambda_p, lb, ub, ntrials):
     d = []
     for i in range(ntrials):
-        rand_sample = np.random.poisson(1000*lambda_p)/1000
+        rand_sample = np.random.poisson(10000*lambda_p)/10000
         while(rand_sample < lb or rand_sample > ub):
-            rand_sample = np.random.poisson(1000*lambda_p)/1000
+            rand_sample = np.random.poisson(10000*lambda_p)/10000
         d.append(rand_sample)
     return d
 
@@ -148,6 +148,8 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
     gui_excel_input, num_trials, output_file_name, simulation_vars):
     global dfstreams
     aspen,obj,excel,book = open_COMS(aspenfilename,excelfilename)
+    
+    print(simulation_vars)
     
     SUC_LOC = r"\Data\Blocks\A300\Data\Blocks\B1\Input\FRAC\TOC5"
     

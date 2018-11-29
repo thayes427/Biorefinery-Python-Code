@@ -26,17 +26,17 @@ def open_excel_file():
     root.filename = askopenfilename(initialdir = "/",
                                                 title = "Select file")
                                         
-    excel.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery-Design-Project/Variable_Call_Excel.csv')
+    excel.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery Code/Variable_Call_Excel.csv')
     
 def open_aspen_file():
     root.filename = askopenfilename(initialdir = "/",
                                                 title = "Select file")
-    aspen.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery-Design-Project/BC1508F-BC_FY17Target._Final_5ptoC5_updated022618.apw')
+    aspen.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery Code/BC1508F-BC_FY17Target._Final_5ptoC5_updated022618.bkp')
 
 def open_solver_file():
     root.filename = askopenfilename(initialdir = "/",
                                                 title = "Select file")
-    solver.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery-Design-Project/DESIGN_OBJ2_test_MFSP-updated.xlsm')
+    solver.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery Code/DESIGN_OBJ2_test_MFSP-updated.xlsm')
     
 def plot_on_GUI(d_f_output, vars_to_change = []):
     '''
@@ -84,9 +84,11 @@ def get_distributions(is_univar):
         for (aspen_variable, aspen_call, fortran_index), dist in simulation_vars.items():
             if aspen_variable in univar_var_num_sim:
                 num_trials_per_var = int(univar_var_num_sim[aspen_variable].get())
-                dist = dist[:num_trials_per_var]
+                simulation_vars[(aspen_variable, aspen_call, fortran_index)] = dist[:num_trials_per_var]
+                simulation_dist[aspen_variable] = dist[:num_trials_per_var]
+                
     else:
-        simulation_vars, simulation_dist = msens.get_distributions(str(excel.get()), numtrial= int(sim.get())) 
+        simulation_vars, simulation_dist = msens.get_distributions(str(excel.get()), ntrials= int(sim.get())) 
     
     
 def plot_init_dist():
@@ -297,6 +299,7 @@ def run_multivar_sens():
     numtrial= int(sim.get())
     outputfile= str(save.get())
     sens_vars = str(excel.get())
+    global simulation_vars
     d_f_output = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars,numtrial,outputfile, simulation_vars)
         
 def run_univ_sens():
@@ -314,7 +317,7 @@ def run_univ_sens():
 
 def single_point_analysis():
     global sp_row_num
-    mfsp = 3.34 #msens.single_point(________)
+    mfsp = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars, 1,outputfile, simulation_vars)
     Label(tab3, text= 'MFSP = ' + str(mfsp)).grid(row=sp_row_num+1, column = 1)
     
     
@@ -371,7 +374,7 @@ def make_new_tab():
                pady=4)
         Button(tab2,
                text='Display Variable Distrbutions',
-               command=display_distributions(True)).grid(row=5,
+               command=lambda: display_distributions(True)).grid(row=5,
                column=1, columnspan=2,
                pady=4)
         Button(tab2,
@@ -436,7 +439,7 @@ def make_new_tab():
                pady=4)
         Button(tab1,
                text='Load Variable Distrbutions',
-               command=display_distributions(False)).grid(row=6,
+               command=lambda: display_distributions(False)).grid(row=6,
                column=1, columnspan=2,
                sticky=W, 
                pady=4)
