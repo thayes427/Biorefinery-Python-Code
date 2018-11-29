@@ -75,10 +75,18 @@ def plot_on_GUI(d_f_output, vars_to_change = []):
         
     root.update_idletasks()
     
-def get_distributions():
-    global simulation_vars
-    global simulation_dist
-    simulation_vars, simulation_dist = msens.get_distributions(str(excel.get()), ntrials= int(sim.get()))
+
+def get_distributions(is_univar):
+    global simulation_vars, simulation_dist
+    if is_univar:
+        max_num_sim = max(int(slot.get()) for slot in univar_var_num_sim.values())
+        simulation_vars, simulation_dist = msens.get_distributions(str(excel.get()), max_num_sim)
+        for (aspen_variable, aspen_call, fortran_index), dist in simulation_vars.items():
+            if aspen_variable in univar_var_num_sim:
+                num_trials_per_var = int(univar_var_num_sim[aspen_variable].get())
+                dist = dist[:num_trials_per_var]
+    else:
+        simulation_vars, simulation_dist = msens.get_distributions(str(excel.get()), numtrial= int(sim.get())) 
     
     
 def plot_init_dist():
@@ -184,6 +192,18 @@ def load_variables_into_GUI(tab_num):
         # what we want to print is just the variable name and then an 
         # auto-updating graph of its distribution
     
+def initialize_multivar_analysis():
+    global simulation_vars
+    if len(simulation_vars) == 0:
+        get_distributions(False)
+    run_multivar_sens()
+    
+def initialize_univar_analysis():
+    global simulation_vars
+    if len(simulation_vars) == 0:
+        get_distributions(True)
+    run_univ_sens()
+    
 def display_time_remaining(time_remaining):
     '''
     THIS NEEDS TO PRINT OUT ESTIMATED TIME REMAINING
@@ -213,7 +233,7 @@ def run_multivar_sens():
     numtrial= int(sim.get())
     outputfile= str(save.get())
     sens_vars = str(excel.get())
-    d_f_output = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars,numtrial,outputfile)
+    d_f_output = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars,numtrial,outputfile, simulation_vars)
         
 def run_univ_sens():
     aspenfile= str(aspen.get())
@@ -221,7 +241,7 @@ def run_univ_sens():
     numtrial= int(sim2.get())
     outputfile= str(save2.get())
     sens_vars = str(excel.get())
-    simulation_vars = msens.get_distributions(sens_vars, numtrial)
+    global simulations_vars
     for (aspen_variable, aspen_call, fortran_index), values in simulation_vars.items():
         msens.univariate_analysis(aspenfile, solverfile, aspen_call, aspen_variable, values, fortran_index, outputfile)
         
@@ -282,12 +302,12 @@ def make_new_tab():
         ##############Tab 2 Buttons###############
         Button(tab2,
                text='Univariate Sensitivity Analysis',
-               command=run_univ_sens).grid(row=5,
+               command=initialize_univar_analysis).grid(row=5,
                column=3, columnspan=2,
                pady=4)
         Button(tab2,
                text='Display Variable Distrbutions',
-               command=display_distributions).grid(row=5,
+               command=display_distributions(True)).grid(row=5,
                column=1, columnspan=2,
                pady=4)
         Button(tab2,
@@ -347,13 +367,13 @@ def make_new_tab():
                
         Button(tab1,
                text='Run Multivariate Analysis',
-               command=run_multivar_sens).grid(row=6,
+               command=initialize_multivar_analysis).grid(row=6,
                column=3, columnspan=2,
                sticky=W, 
                pady=4)
         Button(tab1,
                text='Load Variable Distrbutions',
-               command=display_distributions).grid(row=6,
+               command=display_distributions(False)).grid(row=6,
                column=1, columnspan=2,
                sticky=W, 
                pady=4)

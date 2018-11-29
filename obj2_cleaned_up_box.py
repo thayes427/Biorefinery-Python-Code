@@ -121,11 +121,6 @@ def sample_uniform(lb_uniform, ub_uniform, lb, ub, ntrials):
         d.append(rand_sample)
     return d
 
-#def sample_list(dist, lb, ub, ntrials):
-    #rand_sample = random.choice(dist)
-    #while(rand_sample < lb or rand_sample > ub):
-        #rand_sample = random.choice(dist)
-    #return rand_sample
 
 def sample_poisson(lambda_p, lb, ub, ntrials):
     d = []
@@ -150,7 +145,7 @@ def make_fortran(fortran_call, fortran_index, val):
 
 
 def multivariate_sensitivity_analysis(aspenfilename, excelfilename, 
-    gui_excel_input, num_trials, output_file_name):
+    gui_excel_input, num_trials, output_file_name, simulation_vars):
     global dfstreams
     aspen,obj,excel,book = open_COMS(aspenfilename,excelfilename)
     
@@ -168,8 +163,6 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
               'Var OpCosts', ' Capital Costs', 'MFSP','Fixed Capital Investment',\
               'Capital Investment with Interest','Loan Payment per Year','Depreciation','Cash on Hand',\
               'Steam Plant Value','Bag Cost']
-    
-    simulation_vars = get_distributions(gui_excel_input, num_trials)
     
     dfstreams = pd.DataFrame(columns=columns)
     obj.FindNode(SUC_LOC).Value = 0.4
