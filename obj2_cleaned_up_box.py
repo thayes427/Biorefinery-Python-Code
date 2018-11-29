@@ -97,10 +97,10 @@ def get_distributions(gui_excel_input, ntrials=1):
                             fortran_index = (i, i+len_val) #NOT INCLUSIVE
                     for i, v in enumerate(distribution):
                         distribution[i] = make_fortran(fortran_call, fortran_index, v)
-                        
+                simulation_dist[aspen_variable] = distribution
                 simulation_vars[(aspen_variable, aspen_call, fortran_index)] = distribution
     
-    return simulation_vars
+    return simulation_vars, simulation_dist
     
 def sample_gauss(mean, std, lb, ub, ntrials):
     d = []

@@ -12,6 +12,8 @@ import csv
 ###################GOBALS####################
 single_point_var_val= {}
 univar_var_num_sim = {}
+simulation_dist = {}
+simulation_vars = {}
 
 
 ################Tab 1 Functions###############
@@ -73,7 +75,12 @@ def plot_on_GUI(d_f_output, vars_to_change = []):
         
     root.update_idletasks()
     
-def plot_init_dist(input_var_dist):
+def get_distributions():
+    global simulation_vars, simulation_dist
+    simulation_vars, simulation_dist = msens.get_distributions(str(excel.get()), numtrial= int(sim.get()))
+    
+    
+def plot_init_dist():
     '''
     This function will plot the distribution of variable calls prior to running
     the simulation. This will enable users to see whether the distributions are as they expected.
@@ -83,11 +90,13 @@ def plot_init_dist(input_var_dist):
             lists of the values that will be used in the function.    
     
     '''
+    
+    global simulation_dist
     columns = 5
-    num_rows= ((len(input_var_dist) + 1) % columns) + 1
+    num_rows= ((len(simulation_dist) + 1) % columns) + 1
     counter = 1
     fig = pplt.figure(figsize = (15,7))
-    for var, values in input_var_dist.items():
+    for var, values in simulation_dist.items():
         a = fig.add_subplot(num_rows,columns,counter)
         counter += 1
         num_bins = 100
