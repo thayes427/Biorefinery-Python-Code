@@ -76,8 +76,9 @@ def plot_on_GUI(d_f_output, vars_to_change = []):
     root.update_idletasks()
     
 def get_distributions():
-    global simulation_vars, simulation_dist
-    simulation_vars, simulation_dist = msens.get_distributions(str(excel.get()), numtrial= int(sim.get()))
+    global simulation_vars
+    global simulation_dist
+    simulation_vars, simulation_dist = msens.get_distributions(str(excel.get()), ntrials= int(sim.get()))
     
     
 def plot_init_dist():
@@ -86,7 +87,7 @@ def plot_init_dist():
     the simulation. This will enable users to see whether the distributions are as they expected.
     
     Inputs:
-        input_var_dist: dictionary where the key is the variable name, and values are
+        simulation_dist: dictionary where the key is the variable name, and values are
             lists of the values that will be used in the function.    
     
     '''
@@ -106,6 +107,12 @@ def plot_init_dist():
     canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5,)
         
     root.update_idletasks()
+    
+def display_distributions():
+    
+    get_distributions()
+    plot_init_dist()   
+    
 
 sp_row_num = None
 univar_row_num = None
@@ -280,7 +287,7 @@ def make_new_tab():
                pady=4)
         Button(tab2,
                text='Display Variable Distrbutions',
-               command=run_univ_sens).grid(row=5,
+               command=display_distributions).grid(row=5,
                column=1, columnspan=2,
                pady=4)
         Button(tab2,
@@ -346,7 +353,7 @@ def make_new_tab():
                pady=4)
         Button(tab1,
                text='Load Variable Distrbutions',
-               command=run_univ_sens).grid(row=6,
+               command=display_distributions).grid(row=6,
                column=1, columnspan=2,
                sticky=W, 
                pady=4)

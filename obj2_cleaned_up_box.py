@@ -52,6 +52,7 @@ def get_distributions(gui_excel_input, ntrials=1):
     with open(gui_excel_input) as f:
         reader = csv.DictReader(f)# Skip the header row
         simulation_vars = {}
+        simulation_dist = {}
         for row in reader:
             if row['Toggle'].lower().strip() == 'true':
                 dist_type = row['Format of Range'].lower()
