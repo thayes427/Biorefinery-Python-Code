@@ -224,8 +224,7 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         excel.Run('SOLVE_DCFROR')
         
         dfstreams.loc[trial] = case_values + [x.Value for x in book.Sheets('Output').Evaluate("C3:C15")]
-        if graph_plot == 1:
-            GUI.plot_on_GUI(dfstreams, vars_to_change)
+        GUI.plot_on_GUI(dfstreams, vars_to_change)
         
         ######### KEEP TRACK OF RUN TIME PER TRIAL ########
         print('Elapsed Time: ', time() - old_time)
