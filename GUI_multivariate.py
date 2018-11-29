@@ -77,7 +77,7 @@ def plot_on_GUI(d_f_output, vars_to_change = []):
     
 
 def get_distributions(is_univar):
-    global simulation_vars, simulation_dist
+    global simulation_vars, simulation_dist, univar_var_num_sim
     if is_univar:
         max_num_sim = max(int(slot.get()) for slot in univar_var_num_sim.values())
         simulation_vars, simulation_dist = msens.get_distributions(str(excel.get()), max_num_sim)
@@ -116,9 +116,9 @@ def plot_init_dist():
         
     root.update_idletasks()
     
-def display_distributions():
+def display_distributions(is_univar):
     
-    get_distributions()
+    get_distributions(is_univar)
     plot_init_dist()   
     
 
@@ -127,7 +127,7 @@ univar_row_num = None
     
 def load_variables_into_GUI(tab_num):
     sens_vars = str(excel.get())
-    global sp_row_num, univar_row_num
+    global sp_row_num, univar_row_num, univar_var_num_sim
     single_pt_vars = []
     univariate_vars = []
     multivariate_vars = []
