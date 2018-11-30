@@ -1,7 +1,7 @@
 from tkinter import *
 from tkinter import messagebox
 import numpy as np
-import obj2_cleaned_up_box as msens
+import sensitivity_analysis as msens
 from tkinter import ttk
 from tkinter.filedialog import askopenfilename
 import matplotlib
@@ -78,7 +78,6 @@ def plot_on_GUI(d_f_output, vars_to_change = []):
 
 def get_distributions(is_univar):
     global simulation_vars, simulation_dist, univar_var_num_sim
-    print(univar_var_num_sim)
     if is_univar:
         max_num_sim = max(int(slot.get()) for slot in univar_var_num_sim.values())
         simulation_vars, simulation_dist = msens.get_distributions(str(excel.get()), max_num_sim)
@@ -146,7 +145,7 @@ def load_variables_into_GUI(tab_num):
                 elif type_of_analysis == 'Multivariate Analysis':
                     multivariate_vars.append(row["Variable Name"])
                 else:
-                    univariate_vars.append((row["Variable Name"], row["Format of Range"], row['Range of Values'].split(',')))
+                    univariate_vars.append((row["Variable Name"], row["Format of Range"].strip().lower(), row['Range of Values'].split(',')))
     #now populate the gui with the appropriate tab and variables stored above
     if type_of_analysis == 'Single Point Analysis':
         sp_row_num = 2
@@ -159,7 +158,7 @@ def load_variables_into_GUI(tab_num):
         frame_canvas.grid_propagate(False)
         
         # Add a canvas in the canvas frame
-        canvas = Canvas(frame_canvas, bg="yellow")
+        canvas = Canvas(frame_canvas, bg="blue")
         canvas.grid(row=0, column=0, sticky="news")
         
         # Link a scrollbar to the canvas
@@ -212,7 +211,7 @@ def load_variables_into_GUI(tab_num):
         frame_canvas.grid_propagate(False)
         
         # Add a canvas in the canvas frame
-        canvas = Canvas(frame_canvas, bg="yellow")
+        canvas = Canvas(frame_canvas, bg="blue")
         canvas.grid(row=0, column=0, sticky="news")
         
         # Link a scrollbar to the canvas
@@ -306,10 +305,9 @@ def run_multivar_sens():
 def run_univ_sens():
     aspenfile= str(aspen.get())
     solverfile= str(solver.get())
-    numtrial= int(sim2.get())
     outputfile= str(save2.get())
     sens_vars = str(excel.get())
-    global simulations_vars
+    global simulation_vars
     for (aspen_variable, aspen_call, fortran_index), values in simulation_vars.items():
         msens.univariate_analysis(aspenfile, solverfile, aspen_call, aspen_variable, values, fortran_index, outputfile)
         
@@ -317,8 +315,15 @@ def run_univ_sens():
     print('-----------FINISHED-------------')
 
 def single_point_analysis():
-    global sp_row_num
-    mfsp = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars, 1,outputfile, simulation_vars)
+    aspenfile= str(aspen.get())
+    solverfile= str(solver.get())
+    #outputfile= str(save2.get())
+    sens_vars = str(excel.get())
+    global sp_row_num, single_point_var_val
+    sp_vars, throwaway = msens.get_distributions(sens_vars, 1)
+    for (aspen_variable, aspen_call, fortran_index), values in sp_vars.items():
+        sp_vars[(aspen_variable, aspen_call, fortran_index)] = [float(single_point_var_val[aspen_variable].get())]
+    mfsp = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars, 1,"_", sp_vars, disp_graphs=False).get_value(0, 'MFSP')
     Label(tab3, text= 'MFSP = ' + str(mfsp)).grid(row=sp_row_num+1, column = 1)
     
     

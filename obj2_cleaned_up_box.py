@@ -11,7 +11,6 @@ import win32com.client as win32
 import os
 import pandas as pd
 import numpy as np
-import model_fin as model
 import matplotlib.pyplot as plt
 from time import time
 from math import ceil
@@ -145,11 +144,10 @@ def make_fortran(fortran_call, fortran_index, val):
 
 
 def multivariate_sensitivity_analysis(aspenfilename, excelfilename, 
-    gui_excel_input, num_trials, output_file_name, simulation_vars):
+    gui_excel_input, num_trials, output_file_name, simulation_vars, disp_graphs=True):
     global dfstreams
     aspen,obj,excel,book = open_COMS(aspenfilename,excelfilename)
     
-    print(simulation_vars)
     
     SUC_LOC = r"\Data\Blocks\A300\Data\Blocks\B1\Input\FRAC\TOC5"
     
@@ -186,7 +184,7 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         for v in vars_to_change:
             case_values.append(variable_values[v])
             
-        
+        print(variable_values)
         ######## RUN ASPEN SIMULATION WITH RANDOMLY SAMPLED VARIABLES #######
         aspen.Reinit()
         aspen.Engine.Run2()
@@ -220,7 +218,8 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         excel.Run('SOLVE_DCFROR')
         
         dfstreams.loc[trial] = case_values + [x.Value for x in book.Sheets('Output').Evaluate("C3:C15")]
-        GUI.plot_on_GUI(dfstreams, vars_to_change)
+        if disp_graphs:
+            GUI.plot_on_GUI(dfstreams, vars_to_change)
         
         ######### KEEP TRACK OF RUN TIME PER TRIAL ########
         print('Elapsed Time: ', time() - old_time)
@@ -238,8 +237,9 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
     dfstreams.to_excel(writer,'Sheet1')
     writer.save()
     
-    plt.savefig(output_file_name + '.png')
-    plt.show()
+    if disp_graphs:
+        plt.savefig(output_file_name + '.png')
+        plt.show()
         
     aspen.Close()
     print("-----------FINISHED-----------")
@@ -406,163 +406,6 @@ def CheckConverge(aspen):
     print('Feed Stage: ', obj.FindNode(fracfd).Value)
     return False
 
-def get_price_preds(file,data_col):
-    '''
-    Interface with price predictor model to fill an array with SA and biodiesel
-    prices over a future period.
-    
-    Inputs:
-    [str]file: .csv filename with oil predictions
-    [int]data_col: column containing data (barrels)
-
-    Outputs:
-    [np.array]price preds:
-        price_preds[0] = biofuel price
-        price_preds[1] = SA price
-    '''
-    BARRELL_TO_MT = 7.33
-    #predict the biofuel prices
-    ind = model.upload(file,data_col)
-    ind = model.gen_linspace(ind,span = 'year')
-    
-    #predict the biofuel prices
-    biofuel_model = get_model(ind,"biofuel")
-
-    ind *= BARRELL_TO_MT
-    
-    MA_model = get_model(ind,"ma")
-    SA_model = get_model(MA_model,"sa")
-
-    price_preds = np.array((biofuel_model, SA_model))
-    
-    return price_preds
-
-def get_model(ind,dep_name):
-    """
-    Call model.predict with params 
-    matching input name
-    
-    Inputs:
-    [np.array]ind: independent data
-    [str]dep_name: name of dependent variable
-
-    Outputs:
-    [np.array]model: model of dependent data
-    """
-    
-    if dep_name == "biofuel":
-        abt = (1.0653, 69.8492, 1)
-        mu = -0.04769
-        std = 21.6212
-        
-    if dep_name == "ma":
-        abt = (1.378, 648.5, 3)
-        mu = 0.0002883
-        std = 114.8
-        
-    if dep_name == "sa":    
-        abt = (0.7465, 1050, 3)
-        mu = -1.619
-        std = 144.7
-
-    preds = model.predict(abt, ind, mu, std)
-    
-    return preds
-
-def get_case_profit(case_index, dfstreams, price_preds):
-    '''
-    Calculates the total profit for a refinery over the 
-    number of months in the price_preds array.
-    Does not factor in capital costs
-    
-    Inputs:
-        case_index: integer
-        dfstreams: data frame with TEA and ASPEN outputs
-        price_preds: 2D array with Biofuel prices and SA prices
-            on a monthly basis
-    Outputs:
-        total_profit: float
-    '''
-    streams_for_case = dfstreams.iloc[case_index]
-    price_preds[1] /= 1000
-    total_profit = \
-        streams_for_case['Biofuel Output']*price_preds[0].sum() + \
-        streams_for_case['Succinic Acid Output']*(price_preds[1]).sum() +\
-        streams_for_case['Var OpCosts']*len(price_preds) +\
-        streams_for_case['Fixed Op Costs']*len(price_preds)
-        
-    return total_profit
-
-    
-#The following functions relate to monte carlo analysis
-    #and visualization
-def monte_carlo(dfstreams,num_lives,file = 'oil.csv',data_col = 1):
-    '''
-    For each variation of fractionalization stored in dfstreams
-    this function will calculate the profitability over a time period 
-    many different times. In each simulation for each case, the price 
-    predictions will be varied.
-    Inputs: 
-        dfstreams
-        num_lives
-        file
-        data_col
-    Outputs:
-        case_profits: 2D array
-            case_profits[0] is the SA fractionalization
-            case_profits[1] list of potential profits associated 
-                that fractionalization
-    '''
-    case_profits = []
-    for case in range(len(dfstreams.index)):
-        
-        profits = []
-        for lifetime in range(num_lives):
-            
-            price_preds = get_price_preds(file,data_col)
-            profit = get_case_profit(case, dfstreams, price_preds)
-            profits.append(profit)
-           
-        case_profits.append((dfstreams.iloc[case].name, profits))
-        
-    return case_profits
-
-def plot_histograms(case_profits,number = None):
-    '''
-    Used to visualize the outputs of the monte carlo simulation
-    Inputs: 
-        case_profits: 2D array
-        number: integer, the number of cases distributions
-            to display
-    '''
-    ax = plt.axes()
-    
-    if number == 1:
-        step = len(case_profits[0][1])
-        for case,dist in case_profits[::step]:
-            
-            case_name = "SA%: " + str(case)
-            ax.hist(dist,alpha = .5,label = case_name)
-            
-    elif number == None:
-        for case,dist in case_profits[::1]:
-            
-            case_name = "SA%: " + str(case)
-            ax.hist(dist,alpha = .5,label = case_name)
-            
-    else:
-        step = round(len(case_profits)/number)
-        for case,dist in case_profits[::step]:
-            
-            case_name = "SA%: " + str(case)
-            ax.hist(dist,alpha = .5,label = case_name)
-    
-    ax.set_xlabel("Profit")
-    ax.set_ylabel("Frequency")
-    ax.set_title("Profitability Distributions")
-    ax.legend(loc = 0, fontsize = 'xx-small')
-    plt.show()
-    
     
 if __name__ == "__main__":
     pass
