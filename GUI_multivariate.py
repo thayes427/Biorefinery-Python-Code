@@ -26,17 +26,17 @@ def open_excel_file():
     root.filename = askopenfilename(initialdir = "/",
                                                 title = "Select file")
                                         
-    excel.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery Code/Variable_Call_Excel.csv')
+    excel.insert(0,root.filename)
     
 def open_aspen_file():
     root.filename = askopenfilename(initialdir = "/",
                                                 title = "Select file")
-    aspen.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery Code/BC1508F-BC_FY17Target._Final_5ptoC5_updated022618.bkp')
+    aspen.insert(0,root.filename)
 
 def open_solver_file():
     root.filename = askopenfilename(initialdir = "/",
                                                 title = "Select file")
-    solver.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery Code/DESIGN_OBJ2_test_MFSP-updated.xlsm')
+    solver.insert(0,root.filename)
     
 def plot_on_GUI(d_f_output, vars_to_change = []):
     '''
