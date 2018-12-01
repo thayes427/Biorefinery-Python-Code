@@ -209,8 +209,8 @@ def load_variables_into_GUI(tab_num):
 
         
         # Add a canvas in the canvas frame
-        canvas = Canvas(frame_canvas)
-        canvas.grid(row=0, column=0, sticky="news")
+        canvas1 = Canvas(frame_canvas1)
+        canvas1.grid(row=0, column=0, sticky="news")
         
         # Link a scrollbar to the canvas
         vsb = ttk.Scrollbar(frame_canvas1, orient="vertical", command=canvas1.yview)
