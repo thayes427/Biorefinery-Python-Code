@@ -147,6 +147,7 @@ def load_variables_into_GUI(tab_num):
     #now populate the gui with the appropriate tab and variables stored above
     if type_of_analysis == 'Single Point Analysis':
         sp_row_num = 2
+        
         # Create a frame for the canvas with non-zero row&column weights
         frame_canvas = ttk.Frame(tab_num)
         frame_canvas.grid(row=sp_row_num, column=1, pady=(5, 0))
@@ -346,9 +347,10 @@ cb = None
 tab2 = None
 tab1 = None
 tab3 = None
+save_sp = None 
 
 def make_new_tab():
-    global sim, sim2, save2, save, otherbool, show_plot, boolvar, cb, tab1, tab2, tab3, fill_num_sims
+    global save_sp,sim, sim2, save2, save, otherbool, show_plot, boolvar, cb, tab1, tab2, tab3, fill_num_sims
     
     #note.forget(tab5)
     if analysis_type.get() == 'Choose Analysis Type':
@@ -401,6 +403,11 @@ def make_new_tab():
     elif  analysis_type.get() == 'Single Point Analysis':
         tab3 = ttk.Frame(note)
         note.add(tab3, text = 'Single Point')
+        
+        Label(tab3, 
+              text="Save As :").grid(row=0, column= 0, sticky = E,pady = 5,padx = 5)
+        save_sp = Entry(tab3)
+        save_sp.grid(row=0, column=1,pady = 5,padx = 5)
         
         Button(tab3,
         text='Calculate MFSP',
