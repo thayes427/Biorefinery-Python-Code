@@ -9,6 +9,8 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib import pyplot as pplt
 import csv
 
+
+
 ###################GOBALS####################
 single_point_var_val= {}
 univar_var_num_sim = {}
@@ -24,15 +26,17 @@ def quit():
 
 def open_excel_file():
     root.filename = askopenfilename(title = "Select file", filetypes = (("csv files","*.csv"),("all files","*.*")))
-                                        
+    excel.delete(0, END)
     excel.insert(0,root.filename)
     
 def open_aspen_file():
     root.filename = askopenfilename(title = "Select file", filetypes = (("Aspen Models",["*.bkp", "*.apw"]),("all files","*.*")))
+    aspen.delete(0, END)
     aspen.insert(0,root.filename)
 
 def open_solver_file():
     root.filename = askopenfilename(title = "Select file", filetypes = (("Excel Files","*.xlsm"),("all files","*.*")))
+    solver.delete(0, END)
     solver.insert(0,root.filename)
     
 def plot_on_GUI(d_f_output, vars_to_change = []):
@@ -127,7 +131,7 @@ univar_row_num = None
     
 def load_variables_into_GUI(tab_num):
     sens_vars = str(excel.get())
-    global sp_row_num, univar_row_num, univar_var_num_sim
+    global sp_row_num, univar_row_num, univar_var_num_sim, tab3, tab1, tab2, note
     single_pt_vars = []
     univariate_vars = []
     multivariate_vars = []
@@ -146,6 +150,7 @@ def load_variables_into_GUI(tab_num):
                     univariate_vars.append((row["Variable Name"], row["Format of Range"].strip().lower(), row['Range of Values'].split(',')))
     #now populate the gui with the appropriate tab and variables stored above
     if type_of_analysis == 'Single Point Analysis':
+        note.select(tab3)
         sp_row_num = 2
         
         # Create a frame for the canvas with non-zero row&column weights
@@ -194,6 +199,7 @@ def load_variables_into_GUI(tab_num):
             
 
     if type_of_analysis == 'Univariate Sensitivity':
+        note.select(tab2)
         univar_row_num = 8
         Label(tab_num, 
             text= 'Variable Name').grid(row=univar_row_num, column= 1,pady = 5,padx = 5, sticky= E)
@@ -352,7 +358,7 @@ tab3 = None
 save_sp = None 
 
 def make_new_tab():
-    global save_sp,sim, sim2, save2, save, otherbool, show_plot, boolvar, cb, tab1, tab2, tab3, fill_num_sims
+    global save_sp,sim, sim2, save2, save, otherbool, show_plot, boolvar, cb, tab1, tab2, tab3, fill_num_sims, note
     
     if tab1:
         note.forget(tab1)
@@ -384,7 +390,7 @@ def make_new_tab():
         
         ##############Tab 2 Buttons###############
         Button(tab2,
-               text='Univariate Sensitivity Analysis',
+               text='Run Univariate Sensitivity Analysis',
                command=initialize_univar_analysis).grid(row=5,
                column=3, columnspan=2,
                pady=4)
@@ -428,6 +434,7 @@ def make_new_tab():
     elif  analysis_type.get() == 'Multivariate Sensitivity':
         tab1 = ttk.Frame(note)
         note.add(tab1,text = "Multivariate Analysis")
+        note.select(tab1)
         ###############TAB 1 LABELS#################
 
 
