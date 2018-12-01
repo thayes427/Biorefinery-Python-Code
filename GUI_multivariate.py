@@ -151,6 +151,7 @@ def load_variables_into_GUI(tab_num):
     #now populate the gui with the appropriate tab and variables stored above
     if type_of_analysis == 'Single Point Analysis':
         note.select(tab3)
+        tab3.config(width = '5c', height = '5c')
         sp_row_num = 2
         
         # Create a frame for the canvas with non-zero row&column weights
@@ -158,13 +159,14 @@ def load_variables_into_GUI(tab_num):
         frame_canvas.grid(row=sp_row_num, column=1, pady=(5, 0))
         frame_canvas.grid_rowconfigure(0, weight=1)
         frame_canvas.grid_columnconfigure(0, weight=1)
+        frame_canvas.config(width = '5c', height = '5c')
         # Set grid_propagate to False resizing later
         #frame_canvas.grid_propagate(False)
         
         # Add a canvas in the canvas frame
         canvas = Canvas(frame_canvas)
         canvas.grid(row=0, column=0, sticky="news")
-        
+        canvas.config(width = '5c', height = '5c')
         # Link a scrollbar to the canvas
         vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=canvas.yview)
         vsb.grid(row=0, column=1,sticky = 'ns')
@@ -173,7 +175,7 @@ def load_variables_into_GUI(tab_num):
         # Create a frame to contain the variables
         frame_vars = ttk.Frame(canvas)
         canvas.create_window((0, 0), window=frame_vars, anchor='nw')
-      
+        frame_vars.config(width = '5c', height = '5c')
         
         sp_row_num = 0
         for name,value in single_pt_vars:
@@ -191,7 +193,7 @@ def load_variables_into_GUI(tab_num):
         frame_vars.update_idletasks()
         # Determine the size of the Canvas
         
-        frame_canvas.config(width='5c', height='5c')
+        frame_canvas.config(width='5c', height='10c')
         
         # Set the canvas scrolling region
         canvas.config(scrollregion=canvas.bbox("all"))
@@ -214,7 +216,7 @@ def load_variables_into_GUI(tab_num):
         frame_canvas1.grid_rowconfigure(0, weight=1)
         frame_canvas1.grid_columnconfigure(0, weight=1)
         # Set grid_propagate to False resizing later
-
+        #frame_canvas.grid_propogate(False)
         
         # Add a canvas in the canvas frame
         canvas1 = Canvas(frame_canvas1)
@@ -248,7 +250,7 @@ def load_variables_into_GUI(tab_num):
         frame_vars1.update_idletasks()
         # Determine the size of the Canvas
         
-        frame_canvas1.config(width='9c', height='5c')
+        frame_canvas1.config(width='5c', height='5c')
         
         # Set the canvas scrolling region
         canvas1.config(scrollregion=canvas1.bbox("all"))
@@ -276,10 +278,14 @@ def initialize_univar_analysis():
         get_distributions(True)
     run_univ_sens()
     
-def display_time_remaining(time_remaining):
+def display_time_remaining(time_remaining = 10):
     '''
     THIS NEEDS TO PRINT OUT ESTIMATED TIME REMAINING
     '''
+    if tab1:
+        Label(tab1, text = 'Time Remaining :' + str(time_remaining)).grid(row = 15, column= 1)
+    if tab2:
+        Label(tab2, text = 'Time Remaining :' + str(time_remaining)).grid(row = 15, column= 1)
     return None
 
 
@@ -382,7 +388,6 @@ def make_new_tab():
         save2.grid(row=4, column=2,pady = 5,padx = 5)
         
         Label(tab2,text = ".csv").grid(row = 4, column = 3, sticky = W)
-        
         ##############Tab 2 Buttons###############
         Label(tab2, text ='').grid(row= 13, column =1)
         Button(tab2,
@@ -404,14 +409,20 @@ def make_new_tab():
         fill_num_sims = Entry(tab2)
         fill_num_sims.grid(row=7,column = 3,sticky =W, pady =2, padx = 2)
         fill_num_sims.config(width = 10)
+        
+        options= ttk.Labelframe(tab2, text='Run Options:')
+        options.grid(row = 15,column = 3, pady = 10,padx = 10)
+        
+        
+
         boolvar = IntVar()
         boolvar.set(False)
-        cb = Checkbutton(tab2, text = "Next Variable", variable = boolvar).grid(row=6,columnspan = 1, column = 2, sticky=W)
+        cb = Checkbutton(options, text = "Next Variable", variable = boolvar).grid(row=6,columnspan = 1, column = 2, sticky=W)
         
         otherbool = IntVar()
         otherbool.set(False)
         
-        cb = Checkbutton(tab2, text = "Abort", variable = otherbool).grid(row= 6,columnspan = 1, column = 3, sticky=W)
+        cb = Checkbutton(options, text = "Abort", variable = otherbool).grid(row= 6,columnspan = 1, column = 3, sticky=W)
         tab_made = tab2
     elif  analysis_type.get() == 'Single Point Analysis':
         tab3 = ttk.Frame(note)

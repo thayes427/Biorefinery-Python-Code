@@ -233,9 +233,11 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         #abort = GUI.check_abort()
         #if abort:
         #    break
-    
+        
+    summary_stats = summarie(dfstreams)
     writer = pd.ExcelWriter(output_file_name + '.xlsx')
-    dfstreams.to_excel(writer,'Sheet1')
+    dfstreams.to_excel(writer, sheet_name ='Sheet1')
+    summary_stats.to_excel(writer, sheet_name = 'Summary Stats')
     writer.save()
     
     if disp_graphs:
@@ -245,8 +247,15 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
     aspen.Close()
     print("-----------FINISHED-----------")
     return dfstreams
-        
-        
+
+def summarize(dfstreams):        
+    summary_stats = pd.DataFrame(columns=columns)
+    summary_stats['Mean'] = dfstreams['MFSP'].mean()
+    summary_stats['Max'] = dfstreams['MFSP'].max()
+    summary_stats['Min'] = dfstreams['MFSP'].min()
+    summary_stats['STD'] = dfstreams['MFSP'].std()
+    
+    return summary_stats
 
 def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name, values, fortran_index, output_file_name):
     '''
