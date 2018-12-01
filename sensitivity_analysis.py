@@ -330,13 +330,14 @@ def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name,
         time_remaining = (len(values) - trial_counter)*(elapsed_time / (trial_counter))
         GUI.display_time_remaining(time_remaining)
         trial_counter += 1
+        GUI.plot_univ_on_GUI(dfstreams, v, case, type(values[0]) == str)
         
-        GUI.plot_on_GUI(dfstreams)
         
         ############### CHECK TO SEE IF USER WANTS TO ABORT ##########
         #abort = GUI.check_next_analysis()
         #if abort:
         #    break
+    
     
     writer = pd.ExcelWriter(output_file_name + '_' + v + '.xlsx')
     dfstreams.to_excel(writer,'Sheet1')
