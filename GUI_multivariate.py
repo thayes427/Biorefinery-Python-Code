@@ -57,6 +57,8 @@ def plot_on_GUI(d_f_output, vars_to_change = []):
     num_rows= ((len(vars_to_change) + 1) % columns) + 1
     counter = 1
     fig = pplt.figure(figsize = (15,7))
+    canvas = FigureCanvasTkAgg(fig)
+    canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5,)
     a = fig.add_subplot(num_rows,columns,counter)
     counter += 1
     total_MFSP = d_f_output["MFSP"]
@@ -72,10 +74,14 @@ def plot_on_GUI(d_f_output, vars_to_change = []):
             num_bins = 100
             n, bins, patches = pplt.hist(total_data, num_bins, facecolor='blue', alpha=0.5)
             a.set_title(var)
-    canvas = FigureCanvasTkAgg(fig)
-    canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5,)
-        
-    root.update_idletasks()
+    
+    global tab1, tab2, tab3
+    if tab1:
+        tab1.update_idletasks()
+    elif tab2:
+        tab2.update_idletasks()
+    else:
+        tab3.update_idletasks()
     
 
 def get_distributions(is_univar):

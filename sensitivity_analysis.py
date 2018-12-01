@@ -16,8 +16,8 @@ from time import time
 from math import ceil
 import random
 import csv
-if __name__ == "__main__":
-   import GUI_multivariate as GUI
+import GUI_multivariate as GUI
+import psutil
 
 aspenfilename =  'BC1508F-BC_FY17Target._Final_5ptoC5_updated022618.bkp'
 excelfilename = 'DESIGN_OBJ2_test_MFSP-updated.xlsm' 
@@ -28,7 +28,7 @@ def open_COMS(aspenfilename, excelfilename):
     
     print('Initializing Aspen COM...')
     aspen = win32.Dispatch('Apwn.Document')
-    print('Aspen COM Initialized.')
+    print('Aspen COM Initialized')
     aspen.InitFromArchive(os.path.abspath(aspenfilename))
     print('Aspen File Open.')
     obj = aspen.Tree
@@ -87,6 +87,7 @@ def get_distributions(gui_excel_input, ntrials=1):
                     lb_ub = row['Range of Values'].split(',')
                     lb_uniform, ub_uniform = float(lb_ub[0].strip()), float(lb_ub[1].strip())
                     distribution = sample_uniform(lb_uniform, ub_uniform, lb, ub, ntrials)
+                simulation_dist[aspen_variable] = distribution
                 fortran_index = (0,0)
                 if row['Fortran Call'].strip() != "":
                     is_fortran = True
@@ -98,7 +99,6 @@ def get_distributions(gui_excel_input, ntrials=1):
                             fortran_index = (i, i+len_val) #NOT INCLUSIVE
                     for i, v in enumerate(distribution):
                         distribution[i] = make_fortran(fortran_call, fortran_index, v)
-                simulation_dist[aspen_variable] = distribution
                 simulation_vars[(aspen_variable, aspen_call, fortran_index)] = distribution
     
     return simulation_vars, simulation_dist
@@ -287,7 +287,7 @@ def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name,
     start_time = time()
     trial_counter = 1
     for case in values:
-        print("variable value: " +str(case))
+        print(v + " = " + str(case))
         obj.FindNode(aspencall).Value = case
         
         aspen.Reinit()
