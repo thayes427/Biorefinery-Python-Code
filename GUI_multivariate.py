@@ -91,7 +91,6 @@ def plot_univ_on_GUI(dfstreams, var, value, fortran_check):
     the variable distribution, and the second one plotting the MFSP distribution.   
     
     '''
->>>>>>> 5884b4468e699601f77a67acfdec9eef617a4cb6
     
     global simulation_dist, counter, old_var_name
     columns = 2
