@@ -177,6 +177,7 @@ def load_variables_into_GUI(tab_num):
             text= name).grid(row=sp_row_num, column= 1, sticky = E,pady = 5,padx = 5)
             key=Entry(frame_vars)
             key.grid(row=sp_row_num, column=2,pady = 5,padx = 5)
+            key.delete(first=0,last=END)
             key.insert(0,str(value))
             single_point_var_val[name]= key
             
@@ -331,6 +332,7 @@ def fill_num_trials():
     global fill_num_sims, univar_var_num_sim
     ntrials = fill_num_sims.get()
     for name, slot in univar_var_num_sim.items():
+        slot.delete(0, END)
         slot.insert(0, ntrials)
     
 
@@ -346,9 +348,9 @@ cb = None
 tab2 = None
 tab1 = None
 tab3 = None
-
+save_sp = None
 def make_new_tab():
-    global sim, sim2, save2, save, otherbool, show_plot, boolvar, cb, tab1, tab2, tab3, fill_num_sims
+    global save_sp,sim, sim2, save2, save, otherbool, show_plot, boolvar, cb, tab1, tab2, tab3, fill_num_sims
     
     #note.forget(tab5)
     if analysis_type.get() == 'Choose Analysis Type':
@@ -401,6 +403,11 @@ def make_new_tab():
     elif  analysis_type.get() == 'Single Point Analysis':
         tab3 = ttk.Frame(note)
         note.add(tab3, text = 'Single Point')
+         
+        Label(tab3, 
+              text="Save As :").grid(row=1, column= 0, sticky = E,pady = 5,padx = 5)
+        save_sp = Entry(tab3)
+        save_sp.grid(row=1, column=1,pady = 5,padx = 5)
         
         Button(tab3,
         text='Calculate MFSP',
