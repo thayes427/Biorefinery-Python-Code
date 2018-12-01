@@ -9,6 +9,8 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib import pyplot as pplt
 import csv
 
+
+
 ###################GOBALS####################
 single_point_var_val= {}
 univar_var_num_sim = {}
@@ -24,15 +26,17 @@ def quit():
 
 def open_excel_file():
     root.filename = askopenfilename(title = "Select file", filetypes = (("csv files","*.csv"),("all files","*.*")))
-                                        
+    excel.delete(0, END)
     excel.insert(0,root.filename)
     
 def open_aspen_file():
     root.filename = askopenfilename(title = "Select file", filetypes = (("Aspen Models",["*.bkp", "*.apw"]),("all files","*.*")))
+    aspen.delete(0, END)
     aspen.insert(0,root.filename)
 
 def open_solver_file():
     root.filename = askopenfilename(title = "Select file", filetypes = (("Excel Files","*.xlsm"),("all files","*.*")))
+    solver.delete(0, END)
     solver.insert(0,root.filename)
     
 def plot_on_GUI(d_f_output, vars_to_change = []):
@@ -177,7 +181,7 @@ univar_row_num = None
     
 def load_variables_into_GUI(tab_num):
     sens_vars = str(excel.get())
-    global sp_row_num, univar_row_num, univar_var_num_sim
+    global sp_row_num, univar_row_num, univar_var_num_sim, tab3, tab1, tab2, note
     single_pt_vars = []
     univariate_vars = []
     multivariate_vars = []
@@ -196,7 +200,9 @@ def load_variables_into_GUI(tab_num):
                     univariate_vars.append((row["Variable Name"], row["Format of Range"].strip().lower(), row['Range of Values'].split(',')))
     #now populate the gui with the appropriate tab and variables stored above
     if type_of_analysis == 'Single Point Analysis':
+        note.select(tab3)
         sp_row_num = 2
+        
         # Create a frame for the canvas with non-zero row&column weights
         frame_canvas = ttk.Frame(tab_num)
         frame_canvas.grid(row=sp_row_num, column=1, pady=(5, 0))
@@ -227,6 +233,7 @@ def load_variables_into_GUI(tab_num):
             text= name).grid(row=sp_row_num, column= 1, sticky = E,pady = 5,padx = 5)
             key=Entry(frame_vars)
             key.grid(row=sp_row_num, column=2,pady = 5,padx = 5)
+            key.delete(first=0,last=END)
             key.insert(0,str(value))
             single_point_var_val[name]= key
             
@@ -242,6 +249,7 @@ def load_variables_into_GUI(tab_num):
             
 
     if type_of_analysis == 'Univariate Sensitivity':
+        note.select(tab2)
         univar_row_num = 8
         Label(tab_num, 
             text= 'Variable Name').grid(row=univar_row_num, column= 1,pady = 5,padx = 5, sticky= E)
@@ -251,49 +259,49 @@ def load_variables_into_GUI(tab_num):
             text= '# of Trials').grid(row=univar_row_num, column= 3,pady = 5,padx = 5, sticky = W)
         univar_row_num += 1
         # Create a frame for the canvas with non-zero row&column weights
-        frame_canvas = ttk.Frame(tab_num)
-        frame_canvas.grid(row=univar_row_num, column=1, columnspan =3, pady=(5, 0))
-        frame_canvas.grid_rowconfigure(0, weight=1)
-        frame_canvas.grid_columnconfigure(0, weight=1)
+        frame_canvas1 = ttk.Frame(tab_num)
+        frame_canvas1.grid(row=univar_row_num, column=1, columnspan =3, pady=(5, 0))
+        frame_canvas1.grid_rowconfigure(0, weight=1)
+        frame_canvas1.grid_columnconfigure(0, weight=1)
         # Set grid_propagate to False resizing later
-        #frame_canvas.grid_propagate(False)
+
         
         # Add a canvas in the canvas frame
-        canvas = Canvas(frame_canvas)
-        canvas.grid(row=0, column=0, sticky="news")
+        canvas1 = Canvas(frame_canvas1)
+        canvas1.grid(row=0, column=0, sticky="news")
         
         # Link a scrollbar to the canvas
-        vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=canvas.yview)
+        vsb = ttk.Scrollbar(frame_canvas1, orient="vertical", command=canvas1.yview)
         vsb.grid(row=0, column=1,sticky = 'ns')
-        canvas.configure(yscrollcommand=vsb.set)
+        canvas1.configure(yscrollcommand=vsb.set)
         
         # Create a frame to contain the variables
-        frame_vars = ttk.Frame(canvas)
-        canvas.create_window((0, 0), window=frame_vars, anchor='nw')
+        frame_vars1 = ttk.Frame(canvas1)
+        canvas1.create_window((0, 0), window=frame_vars1, anchor='nw')
         univar_row_num =0
         for name, format_of_data, vals in univariate_vars:
-            Label(frame_vars, 
+            Label(frame_vars1, 
             text= name).grid(row=univar_row_num, column= 1,pady = 5,padx = 5)
-            Label(frame_vars, 
+            Label(frame_vars1, 
             text= format_of_data).grid(row=univar_row_num, column= 2,pady = 5,padx = 5)
             
             if not(format_of_data == 'linspace' or format_of_data == 'list'):
-                key2=Entry(frame_vars)
+                key2=Entry(frame_vars1)
                 key2.grid(row=univar_row_num, column=3,pady = 5,padx = 5)
                 #key2.insert(0,univariate_sims)
                 univar_var_num_sim[name]= key2
             else:
-                Label(frame_vars,text= str(len(vals))).grid(row=univar_row_num, column= 3,pady = 5,padx = 5)
+                Label(frame_vars1,text= str(len(vals))).grid(row=univar_row_num, column= 3,pady = 5,padx = 5)
             univar_row_num += 1
             
         # Update vars frames idle tasks to let tkinter calculate variable sizes
-        frame_vars.update_idletasks()
+        frame_vars1.update_idletasks()
         # Determine the size of the Canvas
         
-        frame_canvas.config(width='9c', height='5c')
+        frame_canvas1.config(width='9c', height='5c')
         
         # Set the canvas scrolling region
-        canvas.config(scrollregion=canvas.bbox("all"))
+        canvas1.config(scrollregion=canvas1.bbox("all"))
             
             
         
@@ -381,6 +389,7 @@ def fill_num_trials():
     global fill_num_sims, univar_var_num_sim
     ntrials = fill_num_sims.get()
     for name, slot in univar_var_num_sim.items():
+        slot.delete(0, END)
         slot.insert(0, ntrials)
     
 
@@ -396,22 +405,26 @@ cb = None
 tab2 = None
 tab1 = None
 tab3 = None
+save_sp = None 
 
 def make_new_tab():
-    global sim, sim2, save2, save, otherbool, show_plot, boolvar, cb, tab1, tab2, tab3, fill_num_sims
+    global save_sp,sim, sim2, save2, save, otherbool, show_plot, boolvar, cb, tab1, tab2, tab3, fill_num_sims, note
     
-    #note.forget(tab5)
+    if tab1:
+        note.forget(tab1)
+        tab1 = None
+    if tab2:
+        note.forget(tab2)
+        tab2 = None
+    if tab3:
+        note.forget(tab3)
+        tab3 = None
     if analysis_type.get() == 'Choose Analysis Type':
         print("ERROR: Select an Analysis")
     elif  analysis_type.get() == 'Univariate Sensitivity':
         tab2 = ttk.Frame(note)
         note.add(tab2,text = "Univariate Analysis")
         ##############Tab 2 LABELS##################
-        
-        Label(tab2, 
-              text="Number of Simulations :").grid(row=3, column= 1, sticky = E,pady = 5,padx = 5)
-        sim2 = Entry(tab2)
-        sim2.grid(row=3, column=2,pady = 5,padx = 5)
         
         Label(tab2, 
               text="Save As :").grid(row=4, column= 1, sticky = E,pady = 5,padx = 5)
@@ -421,24 +434,26 @@ def make_new_tab():
         Label(tab2,text = ".csv").grid(row = 4, column = 3, sticky = W)
         
         ##############Tab 2 Buttons###############
+        Label(tab2, text ='').grid(row= 13, column =1)
         Button(tab2,
-               text='Univariate Sensitivity Analysis',
-               command=initialize_univar_analysis).grid(row=5,
+
+               text='Run Univariate Sensitivity Analysis',
+               command=initialize_univar_analysis).grid(row=14,
                column=3, columnspan=2,
                pady=4)
         Button(tab2,
                text='Display Variable Distributions',
-               command=lambda: display_distributions(True)).grid(row=5,
-               column=1, columnspan=2,
+               command=lambda: display_distributions(True)).grid(row=14,
+               column=1, columnspan=2, sticky = W,
                pady=4)
         Button(tab2,
                text='Fill Simulations',
-               command=fill_num_trials).grid(row=7,
-               column=2, sticky = E,
+               command=fill_num_trials).grid(row=7, columnspan = 2, sticky =E,
+               column=1,
                pady=4)
         fill_num_sims = Entry(tab2)
-        fill_num_sims.grid(row=7,column = 3, pady =2, padx = 2)
-        
+        fill_num_sims.grid(row=7,column = 3,sticky =W, pady =2, padx = 2)
+        fill_num_sims.config(width = 10)
         boolvar = IntVar()
         boolvar.set(False)
         cb = Checkbutton(tab2, text = "Next Variable", variable = boolvar).grid(row=6,columnspan = 1, column = 2, sticky=W)
@@ -451,6 +466,11 @@ def make_new_tab():
     elif  analysis_type.get() == 'Single Point Analysis':
         tab3 = ttk.Frame(note)
         note.add(tab3, text = 'Single Point')
+         
+        Label(tab3, 
+              text="Save As :").grid(row=0, column= 0, sticky = E,pady = 5,padx = 5)
+        save_sp = Entry(tab3)
+        save_sp.grid(row=0, column=1,pady = 5,padx = 5)
         
         Button(tab3,
         text='Calculate MFSP',
@@ -461,6 +481,7 @@ def make_new_tab():
     elif  analysis_type.get() == 'Multivariate Sensitivity':
         tab1 = ttk.Frame(note)
         note.add(tab1,text = "Multivariate Analysis")
+        note.select(tab1)
         ###############TAB 1 LABELS#################
 
 
@@ -552,7 +573,7 @@ master = tab0
 analysis_type = StringVar(master)
 analysis_type.set("Choose Analysis Type") # default value
 
-analysis_type_options = OptionMenu(tab0, analysis_type, "Univariate Sensitivity", "Single Point Analysis", "Multivariate Sensitivity").grid(row = 5,sticky = E,column = 2,padx =5, pady = 5)
+analysis_type_options = OptionMenu(tab0, analysis_type,"Single Point Analysis","Univariate Sensitivity", "Multivariate Sensitivity").grid(row = 5,sticky = E,column = 2,padx =5, pady = 5)
 '''
 ###################Scroll BAR#####################
 label1 = ttk.Label(frame, text="Label 1")

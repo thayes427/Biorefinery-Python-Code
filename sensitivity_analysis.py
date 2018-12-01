@@ -16,7 +16,8 @@ from time import time
 from math import ceil
 import random
 import csv
-import GUI_multivariate as GUI
+if __name__ == "__main__":
+   import GUI_multivariate as GUI
 
 aspenfilename =  'BC1508F-BC_FY17Target._Final_5ptoC5_updated022618.bkp'
 excelfilename = 'DESIGN_OBJ2_test_MFSP-updated.xlsm' 
