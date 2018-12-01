@@ -354,7 +354,15 @@ save_sp = None
 def make_new_tab():
     global save_sp,sim, sim2, save2, save, otherbool, show_plot, boolvar, cb, tab1, tab2, tab3, fill_num_sims
     
-    #note.forget(tab5)
+    if tab1:
+        note.forget(tab1)
+        tab1 = None
+    if tab2:
+        note.forget(tab2)
+        tab2 = None
+    if tab3:
+        note.forget(tab3)
+        tab3 = None
     if analysis_type.get() == 'Choose Analysis Type':
         print("ERROR: Select an Analysis")
     elif  analysis_type.get() == 'Univariate Sensitivity':
@@ -511,7 +519,7 @@ master = tab0
 analysis_type = StringVar(master)
 analysis_type.set("Choose Analysis Type") # default value
 
-analysis_type_options = OptionMenu(tab0, analysis_type, "Univariate Sensitivity", "Single Point Analysis", "Multivariate Sensitivity").grid(row = 5,sticky = E,column = 2,padx =5, pady = 5)
+analysis_type_options = OptionMenu(tab0, analysis_type,"Single Point Analysis","Univariate Sensitivity", "Multivariate Sensitivity").grid(row = 5,sticky = E,column = 2,padx =5, pady = 5)
 '''
 ###################Scroll BAR#####################
 label1 = ttk.Label(frame, text="Label 1")
