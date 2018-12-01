@@ -371,11 +371,6 @@ def make_new_tab():
         ##############Tab 2 LABELS##################
         
         Label(tab2, 
-              text="Number of Simulations :").grid(row=3, column= 1, sticky = E,pady = 5,padx = 5)
-        sim2 = Entry(tab2)
-        sim2.grid(row=3, column=2,pady = 5,padx = 5)
-        
-        Label(tab2, 
               text="Save As :").grid(row=4, column= 1, sticky = E,pady = 5,padx = 5)
         save2 = Entry(tab2)
         save2.grid(row=4, column=2,pady = 5,padx = 5)
@@ -383,24 +378,25 @@ def make_new_tab():
         Label(tab2,text = ".csv").grid(row = 4, column = 3, sticky = W)
         
         ##############Tab 2 Buttons###############
+        Label(tab2, text ='').grid(row= 13, column =1)
         Button(tab2,
                text='Univariate Sensitivity Analysis',
-               command=initialize_univar_analysis).grid(row=5,
+               command=initialize_univar_analysis).grid(row=14,
                column=3, columnspan=2,
                pady=4)
         Button(tab2,
                text='Display Variable Distributions',
-               command=lambda: display_distributions(True)).grid(row=5,
-               column=1, columnspan=2,
+               command=lambda: display_distributions(True)).grid(row=14,
+               column=1, columnspan=2, sticky = W,
                pady=4)
         Button(tab2,
                text='Fill Simulations',
-               command=fill_num_trials).grid(row=7,
-               column=2, sticky = E,
+               command=fill_num_trials).grid(row=7, columnspan = 2, sticky =E,
+               column=1,
                pady=4)
         fill_num_sims = Entry(tab2)
-        fill_num_sims.grid(row=7,column = 3, pady =2, padx = 2)
-        
+        fill_num_sims.grid(row=7,column = 3,sticky =W, pady =2, padx = 2)
+        fill_num_sims.config(width = 10)
         boolvar = IntVar()
         boolvar.set(False)
         cb = Checkbutton(tab2, text = "Next Variable", variable = boolvar).grid(row=6,columnspan = 1, column = 2, sticky=W)
