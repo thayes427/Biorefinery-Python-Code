@@ -7,6 +7,8 @@ from tkinter.filedialog import askopenfilename
 import matplotlib
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 from matplotlib import pyplot as pplt
+from matplotlib.backend_bases import key_press_handler
+from matplotlib.figure import Figure
 import csv
 
 
@@ -56,12 +58,15 @@ def plot_on_GUI(d_f_output, vars_to_change = []):
     columns = 2
     num_rows= ((len(vars_to_change) + 1) // columns) + 1
     counter = 1
-    fig = pplt.figure(figsize = (5,5))
+    fig = Figure(figsize = (5,5))
     a = fig.add_subplot(num_rows,columns,counter)
     counter += 1
     total_MFSP = d_f_output["MFSP"]
     num_bins = 100
-    n, bins, patches = pplt.hist(total_MFSP, num_bins, facecolor='blue', alpha=0.5)
+    try:
+        n, bins, patches = a.hist(total_MFSP, num_bins, facecolor='blue', alpha=0.5)
+    except Exception:
+        pass
     a.set_title ("MFSP Distribution")
     a.set_xlabel("MFSP ($)")
     if len(vars_to_change) != 0:
@@ -70,7 +75,10 @@ def plot_on_GUI(d_f_output, vars_to_change = []):
             counter += 1
             total_data = d_f_output[var]
             num_bins = 100
-            n, bins, patches = pplt.hist(total_data, num_bins, facecolor='blue', alpha=0.5)
+            try:
+                n, bins, patches = a.hist(total_data, num_bins, facecolor='blue', alpha=0.5)
+            except Exception:
+                pass
             a.set_title(var)
 
     a = fig.tight_layout()
@@ -95,14 +103,17 @@ def plot_univ_on_GUI(dfstreams, var, value, fortran_check):
     global simulation_dist, counter, old_var_name
     columns = 2
     num_rows= ((len(simulation_dist) + 1) // columns) + 1
-    fig = pplt.figure(figsize = (5,5))
+    fig = Figure(figsize = (5,5))
     a = fig.add_subplot(num_rows,columns,counter)
     if var == old_var_name and old_var_name != '':
         counter += 2
         old_var_name = var
     counter += 1
     num_bins = 100
-    n, bins, patches = pplt.hist(value, num_bins, facecolor='blue', alpha=0.5)
+    try:
+        n, bins, patches = a.hist(value, num_bins, facecolor='blue', alpha=0.5)
+    except Exception:
+        pass
     a.set_title(var)
     if fortran_check:
         a.set_xticklabels([])
@@ -110,7 +121,10 @@ def plot_univ_on_GUI(dfstreams, var, value, fortran_check):
     a = fig.add_subplot(num_rows,columns,counter)
     counter -= 1
     num_bins = 100
-    n, bins, patches = pplt.hist(dfstreams['MFSP'], num_bins, facecolor='blue', alpha=0.5)
+    try:
+        n, bins, patches = a.hist(dfstreams['MFSP'], num_bins, facecolor='blue', alpha=0.5)
+    except Exception:
+        pass
     a.set_title('MFSP - ' + var)
     a = fig.tight_layout()
     canvas = FigureCanvasTkAgg(fig)
@@ -158,7 +172,10 @@ def plot_init_dist():
         a = fig.add_subplot(num_rows,columns,counter)
         counter += 1
         num_bins = 100
-        n, bins, patches = pplt.hist(values, num_bins, facecolor='blue', alpha=0.5)
+        try:
+            n, bins, patches = pplt.hist(values, num_bins, facecolor='blue', alpha=0.5)
+        except Exception:
+            pass
         a.set_title(var)
     a = fig.tight_layout()
     canvas = FigureCanvasTkAgg(fig)
@@ -380,7 +397,7 @@ def single_point_analysis():
     sp_vars, throwaway = msens.get_distributions(sens_vars, 1)
     for (aspen_variable, aspen_call, fortran_index), values in sp_vars.items():
         sp_vars[(aspen_variable, aspen_call, fortran_index)] = [float(single_point_var_val[aspen_variable].get())]
-    mfsp = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars, 1,"_", sp_vars, disp_graphs=False).get_value(0, 'MFSP')
+    mfsp = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars, 1,"_", sp_vars, disp_graphs=False).at[0, 'MFSP']
     Label(tab3, text= 'MFSP = ' + str(mfsp)).grid(row=sp_row_num+1, column = 1)
     
     
