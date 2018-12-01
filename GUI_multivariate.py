@@ -53,10 +53,10 @@ def plot_on_GUI(d_f_output, vars_to_change = []):
     
     '''
     
-    columns = 5
-    num_rows= ((len(vars_to_change) + 1) % columns) + 1
+    columns = 2
+    num_rows= ((len(vars_to_change) + 1) // columns) + 1
     counter = 1
-    fig = pplt.figure(figsize = (15,7))
+    fig = pplt.figure(figsize = (5,5))
     a = fig.add_subplot(num_rows,columns,counter)
     counter += 1
     total_MFSP = d_f_output["MFSP"]
@@ -72,11 +72,56 @@ def plot_on_GUI(d_f_output, vars_to_change = []):
             num_bins = 100
             n, bins, patches = pplt.hist(total_data, num_bins, facecolor='blue', alpha=0.5)
             a.set_title(var)
+
+    a = fig.tight_layout()
     canvas = FigureCanvasTkAgg(fig)
     canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5,)
         
     root.update_idletasks()
+
+
+counter = 1
+old_var_name = ''
+def plot_univ_on_GUI(dfstreams, var, value, fortran_check):
+    '''
+    Allows Unviariate to be plotted on the GUI
     
+    It will plot the graphs as follows: the number of rows is the number of variables that have
+    to be plotted, and there will be a width of two columns, with the first column graphing 
+    the variable distribution, and the second one plotting the MFSP distribution.   
+    
+    '''
+    
+    global simulation_dist, counter, old_var_name
+    columns = 2
+    num_rows= ((len(simulation_dist) + 1) // columns) + 1
+    fig = pplt.figure(figsize = (5,5))
+    a = fig.add_subplot(num_rows,columns,counter)
+    if var == old_var_name and old_var_name != '':
+        counter += 2
+        old_var_name = var
+    counter += 1
+    num_bins = 100
+    n, bins, patches = pplt.hist(value, num_bins, facecolor='blue', alpha=0.5)
+    a.set_title(var)
+    if fortran_check:
+        a.set_xticklabels([])
+        a.set_xlabel(var)
+    a = fig.add_subplot(num_rows,columns,counter)
+    counter -= 1
+    num_bins = 100
+    n, bins, patches = pplt.hist(dfstreams['MFSP'], num_bins, facecolor='blue', alpha=0.5)
+    a.set_title('MFSP - ' + var)
+    a = fig.tight_layout()
+    canvas = FigureCanvasTkAgg(fig)
+    canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5,)
+    
+    #vsb = ttk.Scrollbar(fig, orient="vertical", command=canvas.yview)
+    #vsb.grid(row=8, column=1,sticky = 'ns')
+    #canvas.configure(yscrollcommand=vsb.set)
+    
+    #canvas.config(scrollregion=canvas.bbox("all"))
+    root.update_idletasks()
 
 def get_distributions(is_univar):
     global simulation_vars, simulation_dist, univar_var_num_sim
@@ -105,19 +150,25 @@ def plot_init_dist():
     '''
     
     global simulation_dist
-    columns = 5
-    num_rows= ((len(simulation_dist) + 1) % columns) + 1
+    columns = 2
+    num_rows= ((len(simulation_dist) + 1) // columns) + 1
     counter = 1
-    fig = pplt.figure(figsize = (15,7))
+    fig = pplt.figure(figsize = (5,5))
     for var, values in simulation_dist.items():
         a = fig.add_subplot(num_rows,columns,counter)
         counter += 1
         num_bins = 100
         n, bins, patches = pplt.hist(values, num_bins, facecolor='blue', alpha=0.5)
         a.set_title(var)
+    a = fig.tight_layout()
     canvas = FigureCanvasTkAgg(fig)
     canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5,)
-        
+    
+    #vsb = ttk.Scrollbar(fig, orient="vertical", command=canvas.yview)
+    #vsb.grid(row=8, column=1,sticky = 'ns')
+    #canvas.configure(yscrollcommand=vsb.set)
+    
+    #canvas.config(scrollregion=canvas.bbox("all"))
     root.update_idletasks()
     
 def display_distributions(is_univar):
