@@ -23,19 +23,16 @@ def quit():
     root.destroy()
 
 def open_excel_file():
-    root.filename = askopenfilename(initialdir = "/",
-                                                title = "Select file")
+    root.filename = askopenfilename(title = "Select file", filetypes = (("csv files","*.csv"),("all files","*.*")))
                                         
     excel.insert(0,root.filename)
     
 def open_aspen_file():
-    root.filename = askopenfilename(initialdir = "/",
-                                                title = "Select file")
+    root.filename = askopenfilename(title = "Select file", filetypes = (("Aspen Models",["*.bkp", "*.apw"]),("all files","*.*")))
     aspen.insert(0,root.filename)
 
 def open_solver_file():
-    root.filename = askopenfilename(initialdir = "/",
-                                                title = "Select file")
+    root.filename = askopenfilename(title = "Select file", filetypes = (("Excel Files","*.xlsm"),("all files","*.*")))
     solver.insert(0,root.filename)
     
 def plot_on_GUI(d_f_output, vars_to_change = []):
@@ -51,6 +48,7 @@ def plot_on_GUI(d_f_output, vars_to_change = []):
         vars_to_change: list of variables that were input
     
     '''
+    
     columns = 5
     num_rows= ((len(vars_to_change) + 1) % columns) + 1
     counter = 1
@@ -155,10 +153,10 @@ def load_variables_into_GUI(tab_num):
         frame_canvas.grid_rowconfigure(0, weight=1)
         frame_canvas.grid_columnconfigure(0, weight=1)
         # Set grid_propagate to False resizing later
-        frame_canvas.grid_propagate(False)
+        #frame_canvas.grid_propagate(False)
         
         # Add a canvas in the canvas frame
-        canvas = Canvas(frame_canvas, bg="blue")
+        canvas = Canvas(frame_canvas)
         canvas.grid(row=0, column=0, sticky="news")
         
         # Link a scrollbar to the canvas
@@ -208,10 +206,10 @@ def load_variables_into_GUI(tab_num):
         frame_canvas.grid_rowconfigure(0, weight=1)
         frame_canvas.grid_columnconfigure(0, weight=1)
         # Set grid_propagate to False resizing later
-        frame_canvas.grid_propagate(False)
+        #frame_canvas.grid_propagate(False)
         
         # Add a canvas in the canvas frame
-        canvas = Canvas(frame_canvas, bg="blue")
+        canvas = Canvas(frame_canvas)
         canvas.grid(row=0, column=0, sticky="news")
         
         # Link a scrollbar to the canvas
@@ -379,7 +377,7 @@ def make_new_tab():
                column=3, columnspan=2,
                pady=4)
         Button(tab2,
-               text='Display Variable Distrbutions',
+               text='Display Variable Distributions',
                command=lambda: display_distributions(True)).grid(row=5,
                column=1, columnspan=2,
                pady=4)
@@ -444,7 +442,7 @@ def make_new_tab():
                sticky=W, 
                pady=4)
         Button(tab1,
-               text='Load Variable Distrbutions',
+               text='Display Variable Distributions',
                command=lambda: display_distributions(False)).grid(row=6,
                column=1, columnspan=2,
                sticky=W, 
