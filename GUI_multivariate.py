@@ -1,7 +1,7 @@
 from tkinter import *
 from tkinter import messagebox
 import numpy as np
-import obj2_cleaned_up_box as msens
+import sensitivity_analysis as msens
 from tkinter import ttk
 from tkinter.filedialog import askopenfilename
 import matplotlib
@@ -23,20 +23,17 @@ def quit():
     root.destroy()
 
 def open_excel_file():
-    root.filename = askopenfilename(initialdir = "/",
-                                                title = "Select file")
+    root.filename = askopenfilename(title = "Select file", filetypes = (("csv files","*.csv"),("all files","*.*")))
                                         
-    excel.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery-Design-Project/Variable_Call_Excel.csv')
+    excel.insert(0,root.filename)
     
 def open_aspen_file():
-    root.filename = askopenfilename(initialdir = "/",
-                                                title = "Select file")
-    aspen.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery-Design-Project/BC1508F-BC_FY17Target._Final_5ptoC5_updated022618.apw')
+    root.filename = askopenfilename(title = "Select file", filetypes = (("Aspen Models",["*.bkp", "*.apw"]),("all files","*.*")))
+    aspen.insert(0,root.filename)
 
 def open_solver_file():
-    root.filename = askopenfilename(initialdir = "/",
-                                                title = "Select file")
-    solver.insert(0,'C:/Users/MENGstudents/Desktop/Biorefinery-Design-Project/DESIGN_OBJ2_test_MFSP-updated.xlsm')
+    root.filename = askopenfilename(title = "Select file", filetypes = (("Excel Files","*.xlsm"),("all files","*.*")))
+    solver.insert(0,root.filename)
     
 def plot_on_GUI(d_f_output, vars_to_change = []):
     '''
@@ -51,6 +48,7 @@ def plot_on_GUI(d_f_output, vars_to_change = []):
         vars_to_change: list of variables that were input
     
     '''
+    
     columns = 5
     num_rows= ((len(vars_to_change) + 1) % columns) + 1
     counter = 1
@@ -77,16 +75,18 @@ def plot_on_GUI(d_f_output, vars_to_change = []):
     
 
 def get_distributions(is_univar):
-    global simulation_vars, simulation_dist
+    global simulation_vars, simulation_dist, univar_var_num_sim
     if is_univar:
         max_num_sim = max(int(slot.get()) for slot in univar_var_num_sim.values())
         simulation_vars, simulation_dist = msens.get_distributions(str(excel.get()), max_num_sim)
         for (aspen_variable, aspen_call, fortran_index), dist in simulation_vars.items():
             if aspen_variable in univar_var_num_sim:
                 num_trials_per_var = int(univar_var_num_sim[aspen_variable].get())
-                dist = dist[:num_trials_per_var]
+                simulation_vars[(aspen_variable, aspen_call, fortran_index)] = dist[:num_trials_per_var]
+                simulation_dist[aspen_variable] = dist[:num_trials_per_var]
+                
     else:
-        simulation_vars, simulation_dist = msens.get_distributions(str(excel.get()), numtrial= int(sim.get())) 
+        simulation_vars, simulation_dist = msens.get_distributions(str(excel.get()), ntrials= int(sim.get())) 
     
     
 def plot_init_dist():
@@ -116,9 +116,9 @@ def plot_init_dist():
         
     root.update_idletasks()
     
-def display_distributions():
+def display_distributions(is_univar):
     
-    get_distributions()
+    get_distributions(is_univar)
     plot_init_dist()   
     
 
@@ -127,7 +127,7 @@ univar_row_num = None
     
 def load_variables_into_GUI(tab_num):
     sens_vars = str(excel.get())
-    global sp_row_num, univar_row_num
+    global sp_row_num, univar_row_num, univar_var_num_sim
     single_pt_vars = []
     univariate_vars = []
     multivariate_vars = []
@@ -143,7 +143,7 @@ def load_variables_into_GUI(tab_num):
                 elif type_of_analysis == 'Multivariate Analysis':
                     multivariate_vars.append(row["Variable Name"])
                 else:
-                    univariate_vars.append((row["Variable Name"], row["Format of Range"], row['Range of Values'].split(',')))
+                    univariate_vars.append((row["Variable Name"], row["Format of Range"].strip().lower(), row['Range of Values'].split(',')))
     #now populate the gui with the appropriate tab and variables stored above
     if type_of_analysis == 'Single Point Analysis':
         sp_row_num = 2
@@ -153,10 +153,10 @@ def load_variables_into_GUI(tab_num):
         frame_canvas.grid_rowconfigure(0, weight=1)
         frame_canvas.grid_columnconfigure(0, weight=1)
         # Set grid_propagate to False resizing later
-        frame_canvas.grid_propagate(False)
+        #frame_canvas.grid_propagate(False)
         
         # Add a canvas in the canvas frame
-        canvas = Canvas(frame_canvas, bg="yellow")
+        canvas = Canvas(frame_canvas)
         canvas.grid(row=0, column=0, sticky="news")
         
         # Link a scrollbar to the canvas
@@ -206,11 +206,11 @@ def load_variables_into_GUI(tab_num):
         frame_canvas1.grid_rowconfigure(0, weight=1)
         frame_canvas1.grid_columnconfigure(0, weight=1)
         # Set grid_propagate to False resizing later
-        frame_canvas1.grid_propagate(False)
+
         
         # Add a canvas in the canvas frame
-        canvas1 = Canvas(frame_canvas1, bg="yellow")
-        canvas1.grid(row=0, column=0, sticky="news")
+        canvas = Canvas(frame_canvas)
+        canvas.grid(row=0, column=0, sticky="news")
         
         # Link a scrollbar to the canvas
         vsb = ttk.Scrollbar(frame_canvas1, orient="vertical", command=canvas1.yview)
@@ -297,15 +297,15 @@ def run_multivar_sens():
     numtrial= int(sim.get())
     outputfile= str(save.get())
     sens_vars = str(excel.get())
+    global simulation_vars
     d_f_output = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars,numtrial,outputfile, simulation_vars)
         
 def run_univ_sens():
     aspenfile= str(aspen.get())
     solverfile= str(solver.get())
-    numtrial= int(sim2.get())
     outputfile= str(save2.get())
     sens_vars = str(excel.get())
-    global simulations_vars
+    global simulation_vars
     for (aspen_variable, aspen_call, fortran_index), values in simulation_vars.items():
         msens.univariate_analysis(aspenfile, solverfile, aspen_call, aspen_variable, values, fortran_index, outputfile)
         
@@ -313,8 +313,15 @@ def run_univ_sens():
     print('-----------FINISHED-------------')
 
 def single_point_analysis():
-    global sp_row_num
-    mfsp = 3.34 #msens.single_point(________)
+    aspenfile= str(aspen.get())
+    solverfile= str(solver.get())
+    #outputfile= str(save2.get())
+    sens_vars = str(excel.get())
+    global sp_row_num, single_point_var_val
+    sp_vars, throwaway = msens.get_distributions(sens_vars, 1)
+    for (aspen_variable, aspen_call, fortran_index), values in sp_vars.items():
+        sp_vars[(aspen_variable, aspen_call, fortran_index)] = [float(single_point_var_val[aspen_variable].get())]
+    mfsp = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars, 1,"_", sp_vars, disp_graphs=False).get_value(0, 'MFSP')
     Label(tab3, text= 'MFSP = ' + str(mfsp)).grid(row=sp_row_num+1, column = 1)
     
     
@@ -370,8 +377,8 @@ def make_new_tab():
                column=3, columnspan=2,
                pady=4)
         Button(tab2,
-               text='Display Variable Distrbutions',
-               command=display_distributions(True)).grid(row=5,
+               text='Display Variable Distributions',
+               command=lambda: display_distributions(True)).grid(row=5,
                column=1, columnspan=2,
                pady=4)
         Button(tab2,
@@ -435,8 +442,8 @@ def make_new_tab():
                sticky=W, 
                pady=4)
         Button(tab1,
-               text='Load Variable Distrbutions',
-               command=display_distributions(False)).grid(row=6,
+               text='Display Variable Distributions',
+               command=lambda: display_distributions(False)).grid(row=6,
                column=1, columnspan=2,
                sticky=W, 
                pady=4)
