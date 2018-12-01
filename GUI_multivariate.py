@@ -201,49 +201,49 @@ def load_variables_into_GUI(tab_num):
             text= '# of Trials').grid(row=univar_row_num, column= 3,pady = 5,padx = 5, sticky = W)
         univar_row_num += 1
         # Create a frame for the canvas with non-zero row&column weights
-        frame_canvas = ttk.Frame(tab_num)
-        frame_canvas.grid(row=univar_row_num, column=1, columnspan =3, pady=(5, 0))
-        frame_canvas.grid_rowconfigure(0, weight=1)
-        frame_canvas.grid_columnconfigure(0, weight=1)
+        frame_canvas1 = ttk.Frame(tab_num)
+        frame_canvas1.grid(row=univar_row_num, column=1, columnspan =3, pady=(5, 0))
+        frame_canvas1.grid_rowconfigure(0, weight=1)
+        frame_canvas1.grid_columnconfigure(0, weight=1)
         # Set grid_propagate to False resizing later
-        frame_canvas.grid_propagate(False)
+        frame_canvas1.grid_propagate(False)
         
         # Add a canvas in the canvas frame
-        canvas = Canvas(frame_canvas, bg="yellow")
-        canvas.grid(row=0, column=0, sticky="news")
+        canvas1 = Canvas(frame_canvas1, bg="yellow")
+        canvas1.grid(row=0, column=0, sticky="news")
         
         # Link a scrollbar to the canvas
-        vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=canvas.yview)
+        vsb = ttk.Scrollbar(frame_canvas1, orient="vertical", command=canvas1.yview)
         vsb.grid(row=0, column=1,sticky = 'ns')
-        canvas.configure(yscrollcommand=vsb.set)
+        canvas1.configure(yscrollcommand=vsb.set)
         
         # Create a frame to contain the variables
-        frame_vars = ttk.Frame(canvas)
-        canvas.create_window((0, 0), window=frame_vars, anchor='nw')
+        frame_vars1 = ttk.Frame(canvas1)
+        canvas1.create_window((0, 0), window=frame_vars1, anchor='nw')
         univar_row_num =0
         for name, format_of_data, vals in univariate_vars:
-            Label(frame_vars, 
+            Label(frame_vars1, 
             text= name).grid(row=univar_row_num, column= 1,pady = 5,padx = 5)
-            Label(frame_vars, 
+            Label(frame_vars1, 
             text= format_of_data).grid(row=univar_row_num, column= 2,pady = 5,padx = 5)
             
             if not(format_of_data == 'linspace' or format_of_data == 'list'):
-                key2=Entry(frame_vars)
+                key2=Entry(frame_vars1)
                 key2.grid(row=univar_row_num, column=3,pady = 5,padx = 5)
                 #key2.insert(0,univariate_sims)
                 univar_var_num_sim[name]= key2
             else:
-                Label(frame_vars,text= str(len(vals))).grid(row=univar_row_num, column= 3,pady = 5,padx = 5)
+                Label(frame_vars1,text= str(len(vals))).grid(row=univar_row_num, column= 3,pady = 5,padx = 5)
             univar_row_num += 1
             
         # Update vars frames idle tasks to let tkinter calculate variable sizes
-        frame_vars.update_idletasks()
+        frame_vars1.update_idletasks()
         # Determine the size of the Canvas
         
-        frame_canvas.config(width='9c', height='5c')
+        frame_canvas1.config(width='9c', height='5c')
         
         # Set the canvas scrolling region
-        canvas.config(scrollregion=canvas.bbox("all"))
+        canvas1.config(scrollregion=canvas1.bbox("all"))
             
             
         
