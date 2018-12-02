@@ -90,7 +90,7 @@ def plot_on_GUI(d_f_output, vars_to_change = []):
 
 counter = 1
 old_var_name = ''
-def plot_univ_on_GUI(dfstreams, var, value, fortran_check):
+def plot_univ_on_GUI(dfstreams, var, c, fortran_check):
     '''
     Allows Unviariate to be plotted on the GUI
     
@@ -100,18 +100,20 @@ def plot_univ_on_GUI(dfstreams, var, value, fortran_check):
     
     '''
     
-    global simulation_dist, counter, old_var_name
+    global simulation_dist, old_var_name, counter
     columns = 2
     num_rows= ((len(simulation_dist) + 1) // columns) + 1
     fig = Figure(figsize = (5,5))
     a = fig.add_subplot(num_rows,columns,counter)
-    if var == old_var_name and old_var_name != '':
+    if var != old_var_name and old_var_name != '':
         counter += 2
+        old_var_name = var
+    if var != old_var_name:
         old_var_name = var
     counter += 1
     num_bins = 100
     try:
-        n, bins, patches = a.hist(value, num_bins, facecolor='blue', alpha=0.5)
+        n, bins, patches = a.hist(simulation_dist[var][:c], num_bins, facecolor='blue', alpha=0.5)
     except Exception:
         pass
     a.set_title(var)
@@ -167,6 +169,16 @@ def plot_init_dist():
     columns = 2
     num_rows= ((len(simulation_dist) + 1) // columns) + 1
     counter = 1
+    
+    frame = Frame(root, width = 400, height = 400)
+    frame.grid(row = 8, column = 0, columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
+    canvas = Canvas(frame, width = 400, height = 400, scrollregion = (0, 0, 500, 500))
+    vbar = Scrollbar(frame, orient = VERTICAL)
+    vbar.pack(side= RIGHT, fill = Y)
+    vbar.config(command=canvas.yview)
+    canvas.config(width = 400, height = 400)
+    canvas.config(yscrollcommand = vbar.set)
+    
     fig = pplt.figure(figsize = (5,5))
     for var, values in simulation_dist.items():
         a = fig.add_subplot(num_rows,columns,counter)
@@ -177,31 +189,26 @@ def plot_init_dist():
         except Exception:
             pass
         a.set_title(var)
-        a.set_xticklabels([])
     a = fig.tight_layout()
     canvas = FigureCanvasTkAgg(fig)
     canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
-    
-    print('HIIIIIIIIII')
     if tab3:
         tab_num = tab3
     elif tab2:
         tab_num  = tab2
     else:
         tab_num = tab1
-    frame_canvas = ttk.Frame(canvas.get_tk_widget())
-    frame_canvas.grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
-    frame_canvas.grid_rowconfigure(0, weight=1)
-    frame_canvas.grid_columnconfigure(0, weight=1)
-    frame_canvas.config(height = '5c')
-    #canvas = Canvas(frame_canvas)
-    #canvas.grid(row=0, column=0, sticky="news")
-    #canvas.config(height = '5c')
-    vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=canvas.get_tk_widget().yview)
-    vsb.grid(row=8, column=1,sticky = 'ns')
-    canvas.get_tk_widget().configure(yscrollcommand=vsb.set)
+    #frame_canvas = ttk.Frame()
+    #frame_canvas.grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
+    #canvas.grid_rowconfigure(0, weight=1)
+    #frame_canvas.grid_columnconfigure(0, weight=1)
+    #frame_canvas.config()
     
-    canvas.get_tk_widget().config(scrollregion=canvas.bbox("all"))
+    #vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=canvas.get_tk_widget().yview)
+    #vsb.grid(row=8, column=1,sticky = 'ns')
+    #canvas.get_tk_widget().configure(yscrollcommand=vsb.set)
+    
+    #canvas.get_tk_widget().config(scrollregion=canvas.bbox("all"))
     root.update_idletasks()
     
 def display_distributions(is_univar):
@@ -423,9 +430,7 @@ def single_point_analysis():
     for (aspen_variable, aspen_call, fortran_index), values in sp_vars.items():
         sp_vars[(aspen_variable, aspen_call, fortran_index)] = [float(single_point_var_val[aspen_variable].get())]
     mfsp = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars, 1,outputfile, sp_vars, disp_graphs=False).at[0, 'MFSP']
-    Label(tab3, text= 'MFSP = ' + str(mfsp)).grid(row=sp_row_num+1, column = 1)
-    
-    
+    Label(tab3, text= 'MFSP = ${:.2f}'.format(mfsp)).grid(row=sp_row_num+1, column = 1)
     return None
 
 def fill_num_trials():
