@@ -177,6 +177,7 @@ def plot_init_dist():
         except Exception:
             pass
         a.set_title(var)
+        a.set_xticklabels([])
     a = fig.tight_layout()
     canvas = FigureCanvasTkAgg(fig)
     canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
