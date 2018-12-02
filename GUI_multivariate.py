@@ -160,6 +160,7 @@ def plot_init_dist():
         num_bins = 100
         n, bins, patches = pplt.hist(values, num_bins, facecolor='blue', alpha=0.5)
         a.set_title(var)
+        a.set_xticklabels([])
     a = fig.tight_layout()
     canvas = FigureCanvasTkAgg(fig)
     canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5,)
