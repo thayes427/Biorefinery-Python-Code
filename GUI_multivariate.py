@@ -169,6 +169,16 @@ def plot_init_dist():
     columns = 2
     num_rows= ((len(simulation_dist) + 1) // columns) + 1
     counter = 1
+    
+    frame = Frame(root, width = 400, height = 400)
+    frame.grid(row = 8, column = 0, columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
+    canvas = Canvas(frame, width = 400, height = 400, scrollregion = (0, 0, 500, 500))
+    vbar = Scrollbar(frame, orient = VERTICAL)
+    vbar.pack(side= RIGHT, fill = Y)
+    vbar.config(command=canvas.yview)
+    canvas.config(width = 400, height = 400)
+    canvas.config(yscrollcommand = vbar.set)
+    
     fig = pplt.figure(figsize = (5,5))
     for var, values in simulation_dist.items():
         a = fig.add_subplot(num_rows,columns,counter)
@@ -182,27 +192,23 @@ def plot_init_dist():
     a = fig.tight_layout()
     canvas = FigureCanvasTkAgg(fig)
     canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
-    
-    print('HIIIIIIIIII')
     if tab3:
         tab_num = tab3
     elif tab2:
         tab_num  = tab2
     else:
         tab_num = tab1
-    frame_canvas = ttk.Frame(canvas.get_tk_widget())
-    frame_canvas.grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
-    frame_canvas.grid_rowconfigure(0, weight=1)
-    frame_canvas.grid_columnconfigure(0, weight=1)
-    frame_canvas.config(height = '5c')
-    #canvas = Canvas(frame_canvas)
-    #canvas.grid(row=0, column=0, sticky="news")
-    #canvas.config(height = '5c')
-    vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=canvas.get_tk_widget().yview)
-    vsb.grid(row=8, column=1,sticky = 'ns')
-    canvas.get_tk_widget().configure(yscrollcommand=vsb.set)
+    #frame_canvas = ttk.Frame()
+    #frame_canvas.grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
+    #canvas.grid_rowconfigure(0, weight=1)
+    #frame_canvas.grid_columnconfigure(0, weight=1)
+    #frame_canvas.config()
     
-    canvas.get_tk_widget().config(scrollregion=canvas.bbox("all"))
+    #vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=canvas.get_tk_widget().yview)
+    #vsb.grid(row=8, column=1,sticky = 'ns')
+    #canvas.get_tk_widget().configure(yscrollcommand=vsb.set)
+    
+    #canvas.get_tk_widget().config(scrollregion=canvas.bbox("all"))
     root.update_idletasks()
     
 def display_distributions(is_univar):
