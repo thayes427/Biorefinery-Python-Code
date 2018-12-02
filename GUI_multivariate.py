@@ -422,7 +422,7 @@ def single_point_analysis():
     sp_vars, throwaway = msens.get_distributions(sens_vars, 1)
     for (aspen_variable, aspen_call, fortran_index), values in sp_vars.items():
         sp_vars[(aspen_variable, aspen_call, fortran_index)] = [float(single_point_var_val[aspen_variable].get())]
-    mfsp = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars, 1,output_file, sp_vars, disp_graphs=False).at[0, 'MFSP']
+    mfsp = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars, 1,outputfile, sp_vars, disp_graphs=False).at[0, 'MFSP']
     Label(tab3, text= 'MFSP = ' + str(mfsp)).grid(row=sp_row_num+1, column = 1)
     
     
