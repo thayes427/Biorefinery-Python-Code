@@ -181,13 +181,28 @@ def plot_init_dist():
         a.set_title(var)
     a = fig.tight_layout()
     canvas = FigureCanvasTkAgg(fig)
-    canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5,)
+    canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
     
-    #vsb = ttk.Scrollbar(fig, orient="vertical", command=canvas.yview)
-    #vsb.grid(row=8, column=1,sticky = 'ns')
-    #canvas.configure(yscrollcommand=vsb.set)
+    print('HIIIIIIIIII')
+    if tab3:
+        tab_num = tab3
+    elif tab2:
+        tab_num  = tab2
+    else:
+        tab_num = tab1
+    frame_canvas = ttk.Frame(canvas.get_tk_widget())
+    frame_canvas.grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
+    frame_canvas.grid_rowconfigure(0, weight=1)
+    frame_canvas.grid_columnconfigure(0, weight=1)
+    frame_canvas.config(height = '5c')
+    #canvas = Canvas(frame_canvas)
+    #canvas.grid(row=0, column=0, sticky="news")
+    #canvas.config(height = '5c')
+    vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=canvas.get_tk_widget().yview)
+    vsb.grid(row=8, column=1,sticky = 'ns')
+    canvas.get_tk_widget().configure(yscrollcommand=vsb.set)
     
-    #canvas.config(scrollregion=canvas.bbox("all"))
+    canvas.get_tk_widget().config(scrollregion=canvas.bbox("all"))
     root.update_idletasks()
     
 def display_distributions(is_univar):
@@ -229,14 +244,14 @@ def load_variables_into_GUI(tab_num):
         frame_canvas.grid(row=sp_row_num, column=1, pady=(5, 0))
         frame_canvas.grid_rowconfigure(0, weight=1)
         frame_canvas.grid_columnconfigure(0, weight=1)
-        frame_canvas.config(width = '5c', height = '5c')
+        frame_canvas.config(height = '5c')
         # Set grid_propagate to False resizing later
         #frame_canvas.grid_propagate(False)
         
         # Add a canvas in the canvas frame
         canvas = Canvas(frame_canvas)
         canvas.grid(row=0, column=0, sticky="news")
-        canvas.config(width = '5c', height = '5c')
+        canvas.config(height = '5c')
         # Link a scrollbar to the canvas
         vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=canvas.yview)
         vsb.grid(row=0, column=1,sticky = 'ns')
@@ -245,7 +260,7 @@ def load_variables_into_GUI(tab_num):
         # Create a frame to contain the variables
         frame_vars = ttk.Frame(canvas)
         canvas.create_window((0, 0), window=frame_vars, anchor='nw')
-        frame_vars.config(width = '5c', height = '5c')
+        frame_vars.config(height = '5c')
         
         sp_row_num = 0
         for name,value in single_pt_vars:
@@ -285,12 +300,14 @@ def load_variables_into_GUI(tab_num):
         frame_canvas1.grid(row=univar_row_num, column=1, columnspan =3, pady=(5, 0))
         frame_canvas1.grid_rowconfigure(0, weight=1)
         frame_canvas1.grid_columnconfigure(0, weight=1)
+        frame_canvas1.config(height = '3c')
         # Set grid_propagate to False resizing later
         #frame_canvas.grid_propogate(False)
         
         # Add a canvas in the canvas frame
         canvas1 = Canvas(frame_canvas1)
         canvas1.grid(row=0, column=0, sticky="news")
+        canvas1.config(height = '3c')
         
         # Link a scrollbar to the canvas
         vsb = ttk.Scrollbar(frame_canvas1, orient="vertical", command=canvas1.yview)
@@ -299,6 +316,7 @@ def load_variables_into_GUI(tab_num):
         
         # Create a frame to contain the variables
         frame_vars1 = ttk.Frame(canvas1)
+        frame_vars1.config(height = '3c')
         canvas1.create_window((0, 0), window=frame_vars1, anchor='nw')
         univar_row_num =0
         for name, format_of_data, vals in univariate_vars:
@@ -399,7 +417,7 @@ def run_univ_sens():
 def single_point_analysis():
     aspenfile= str(aspen.get())
     solverfile= str(solver.get())
-    #outputfile= str(save2.get())
+    outputfile= str(save_sp.get())
     sens_vars = str(excel.get())
     global sp_row_num, single_point_var_val
     sp_vars, throwaway = msens.get_distributions(sens_vars, 1)
@@ -407,8 +425,6 @@ def single_point_analysis():
         sp_vars[(aspen_variable, aspen_call, fortran_index)] = [float(single_point_var_val[aspen_variable].get())]
     mfsp = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars, 1,"_", sp_vars, disp_graphs=False).at[0, 'MFSP']
     Label(tab3, text= 'MFSP = ${:.2f}'.format(mfsp)).grid(row=sp_row_num+1, column = 1)
-    
-    
     return None
 
 def fill_num_trials():
