@@ -1,17 +1,15 @@
 from tkinter import *
 from tkinter import messagebox
 import numpy as np
-import sensitivity_analysis as msens
+import time
+import sensitivity_analysis_v3 as msens
 from tkinter import ttk
 from tkinter.filedialog import askopenfilename
 import matplotlib
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 from matplotlib import pyplot as pplt
-from matplotlib.backend_bases import key_press_handler
-from matplotlib.figure import Figure
 import csv
-
-
+import multiprocessing as mp
 
 ###################GOBALS####################
 single_point_var_val= {}
@@ -27,18 +25,19 @@ def quit():
     root.destroy()
 
 def open_excel_file():
-    root.filename = askopenfilename(title = "Select file", filetypes = (("csv files","*.csv"),("all files","*.*")))
-    excel.delete(0, END)
+    root.filename = askopenfilename(initialdir = ".",
+                                                title = "Select file")
+                                        
     excel.insert(0,root.filename)
     
 def open_aspen_file():
-    root.filename = askopenfilename(title = "Select file", filetypes = (("Aspen Models",["*.bkp", "*.apw"]),("all files","*.*")))
-    aspen.delete(0, END)
+    root.filename = askopenfilename(initialdir = ".",
+                                                title = "Select file")
     aspen.insert(0,root.filename)
 
 def open_solver_file():
-    root.filename = askopenfilename(title = "Select file", filetypes = (("Excel Files","*.xlsm"),("all files","*.*")))
-    solver.delete(0, END)
+    root.filename = askopenfilename(initialdir = ".",
+                                                title = "Select file")
     solver.insert(0,root.filename)
     
 def plot_on_GUI(d_f_output, vars_to_change = []):
@@ -54,19 +53,15 @@ def plot_on_GUI(d_f_output, vars_to_change = []):
         vars_to_change: list of variables that were input
     
     '''
-    
-    columns = 2
-    num_rows= ((len(vars_to_change) + 1) // columns) + 1
+    columns = 5
+    num_rows= ((len(vars_to_change) + 1) % columns) + 1
     counter = 1
-    fig = Figure(figsize = (5,5))
+    fig = pplt.figure(figsize = (15,7))
     a = fig.add_subplot(num_rows,columns,counter)
     counter += 1
     total_MFSP = d_f_output["MFSP"]
     num_bins = 100
-    try:
-        n, bins, patches = a.hist(total_MFSP, num_bins, facecolor='blue', alpha=0.5)
-    except Exception:
-        pass
+    n, bins, patches = pplt.hist(total_MFSP, num_bins, facecolor='blue', alpha=0.5)
     a.set_title ("MFSP Distribution")
     a.set_xlabel("MFSP ($)")
     if len(vars_to_change) != 0:
@@ -75,77 +70,18 @@ def plot_on_GUI(d_f_output, vars_to_change = []):
             counter += 1
             total_data = d_f_output[var]
             num_bins = 100
-            try:
-                n, bins, patches = a.hist(total_data, num_bins, facecolor='blue', alpha=0.5)
-            except Exception:
-                pass
+            n, bins, patches = pplt.hist(total_data, num_bins, facecolor='blue', alpha=0.5)
             a.set_title(var)
-
-    #a = fig.tight_layout()
     canvas = FigureCanvasTkAgg(fig)
     canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5,)
         
     root.update_idletasks()
-
-
-counter = 1
-old_var_name = ''
-def plot_univ_on_GUI(dfstreams, var, c, fortran_check):
-    '''
-    Allows Unviariate to be plotted on the GUI
     
-    It will plot the graphs as follows: the number of rows is the number of variables that have
-    to be plotted, and there will be a width of two columns, with the first column graphing 
-    the variable distribution, and the second one plotting the MFSP distribution.   
-    
-    '''
-    
-    global simulation_dist, old_var_name, counter
-    columns = 2
-    num_rows= ((len(simulation_dist) + 1) // columns) + 1
-    fig = Figure(figsize = (5,5))
-    a = fig.add_subplot(num_rows,columns,counter)
-    if var != old_var_name and old_var_name != '':
-        counter += 2
-        old_var_name = var
-    if var != old_var_name:
-        old_var_name = var
-    counter += 1
-    num_bins = 100
-    try:
-        n, bins, patches = a.hist(simulation_dist[var][:c], num_bins, facecolor='blue', alpha=0.5)
-    except Exception:
-        pass
-    a.set_title(var)
-    if fortran_check:
-        a.set_xticklabels([])
-        a.set_xlabel(var)
-    a = fig.add_subplot(num_rows,columns,counter)
-    counter -= 1
-    num_bins = 100
-    try:
-        n, bins, patches = a.hist(dfstreams['MFSP'], num_bins, facecolor='blue', alpha=0.5)
-    except Exception:
-        pass
-    a.set_title('MFSP - ' + var)
-    #a = fig.tight_layout()
-    canvas = FigureCanvasTkAgg(fig)
-    canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5,)
-    
-    #vsb = ttk.Scrollbar(fig, orient="vertical", command=canvas.yview)
-    #vsb.grid(row=8, column=1,sticky = 'ns')
-    #canvas.configure(yscrollcommand=vsb.set)
-    
-    #canvas.config(scrollregion=canvas.bbox("all"))
-    root.update_idletasks()
 
 def get_distributions(is_univar):
     global simulation_vars, simulation_dist, univar_var_num_sim
     if is_univar:
-        if univar_var_num_sim:
-            max_num_sim = max(int(slot.get()) for slot in univar_var_num_sim.values())
-        else:
-            max_num_sim = 1
+        max_num_sim = max(int(slot.get()) for slot in univar_var_num_sim.values())
         simulation_vars, simulation_dist = msens.get_distributions(str(excel.get()), max_num_sim)
         for (aspen_variable, aspen_call, fortran_index), dist in simulation_vars.items():
             if aspen_variable in univar_var_num_sim:
@@ -169,49 +105,19 @@ def plot_init_dist():
     '''
     
     global simulation_dist
-    columns = 2
-    num_rows= ((len(simulation_dist) + 1) // columns) + 1
+    columns = 5
+    num_rows= ((len(simulation_dist) + 1) % columns) + 1
     counter = 1
-    
-    frame = Frame(root, width = 400, height = 400)
-    frame.grid(row = 8, column = 0, columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
-    canvas = Canvas(frame, width = 400, height = 400, scrollregion = (0, 0, 500, 500))
-    vbar = Scrollbar(frame, orient = VERTICAL)
-    vbar.pack(side= RIGHT, fill = Y)
-    vbar.config(command=canvas.yview)
-    canvas.config(width = 400, height = 400)
-    canvas.config(yscrollcommand = vbar.set)
-    
-    fig = pplt.figure(figsize = (5,5))
+    fig = pplt.figure(figsize = (15,7))
     for var, values in simulation_dist.items():
         a = fig.add_subplot(num_rows,columns,counter)
         counter += 1
         num_bins = 100
-        try:
-            n, bins, patches = pplt.hist(values, num_bins, facecolor='blue', alpha=0.5)
-        except Exception:
-            pass
+        n, bins, patches = pplt.hist(values, num_bins, facecolor='blue', alpha=0.5)
         a.set_title(var)
-    a = fig.tight_layout()
     canvas = FigureCanvasTkAgg(fig)
-    canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
-    if tab3:
-        tab_num = tab3
-    elif tab2:
-        tab_num  = tab2
-    else:
-        tab_num = tab1
-    #frame_canvas = ttk.Frame()
-    #frame_canvas.grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
-    #canvas.grid_rowconfigure(0, weight=1)
-    #frame_canvas.grid_columnconfigure(0, weight=1)
-    #frame_canvas.config()
-    
-    #vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=canvas.get_tk_widget().yview)
-    #vsb.grid(row=8, column=1,sticky = 'ns')
-    #canvas.get_tk_widget().configure(yscrollcommand=vsb.set)
-    
-    #canvas.get_tk_widget().config(scrollregion=canvas.bbox("all"))
+    canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5,)
+        
     root.update_idletasks()
     
 def display_distributions(is_univar):
@@ -225,7 +131,7 @@ univar_row_num = None
     
 def load_variables_into_GUI(tab_num):
     sens_vars = str(excel.get())
-    global sp_row_num, univar_row_num, univar_var_num_sim, tab3, tab1, tab2, note
+    global sp_row_num, univar_row_num, univar_var_num_sim
     single_pt_vars = []
     univariate_vars = []
     multivariate_vars = []
@@ -244,23 +150,19 @@ def load_variables_into_GUI(tab_num):
                     univariate_vars.append((row["Variable Name"], row["Format of Range"].strip().lower(), row['Range of Values'].split(',')))
     #now populate the gui with the appropriate tab and variables stored above
     if type_of_analysis == 'Single Point Analysis':
-        note.select(tab3)
-        tab3.config(width = '5c', height = '5c')
         sp_row_num = 2
-        
         # Create a frame for the canvas with non-zero row&column weights
         frame_canvas = ttk.Frame(tab_num)
         frame_canvas.grid(row=sp_row_num, column=1, pady=(5, 0))
         frame_canvas.grid_rowconfigure(0, weight=1)
         frame_canvas.grid_columnconfigure(0, weight=1)
-        frame_canvas.config(height = '5c')
         # Set grid_propagate to False resizing later
         #frame_canvas.grid_propagate(False)
         
         # Add a canvas in the canvas frame
         canvas = Canvas(frame_canvas)
         canvas.grid(row=0, column=0, sticky="news")
-        canvas.config(height = '5c')
+        
         # Link a scrollbar to the canvas
         vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=canvas.yview)
         vsb.grid(row=0, column=1,sticky = 'ns')
@@ -269,7 +171,7 @@ def load_variables_into_GUI(tab_num):
         # Create a frame to contain the variables
         frame_vars = ttk.Frame(canvas)
         canvas.create_window((0, 0), window=frame_vars, anchor='nw')
-        frame_vars.config(height = '5c')
+      
         
         sp_row_num = 0
         for name,value in single_pt_vars:
@@ -279,7 +181,6 @@ def load_variables_into_GUI(tab_num):
             text= name).grid(row=sp_row_num, column= 1, sticky = E,pady = 5,padx = 5)
             key=Entry(frame_vars)
             key.grid(row=sp_row_num, column=2,pady = 5,padx = 5)
-            key.delete(first=0,last=END)
             key.insert(0,str(value))
             single_point_var_val[name]= key
             
@@ -287,7 +188,7 @@ def load_variables_into_GUI(tab_num):
         frame_vars.update_idletasks()
         # Determine the size of the Canvas
         
-        frame_canvas.config(width='5c', height='10c')
+        frame_canvas.config(width='5c', height='5c')
         
         # Set the canvas scrolling region
         canvas.config(scrollregion=canvas.bbox("all"))
@@ -295,7 +196,6 @@ def load_variables_into_GUI(tab_num):
             
 
     if type_of_analysis == 'Univariate Sensitivity':
-        note.select(tab2)
         univar_row_num = 8
         Label(tab_num, 
             text= 'Variable Name').grid(row=univar_row_num, column= 1,pady = 5,padx = 5, sticky= E)
@@ -305,56 +205,49 @@ def load_variables_into_GUI(tab_num):
             text= '# of Trials').grid(row=univar_row_num, column= 3,pady = 5,padx = 5, sticky = W)
         univar_row_num += 1
         # Create a frame for the canvas with non-zero row&column weights
-        frame_canvas1 = ttk.Frame(tab_num)
-        frame_canvas1.grid(row=univar_row_num, column=1, columnspan =3, pady=(5, 0))
-        frame_canvas1.grid_rowconfigure(0, weight=1)
-        frame_canvas1.grid_columnconfigure(0, weight=1)
-        frame_canvas1.config(height = '3c')
+        frame_canvas = ttk.Frame(tab_num)
+        frame_canvas.grid(row=univar_row_num, column=1, columnspan =3, pady=(5, 0))
+        frame_canvas.grid_rowconfigure(0, weight=1)
+        frame_canvas.grid_columnconfigure(0, weight=1)
         # Set grid_propagate to False resizing later
-        #frame_canvas.grid_propogate(False)
+        #frame_canvas.grid_propagate(False)
         
         # Add a canvas in the canvas frame
-        canvas1 = Canvas(frame_canvas1)
-        canvas1.grid(row=0, column=0, sticky="news")
-        canvas1.config(height = '3c')
+        canvas = Canvas(frame_canvas)
+        canvas.grid(row=0, column=0, sticky="news")
         
         # Link a scrollbar to the canvas
-        vsb = ttk.Scrollbar(frame_canvas1, orient="vertical", command=canvas1.yview)
+        vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=canvas.yview)
         vsb.grid(row=0, column=1,sticky = 'ns')
-        canvas1.configure(yscrollcommand=vsb.set)
+        canvas.configure(yscrollcommand=vsb.set)
         
         # Create a frame to contain the variables
-        frame_vars1 = ttk.Frame(canvas1)
-        frame_vars1.config(height = '3c')
-        canvas1.create_window((0, 0), window=frame_vars1, anchor='nw')
+        frame_vars = ttk.Frame(canvas)
+        canvas.create_window((0, 0), window=frame_vars, anchor='nw')
         univar_row_num =0
         for name, format_of_data, vals in univariate_vars:
-            Label(frame_vars1, 
+            Label(frame_vars, 
             text= name).grid(row=univar_row_num, column= 1,pady = 5,padx = 5)
-            Label(frame_vars1, 
+            Label(frame_vars, 
             text= format_of_data).grid(row=univar_row_num, column= 2,pady = 5,padx = 5)
             
             if not(format_of_data == 'linspace' or format_of_data == 'list'):
-                key2=Entry(frame_vars1)
+                key2=Entry(frame_vars)
                 key2.grid(row=univar_row_num, column=3,pady = 5,padx = 5)
                 #key2.insert(0,univariate_sims)
                 univar_var_num_sim[name]= key2
             else:
-                if format_of_data == 'linspace':
-                    
-                    Label(frame_vars1,text= str(vals[2])).grid(row=univar_row_num, column= 3,pady = 5,padx = 5)
-                else:
-                    Label(frame_vars1,text= str(len(vals))).grid(row=univar_row_num, column= 3,pady = 5,padx = 5)
+                Label(frame_vars,text= str(len(vals))).grid(row=univar_row_num, column= 3,pady = 5,padx = 5)
             univar_row_num += 1
             
         # Update vars frames idle tasks to let tkinter calculate variable sizes
-        frame_vars1.update_idletasks()
+        frame_vars.update_idletasks()
         # Determine the size of the Canvas
         
-        frame_canvas1.config(width='5c', height='5c')
+        frame_canvas.config(width='9c', height='5c')
         
         # Set the canvas scrolling region
-        canvas1.config(scrollregion=canvas1.bbox("all"))
+        canvas.config(scrollregion=canvas.bbox("all"))
             
             
         
@@ -374,19 +267,19 @@ def initialize_multivar_analysis():
     run_multivar_sens()
     
 def initialize_univar_analysis():
+    aspenfile= str(aspen.get())
+    solverfile= str(solver.get())
+    outputfile= str(save2.get())
+    sens_vars = str(excel.get())
     global simulation_vars
     if len(simulation_vars) == 0:
         get_distributions(True)
-    run_univ_sens()
+    msens.run_univar_sens(aspenfile, solverfile, outputfile, simulation_vars)
     
-def display_time_remaining(time_remaining = 10):
+def display_time_remaining(time_remaining):
     '''
     THIS NEEDS TO PRINT OUT ESTIMATED TIME REMAINING
     '''
-    if tab1:
-        Label(tab1, text = 'Time Remaining :' + str(time_remaining)).grid(row = 15, column= 1)
-    if tab2:
-        Label(tab2, text = 'Time Remaining :' + str(time_remaining)).grid(row = 15, column= 1)
     return None
 
 
@@ -415,36 +308,26 @@ def run_multivar_sens():
     global simulation_vars
     d_f_output = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars,numtrial,outputfile, simulation_vars)
         
-def run_univ_sens():
-    aspenfile= str(aspen.get())
-    solverfile= str(solver.get())
-    outputfile= str(save2.get())
-    sens_vars = str(excel.get())
-    global simulation_vars
-    for (aspen_variable, aspen_call, fortran_index), values in simulation_vars.items():
-        msens.univariate_analysis(aspenfile, solverfile, aspen_call, aspen_variable, values, fortran_index, outputfile)
-        
-        print('Finished Analysis for Variable: ', aspen_variable)
-    print('-----------FINISHED-------------')
 
 def single_point_analysis():
     aspenfile= str(aspen.get())
     solverfile= str(solver.get())
-    outputfile= str(save_sp.get())
+    #outputfile= str(save2.get())
     sens_vars = str(excel.get())
     global sp_row_num, single_point_var_val
     sp_vars, throwaway = msens.get_distributions(sens_vars, 1)
     for (aspen_variable, aspen_call, fortran_index), values in sp_vars.items():
         sp_vars[(aspen_variable, aspen_call, fortran_index)] = [float(single_point_var_val[aspen_variable].get())]
-    mfsp = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars, 1,outputfile, sp_vars, disp_graphs=False).at[0, 'MFSP']
-    Label(tab3, text= 'MFSP = ${:.2f}'.format(mfsp)).grid(row=sp_row_num+1, column = 1)
+    mfsp = msens.multivariate_sensitivity_analysis(aspenfile,solverfile,sens_vars, 1,"_", sp_vars, disp_graphs=False).get_value(0, 'MFSP')
+    Label(tab3, text= 'MFSP = ' + str(mfsp)).grid(row=sp_row_num+1, column = 1)
+    
+    
     return None
 
 def fill_num_trials():
     global fill_num_sims, univar_var_num_sim
     ntrials = fill_num_sims.get()
     for name, slot in univar_var_num_sim.items():
-        slot.delete(0, END)
         slot.insert(0, ntrials)
     
 
@@ -460,26 +343,32 @@ cb = None
 tab2 = None
 tab1 = None
 tab3 = None
-save_sp = None 
 
 def make_new_tab():
-    global save_sp,sim, sim2, save2, save, otherbool, show_plot, boolvar, cb, tab1, tab2, tab3, fill_num_sims, note
+    global sim, sim2, save2, save, otherbool, show_plot, boolvar, cb, tab1, tab2, tab3, fill_num_sims
     
-    if tab1:
-        note.forget(tab1)
-        tab1 = None
-    if tab2:
-        note.forget(tab2)
-        tab2 = None
-    if tab3:
-        note.forget(tab3)
-        tab3 = None
+    #note.forget(tab5)
     if analysis_type.get() == 'Choose Analysis Type':
         print("ERROR: Select an Analysis")
+   
+    elif  analysis_type.get() == 'Single Point Analysis':
+        tab3 = ttk.Frame(note)
+        note.add(tab3, text = 'Single Point')
+        Button(tab3,
+        text='Calculate MFSP',
+        command=single_point_analysis).grid(row=7,
+        column=1, columnspan=2, pady=4)
+        tab_made  = tab3
+    
     elif  analysis_type.get() == 'Univariate Sensitivity':
         tab2 = ttk.Frame(note)
         note.add(tab2,text = "Univariate Analysis")
         ##############Tab 2 LABELS##################
+        
+        Label(tab2, 
+              text="Number of Simulations :").grid(row=3, column= 1, sticky = E,pady = 5,padx = 5)
+        sim2 = Entry(tab2)
+        sim2.grid(row=3, column=2,pady = 5,padx = 5)
         
         Label(tab2, 
               text="Save As :").grid(row=4, column= 1, sticky = E,pady = 5,padx = 5)
@@ -487,63 +376,40 @@ def make_new_tab():
         save2.grid(row=4, column=2,pady = 5,padx = 5)
         
         Label(tab2,text = ".csv").grid(row = 4, column = 3, sticky = W)
+        
         ##############Tab 2 Buttons###############
-        Label(tab2, text ='').grid(row= 13, column =1)
         Button(tab2,
-
-               text='Run Univariate Sensitivity Analysis',
-               command=initialize_univar_analysis).grid(row=14,
+               text='Run Univariate Analysis',
+               command=initialize_univar_analysis).grid(row=5,
                column=3, columnspan=2,
                pady=4)
         Button(tab2,
                text='Display Variable Distributions',
-               command=lambda: display_distributions(True)).grid(row=14,
-               column=1, columnspan=2, sticky = W,
+               command=lambda: display_distributions(True)).grid(row=5,
+               column=1, columnspan=2,
                pady=4)
         Button(tab2,
-               text='Fill  # Trials',
-               command=fill_num_trials).grid(row=7, columnspan = 2, sticky =E,
-               column=1,
+               text='Fill Simulations',
+               command=fill_num_trials).grid(row=7,
+               column=2, sticky = E,
                pady=4)
         fill_num_sims = Entry(tab2)
-        fill_num_sims.grid(row=7,column = 3,sticky =W, pady =2, padx = 2)
-        fill_num_sims.config(width = 10)
+        fill_num_sims.grid(row=7,column = 3, pady =2, padx = 2)
         
-        options= ttk.Labelframe(tab2, text='Run Options:')
-        options.grid(row = 15,column = 3, pady = 10,padx = 10)
-        
-        
-
         boolvar = IntVar()
         boolvar.set(False)
-        cb = Checkbutton(options, text = "Next Variable", variable = boolvar).grid(row=6,columnspan = 1, column = 2, sticky=W)
+        cb = Checkbutton(tab2, text = "Next Variable", variable = boolvar).grid(row=6,columnspan = 1, column = 2, sticky=W)
         
         otherbool = IntVar()
         otherbool.set(False)
         
-        cb = Checkbutton(options, text = "Abort", variable = otherbool).grid(row= 6,columnspan = 1, column = 3, sticky=W)
+        cb = Checkbutton(tab2, text = "Abort", variable = otherbool).grid(row= 6,columnspan = 1, column = 3, sticky=W)
         tab_made = tab2
-    elif  analysis_type.get() == 'Single Point Analysis':
-        tab3 = ttk.Frame(note)
-        note.add(tab3, text = 'Single Point')
-         
-        Label(tab3, 
-              text="Save As :").grid(row=0, column= 0, sticky = E,pady = 5,padx = 5)
-        save_sp = Entry(tab3)
-        save_sp.grid(row=0, column=1,pady = 5,padx = 5)
-        
-        Button(tab3,
-        text='Calculate MFSP',
-        command=single_point_analysis).grid(row=7,
-        column=1, columnspan=2, pady=4)
-        tab_made  = tab3
         
     elif  analysis_type.get() == 'Multivariate Sensitivity':
         tab1 = ttk.Frame(note)
         note.add(tab1,text = "Multivariate Analysis")
-        note.select(tab1)
         ###############TAB 1 LABELS#################
-
 
         Label(tab1, 
               text="Number of Simulations :").grid(row=3, column= 1, sticky = E,pady = 5,padx = 5)
@@ -633,7 +499,7 @@ master = tab0
 analysis_type = StringVar(master)
 analysis_type.set("Choose Analysis Type") # default value
 
-analysis_type_options = OptionMenu(tab0, analysis_type,"Single Point Analysis","Univariate Sensitivity", "Multivariate Sensitivity").grid(row = 5,sticky = E,column = 2,padx =5, pady = 5)
+analysis_type_options = OptionMenu(tab0, analysis_type, "Single Point Analysis", "Univariate Sensitivity", "Multivariate Sensitivity").grid(row = 5,sticky = E,column = 2,padx =5, pady = 5)
 '''
 ###################Scroll BAR#####################
 label1 = ttk.Label(frame, text="Label 1")
