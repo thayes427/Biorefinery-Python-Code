@@ -62,7 +62,7 @@ def plot_on_GUI(d_f_output, vars_to_change = []):
     a = fig.add_subplot(num_rows,columns,counter)
     counter += 1
     total_MFSP = d_f_output["MFSP"]
-    num_bins = 100
+    num_bins = 15
     try:
         n, bins, patches = a.hist(total_MFSP, num_bins, facecolor='blue', alpha=0.5)
     except Exception:
@@ -74,7 +74,7 @@ def plot_on_GUI(d_f_output, vars_to_change = []):
             a = fig.add_subplot(num_rows,columns,counter)
             counter += 1
             total_data = d_f_output[var]
-            num_bins = 100
+            num_bins = 15
             try:
                 n, bins, patches = a.hist(total_data, num_bins, facecolor='blue', alpha=0.5)
             except Exception:
@@ -111,7 +111,7 @@ def plot_univ_on_GUI(dfstreams, var, c, fortran_check):
     if var != old_var_name:
         old_var_name = var
     counter += 1
-    num_bins = 100
+    num_bins = 15
     try:
         n, bins, patches = a.hist(simulation_dist[var][:c], num_bins, facecolor='blue', alpha=0.5)
     except Exception:
@@ -122,7 +122,7 @@ def plot_univ_on_GUI(dfstreams, var, c, fortran_check):
         a.set_xlabel(var)
     a = fig.add_subplot(num_rows,columns,counter)
     counter -= 1
-    num_bins = 100
+    num_bins = 15
     try:
         n, bins, patches = a.hist(dfstreams['MFSP'], num_bins, facecolor='blue', alpha=0.5)
     except Exception:
@@ -186,7 +186,7 @@ def plot_init_dist():
     for var, values in simulation_dist.items():
         a = fig.add_subplot(num_rows,columns,counter)
         counter += 1
-        num_bins = 100
+        num_bins = 15
         try:
             n, bins, patches = pplt.hist(values, num_bins, facecolor='blue', alpha=0.5)
         except Exception:

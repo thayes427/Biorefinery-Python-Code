@@ -19,8 +19,8 @@ import csv
 import GUI_multivariate as GUI
 import psutil
 
-aspenfilename =  'BC1508F-BC_FY17Target._Final_5ptoC5_updated022618.bkp'
-excelfilename = 'DESIGN_OBJ2_test_MFSP-updated.xlsm' 
+#aspenfilename =  'BC1508F-BC_FY17Target._Final_5ptoC5_updated022618.bkp'
+#excelfilename = 'DESIGN_OBJ2_test_MFSP-updated.xlsm' 
 
 
 def open_COMS(aspenfilename, excelfilename):
