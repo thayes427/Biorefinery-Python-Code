@@ -81,7 +81,7 @@ def plot_on_GUI(d_f_output, vars_to_change = []):
                 pass
             a.set_title(var)
 
-    a = fig.tight_layout()
+    #a = fig.tight_layout()
     canvas = FigureCanvasTkAgg(fig)
     canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5,)
         
@@ -128,7 +128,7 @@ def plot_univ_on_GUI(dfstreams, var, c, fortran_check):
     except Exception:
         pass
     a.set_title('MFSP - ' + var)
-    a = fig.tight_layout()
+    #a = fig.tight_layout()
     canvas = FigureCanvasTkAgg(fig)
     canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5,)
     
@@ -142,7 +142,10 @@ def plot_univ_on_GUI(dfstreams, var, c, fortran_check):
 def get_distributions(is_univar):
     global simulation_vars, simulation_dist, univar_var_num_sim
     if is_univar:
-        max_num_sim = max(int(slot.get()) for slot in univar_var_num_sim.values())
+        if univar_var_num_sim:
+            max_num_sim = max(int(slot.get()) for slot in univar_var_num_sim.values())
+        else:
+            max_num_sim = 1
         simulation_vars, simulation_dist = msens.get_distributions(str(excel.get()), max_num_sim)
         for (aspen_variable, aspen_call, fortran_index), dist in simulation_vars.items():
             if aspen_variable in univar_var_num_sim:
@@ -337,7 +340,11 @@ def load_variables_into_GUI(tab_num):
                 #key2.insert(0,univariate_sims)
                 univar_var_num_sim[name]= key2
             else:
-                Label(frame_vars1,text= str(len(vals))).grid(row=univar_row_num, column= 3,pady = 5,padx = 5)
+                if format_of_data == 'linspace':
+                    
+                    Label(frame_vars1,text= str(vals[2])).grid(row=univar_row_num, column= 3,pady = 5,padx = 5)
+                else:
+                    Label(frame_vars1,text= str(len(vals))).grid(row=univar_row_num, column= 3,pady = 5,padx = 5)
             univar_row_num += 1
             
         # Update vars frames idle tasks to let tkinter calculate variable sizes
@@ -494,7 +501,7 @@ def make_new_tab():
                column=1, columnspan=2, sticky = W,
                pady=4)
         Button(tab2,
-               text='Fill Simulations',
+               text='Fill  # Trials',
                command=fill_num_trials).grid(row=7, columnspan = 2, sticky =E,
                column=1,
                pady=4)

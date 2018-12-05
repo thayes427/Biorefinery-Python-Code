@@ -228,6 +228,9 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         elapsed_time = start_time - time()
         time_remaining = (num_trials - trial - 1)*(elapsed_time / (trial + 1))
         GUI.display_time_remaining(time_remaining)
+        aspen.Engine.ConnectionDialog()
+        #aspen.Close()
+        #aspen.Quit()
         
         ############### CHECK TO SEE IF USER WANTS TO ABORT ##########
         #abort = GUI.check_abort()
@@ -244,9 +247,14 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         plt.savefig(output_file_name + '.png')
         plt.show()
         
-    aspen.Close()
+    close_aspen_instances()
     print("-----------FINISHED-----------")
     return dfstreams
+
+def close_aspen_instances():
+    for p in psutil.process_iter():
+        if p.name() == 'AspenPlus.exe':
+            p.terminate()
 
 def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name, values, fortran_index, output_file_name):
     '''
@@ -333,6 +341,9 @@ def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name,
         trial_counter += 1
         GUI.plot_univ_on_GUI(dfstreams, v, counter, type(values[0]) == str)
         counter += 1
+        aspen.Engine.ConnectionDialog()
+        #aspen.Close()
+        #aspen.Quit()
         
         
         ############### CHECK TO SEE IF USER WANTS TO ABORT ##########
@@ -344,6 +355,7 @@ def univariate_analysis(aspenfilename, excelfilename, aspencall, aspen_var_name,
     writer = pd.ExcelWriter(output_file_name + '_' + v + '.xlsx')
     dfstreams.to_excel(writer,'Sheet1')
     writer.save()
+    close_aspen_instances()
     
     return dfstreams
 
@@ -386,6 +398,11 @@ def CheckConverge(aspen):
     #fd_stage = r'\Data\Blocks\REFINE\Data\Blocks\FRAC\Input\FEED_CONVEN\FRACFD'
     nstage = obj.FindNode(stage)
     
+    init_stage = obj.FindNode(stage).Value
+    init_fracstm = obj.FindNode(fracstm).Value
+    init_fracfd = obj.FindNode(fracfd).Value
+    init_stm_stage = obj.FindNode(stm_stage).Value
+    
     while obj.FindNode(error) != None:
         
         nstage = obj.FindNode(stage)
@@ -408,6 +425,10 @@ def CheckConverge(aspen):
         
     print("Converged with " + str(nstage.Value) + ' stages')
     print('Feed Stage: ', obj.FindNode(fracfd).Value)
+    obj.FindNode(stage).Value = init_stage
+    obj.FindNode(fracstm).Value = init_fracstm
+    obj.FindNode(fracfd).Value = init_fracfd
+    obj.FindNode(stm_stage).Value = init_stm_stage
     return False
 
     

@@ -2,7 +2,7 @@ from tkinter import *
 from tkinter import messagebox
 import numpy as np
 import time
-import sensitivity_analysis_v2 as msens
+import sensitivity_analysis_v3 as msens
 from tkinter import ttk
 from tkinter.filedialog import askopenfilename
 import matplotlib
