@@ -35,6 +35,7 @@ class MainApp(tk.Tk):
         ####### Do something ######
         tk.Tk.__init__(self)
         self.notebook = ttk.Notebook(self)
+        self.wm_title("Sensitivity Analysis Tool")
         self.notebook.grid()
         self.construct_home_tab()
         
