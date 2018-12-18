@@ -81,7 +81,7 @@ def plot_on_GUI(d_f_output, vars_to_change = []):
                 pass
             a.set_title(var)
 
-    #a = fig.tight_layout()
+    a = fig.tight_layout()
     canvas = FigureCanvasTkAgg(fig)
     canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5,)
         
@@ -128,7 +128,7 @@ def plot_univ_on_GUI(dfstreams, var, c, fortran_check):
     except Exception:
         pass
     a.set_title('MFSP - ' + var)
-    #a = fig.tight_layout()
+    a = fig.tight_layout()
     canvas = FigureCanvasTkAgg(fig)
     canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5,)
     

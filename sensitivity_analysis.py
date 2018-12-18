@@ -163,7 +163,7 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
     columns = vars_to_change + ['Biofuel Output', 'Succinic Acid Output', 'Fixed Op Costs',\
               'Var OpCosts', ' Capital Costs', 'MFSP','Fixed Capital Investment',\
               'Capital Investment with Interest','Loan Payment per Year','Depreciation','Cash on Hand',\
-              'Steam Plant Value','Bag Cost']
+              'Steam Plant Value','Bag Cost', 'Aspen Errors']
     
     dfstreams = pd.DataFrame(columns=columns)
     obj.FindNode(SUC_LOC).Value = 0.4
@@ -193,6 +193,7 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         errors = FindErrors(aspen)
         for e in errors:
             print(e)
+        errors = ' ; '.join(errors)
         
         if stop:
             writer = pd.ExcelWriter(output_file_name)
@@ -218,7 +219,7 @@ def multivariate_sensitivity_analysis(aspenfilename, excelfilename,
         excel.Calculate()
         excel.Run('SOLVE_DCFROR')
         
-        dfstreams.loc[trial] = case_values + [x.Value for x in book.Sheets('Output').Evaluate("C3:C15")]
+        dfstreams.loc[trial] = case_values + [x.Value for x in book.Sheets('Output').Evaluate("C3:C15")] + [errors]
         if disp_graphs:
             GUI.plot_on_GUI(dfstreams, vars_to_change)
         
@@ -398,10 +399,10 @@ def CheckConverge(aspen):
     #fd_stage = r'\Data\Blocks\REFINE\Data\Blocks\FRAC\Input\FEED_CONVEN\FRACFD'
     nstage = obj.FindNode(stage)
     
-    init_stage = obj.FindNode(stage).Value
-    init_fracstm = obj.FindNode(fracstm).Value
-    init_fracfd = obj.FindNode(fracfd).Value
-    init_stm_stage = obj.FindNode(stm_stage).Value
+    #init_stage = obj.FindNode(stage).Value
+    #init_fracstm = obj.FindNode(fracstm).Value
+    #init_fracfd = obj.FindNode(fracfd).Value
+    #init_stm_stage = obj.FindNode(stm_stage).Value
     
     while obj.FindNode(error) != None:
         
@@ -425,10 +426,10 @@ def CheckConverge(aspen):
         
     print("Converged with " + str(nstage.Value) + ' stages')
     print('Feed Stage: ', obj.FindNode(fracfd).Value)
-    obj.FindNode(stage).Value = init_stage
-    obj.FindNode(fracstm).Value = init_fracstm
-    obj.FindNode(fracfd).Value = init_fracfd
-    obj.FindNode(stm_stage).Value = init_stm_stage
+    #obj.FindNode(stage).Value = init_stage
+    #obj.FindNode(fracstm).Value = init_fracstm
+    #obj.FindNode(fracfd).Value = init_fracfd
+    #obj.FindNode(stm_stage).Value = init_stm_stage
     return False
 
     
