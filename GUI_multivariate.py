@@ -27,19 +27,19 @@ def quit():
     root.destroy()
 
 def open_excel_file():
-    root.filename = askopenfilename(title = "Select file", filetypes = (("csv files","*.csv"),("all files","*.*")))
+    filename = askopenfilename(title = "Select file", filetypes = (("csv files","*.csv"),("all files","*.*")))
     excel.delete(0, END)
-    excel.insert(0,root.filename)
+    excel.insert(0, filename)
     
 def open_aspen_file():
-    root.filename = askopenfilename(title = "Select file", filetypes = (("Aspen Models",["*.bkp", "*.apw"]),("all files","*.*")))
+    filename = askopenfilename(title = "Select file", filetypes = (("Aspen Models",["*.bkp", "*.apw"]),("all files","*.*")))
     aspen.delete(0, END)
-    aspen.insert(0,root.filename)
+    aspen.insert(0, filename)
 
 def open_solver_file():
-    root.filename = askopenfilename(title = "Select file", filetypes = (("Excel Files","*.xlsm"),("all files","*.*")))
+    filename = askopenfilename(title = "Select file", filetypes = (("Excel Files","*.xlsm"),("all files","*.*")))
     solver.delete(0, END)
-    solver.insert(0,root.filename)
+    solver.insert(0, filename)
     
 def plot_on_GUI(d_f_output, vars_to_change = []):
     '''

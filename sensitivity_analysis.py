@@ -143,6 +143,18 @@ def sample_pareto(shape, scale, lb, ub, ntrials):
 def make_fortran(fortran_call, fortran_index, val):
     return fortran_call[:fortran_index[0]] + str(val) + fortran_call[fortran_index[1]:]
 
+def save_dataframe(outputfilename, data):
+    prev_data = pd.read_excel(outputfilename, sheet_name='Sheet1').append(data)
+    writer = pd.ExcelWriter(outputfilename + '.xlsx')
+    prev_data.to_excel(writer, sheet_name ='Sheet1')
+    stats = prev_data['MFSP'].describe()
+    stats.to_excel(writer, sheet_name = 'Summary Stats')
+    writer.save()
+    # you just need to save the dataframe after initializing it with dfstreams = pd.DataFrame(columns=columns) so you 
+    # can always append to it
+    
+    
+
 
 def multivariate_sensitivity_analysis(aspenfilename, excelfilename, 
     gui_excel_input, num_trials, output_file_name, simulation_vars, disp_graphs=True):
