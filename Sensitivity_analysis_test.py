@@ -24,8 +24,6 @@ import csv
 from multiprocessing import freeze_support
 import matplotlib
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
-from matplotlib import pyplot as pplt
-from matplotlib.backend_bases import key_press_handler
 from matplotlib.figure import Figure
  
 
@@ -51,6 +49,7 @@ class MainApp(tk.Tk):
         self.start_time = None
         self.univar_plot_counter = 1
         self.univar_old_name = ''
+        self.univar_row_num = 0
 
 
     def construct_home_tab(self):
@@ -270,7 +269,6 @@ class MainApp(tk.Tk):
             frame_vars1 = ttk.Frame(canvas1)
             frame_vars1.config(height = '3c')
             canvas1.create_window((0, 0), window=frame_vars1, anchor='nw')
-            self.univar_row_num = 0
             for name, format_of_data, vals in univariate_vars:
                 Label(frame_vars1, 
                 text= name).grid(row=self.univar_row_num, column= 1,pady = 5,padx = 5)
@@ -656,10 +654,6 @@ class MainApp(tk.Tk):
         This function will plot the distribution of variable calls prior to running
         the simulation. This will enable users to see whether the distributions are as they expected.
         
-        Inputs:
-            simulation_dist: dictionary where the key is the variable name, and values are
-                lists of the values that will be used in the function.    
-        
         '''
         
         self.get_distributions()
@@ -668,40 +662,26 @@ class MainApp(tk.Tk):
         num_rows= ((len(self.simulation_dist) + 1) // columns) + 1
         counter = 1
         
-        frame = Frame(self, width = 400, height = 400)
-        frame.grid(row = 8, column = 0, columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
-        canvas = Canvas(frame, width = 400, height = 400, scrollregion = (0, 0, 500, 500))
-        vbar = Scrollbar(frame, orient = VERTICAL)
-        vbar.pack(side= RIGHT, fill = Y)
-        vbar.config(command=canvas.yview)
-        canvas.config(width = 400, height = 400)
-        canvas.config(yscrollcommand = vbar.set)
-        
-        fig = pplt.figure(figsize = (5,5))
+        fig = Figure(figsize = (5,5), facecolor=[240/255,240/255,237/255])
         for var, values in self.simulation_dist.items():
             a = fig.add_subplot(num_rows,columns,counter)
             counter += 1
             num_bins = 15
             try:
-                n, bins, patches = pplt.hist(values, num_bins, facecolor='blue', alpha=0.5)
+                n, bins, patches = a.hist(values, num_bins, facecolor='blue', alpha=0.5)
             except Exception:
                 pass
             a.set_title(var)
-        a = fig.tight_layout()
-        canvas = FigureCanvasTkAgg(fig)
-        canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
-
-        #frame_canvas = ttk.Frame()
-        #frame_canvas.grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
-        #canvas.grid_rowconfigure(0, weight=1)
-        #frame_canvas.grid_columnconfigure(0, weight=1)
-        #frame_canvas.config()
-        
-        #vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=canvas.get_tk_widget().yview)
-        #vsb.grid(row=8, column=1,sticky = 'ns')
-        #canvas.get_tk_widget().configure(yscrollcommand=vsb.set)
-        
-        #canvas.get_tk_widget().config(scrollregion=canvas.bbox("all"))
+        #a = fig.tight_layout()
+        if self.univar_row_num != 0:
+            row_num = 16
+        else:
+            row_num = 8
+        canvas = FigureCanvasTkAgg(fig, master=self.current_tab)
+        canvas.draw()
+        canvas.get_tk_widget().grid(row=row_num, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
+        canvas._tkcanvas.grid(row=row_num, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
+       
         
     def univar_gui_update(self):
         self.disp_status_update()
@@ -921,8 +901,8 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
         
         results_lock.acquire()
         results.append(result) 
-        sim_counter.value = len(results) - 1
-        if sim_counter.value % save_freq.value:
+        sim_counter.value = len(results)
+        if sim_counter.value % save_freq.value == 0:
             save_data(outputfilename, results)
         sims_completed.value += 1
         results_lock.release()
