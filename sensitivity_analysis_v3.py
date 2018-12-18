@@ -399,48 +399,6 @@ def mp_aspenrun(aspencom, obj, aspenfilename, excelfilename, aspen_call, aspen_v
     errors = FindErrors(aspencom)
     for e in errors:
         print(e)
-
-#  PART OF ERROR OR CONVERGENCE CHECK???    
-#    if stop:
-#        writer = pd.ExcelWriter('3-7-2018_df_final.xlsx')
-#        dfstreams.to_excel(writer,'Sheet1')
-#        writer.save()
-#        return dfstreams
-
-#    excellock.acquire()
-#    excel,book = open_excelCOMS(excelfilename)
-#    column = [x for x in book.Sheets('Aspen_Streams').Evaluate("D1:D100") if x.Value != None] 
-#    
-#    if obj.FindNode(column[0]) == None:
-#        print('ERROR in Aspen for fraction '+ str(value))
-#        return()
-#    stream_values = []
-#    for index,stream in enumerate(column):
-#        stream_value = obj.FindNode(stream).Value   
-#        stream_values.append((stream_value,))
-#    
-#    cell_string = "C1:C" + str(len(column))
-#    book.Sheets('ASPEN_Streams').Evaluate(cell_string).Value = stream_values
-#    print('here3')
-#    excel.Calculate()
-#    excel.Run('SOLVE_DCFROR')
-#
-##  NEEDS TO BE IMPLEMENTED ABOVE???    
-##    if type(case) == str:
-##        case = float(case[fortran_index[0]:fortran_index[1]])
-#    
-#    dfstream = [x.Value for x in book.Sheets('Output').Evaluate("C3:C15")]
-#    excellock.release()
-##    excel.Workbooks.Close(False)
-#    map(lambda book: book.Close(False), excel.Workbooks)
-#    excel.Quit()
-#    excel = None
-#    del excel
-#    aspen.Close()
-#    aspen.Quit()
-#    aspen = None
-#    del aspen
-#    pythoncom.CoUninitialize()
     
     return aspencom,value
 

@@ -143,6 +143,18 @@ def sample_pareto(shape, scale, lb, ub, ntrials):
 def make_fortran(fortran_call, fortran_index, val):
     return fortran_call[:fortran_index[0]] + str(val) + fortran_call[fortran_index[1]:]
 
+def save_dataframe(outputfilename, data):
+    prev_data = pd.read_excel(outputfilename, sheet_name='Sheet1').append(data)
+    writer = pd.ExcelWriter(outputfilename + '.xlsx')
+    prev_data.to_excel(writer, sheet_name ='Sheet1')
+    stats = prev_data['MFSP'].describe()
+    stats.to_excel(writer, sheet_name = 'Summary Stats')
+    writer.save()
+    # you just need to save the dataframe after initializing it with dfstreams = pd.DataFrame(columns=columns) so you 
+    # can always append to it
+    
+    
+
 
 def multivariate_sensitivity_analysis(aspenfilename, excelfilename, 
     gui_excel_input, num_trials, output_file_name, simulation_vars, disp_graphs=True):
@@ -398,10 +410,10 @@ def CheckConverge(aspen):
     #fd_stage = r'\Data\Blocks\REFINE\Data\Blocks\FRAC\Input\FEED_CONVEN\FRACFD'
     nstage = obj.FindNode(stage)
     
-    init_stage = obj.FindNode(stage).Value
-    init_fracstm = obj.FindNode(fracstm).Value
-    init_fracfd = obj.FindNode(fracfd).Value
-    init_stm_stage = obj.FindNode(stm_stage).Value
+    #init_stage = obj.FindNode(stage).Value
+    #init_fracstm = obj.FindNode(fracstm).Value
+    #init_fracfd = obj.FindNode(fracfd).Value
+    #init_stm_stage = obj.FindNode(stm_stage).Value
     
     while obj.FindNode(error) != None:
         
@@ -425,10 +437,10 @@ def CheckConverge(aspen):
         
     print("Converged with " + str(nstage.Value) + ' stages')
     print('Feed Stage: ', obj.FindNode(fracfd).Value)
-    obj.FindNode(stage).Value = init_stage
-    obj.FindNode(fracstm).Value = init_fracstm
-    obj.FindNode(fracfd).Value = init_fracfd
-    obj.FindNode(stm_stage).Value = init_stm_stage
+    #obj.FindNode(stage).Value = init_stage
+    #obj.FindNode(fracstm).Value = init_fracstm
+    #obj.FindNode(fracfd).Value = init_fracfd
+    #obj.FindNode(stm_stage).Value = init_stm_stage
     return False
 
     
