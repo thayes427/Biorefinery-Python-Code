@@ -662,26 +662,57 @@ class MainApp(tk.Tk):
         num_rows= ((len(self.simulation_dist) + 1) // columns) + 1
         counter = 1
         
-        fig = Figure(figsize = (5,5), facecolor=[240/255,240/255,237/255])
+        fig_list =[]
+
         for var, values in self.simulation_dist.items():
+            fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255])
             a = fig.add_subplot(num_rows,columns,counter)
-            counter += 1
+            #counter += 1
             num_bins = 15
             try:
                 n, bins, patches = a.hist(values, num_bins, facecolor='blue', alpha=0.5)
             except Exception:
                 pass
             a.set_title(var)
+            fig_list.append(fig)
         #a = fig.tight_layout()
         if self.univar_row_num != 0:
             row_num = 16
         else:
             row_num = 8
-        canvas = FigureCanvasTkAgg(fig, master=self.current_tab)
-        canvas.draw()
-        canvas.get_tk_widget().grid(row=row_num, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
-        canvas._tkcanvas.grid(row=row_num, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
-       
+        frame_canvas = ttk.Frame(self.current_tab)
+        frame_canvas.grid(row=row_num, column=columns, pady=(5, 0))
+        frame_canvas.grid_rowconfigure(0, weight=1)
+        frame_canvas.grid_columnconfigure(0, weight=1)
+        frame_canvas.config(height = '5c')
+        
+        main_canvas = Canvas(frame_canvas)
+        main_canvas.grid(row=0, column=0, sticky="news")
+        main_canvas.config(height = '5c')
+        
+        vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
+        vsb.grid(row=0, column=1,sticky = 'ns')
+        main_canvas.configure(yscrollcommand=vsb.set)
+        
+        figure_frame = ttk.Frame(main_canvas)
+        main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
+        figure_frame.config(height = '5c')
+    
+        row_num = 0
+        
+        for figs in fig_list:
+            figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
+            #figure_canvas.draw()
+            figure_canvas.get_tk_widget().grid(row=row_num, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
+            #figure_canvas._tkcanvas.grid(row=row_num, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
+            row_num += 5
+        
+        figure_canvas.update_idletasks()
+        
+        frame_canvas.config(width='5c', height='5c')
+        
+        # Set the canvas scrolling region
+        main_canvas.config(scrollregion=main_canvas.bbox("all"))
         
     def univar_gui_update(self):
         self.disp_status_update()
