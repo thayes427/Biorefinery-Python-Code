@@ -730,7 +730,6 @@ class MainApp(tk.Tk):
             a = fig.add_subplot(111)
             num_bins = 15
             a.hist(values, num_bins, facecolor='blue', alpha=0.5)
-            #a.hist(values[::2], num_bins, facecolor='blue', alpha=0.7)
             a.set_title(var)
             fig_list.append(fig)
             
@@ -749,7 +748,7 @@ class MainApp(tk.Tk):
         main_canvas.config(height = '10c', width='12c')
         
         vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
-        vsb.grid(row=0, column=1,sticky = 'ns')
+        vsb.grid(row=0, column=2,sticky = 'ns')
         main_canvas.configure(yscrollcommand=vsb.set)
         
         figure_frame = ttk.Frame(main_canvas)
@@ -764,19 +763,14 @@ class MainApp(tk.Tk):
                 col = 4
             else:
                 col = 1
-            #figure_canvas.draw()
             figure_canvas.get_tk_widget().grid(
                     row=row_num, column=col,columnspan=2, rowspan = 5, pady = 5,padx = 8, sticky=E)
-            #figure_canvas._tkcanvas.grid(row=row_num, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
             if column:
                 row_num += 5
             column = not column
-        
 
         figure_frame.update_idletasks()
         frame_canvas.config(width='12c', height='10c')
-        
-        # Set the canvas scrolling region
         main_canvas.config(scrollregion=figure_frame.bbox("all"))
         
     def univar_gui_update(self):
