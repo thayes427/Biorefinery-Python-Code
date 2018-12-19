@@ -39,7 +39,7 @@ a = f.add_subplot(111)
 t = np.random.normal(3,2,1000)
 ss = pd.DataFrame(columns=['a','b'])
 
-_, binss, _ = a.hist(t, facecolor='blue', alpha=0.5)
+_, binss, _ = a.hist(t, facecolor='blue', alpha=0.23)
 a.hist(t[::2], facecolor='blue', bins=binss, alpha=0.7)
 
 # a tk.DrawingArea

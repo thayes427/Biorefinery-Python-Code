@@ -501,7 +501,7 @@ class MainApp(tk.Tk):
         
         new_sim = Simulation(self.sims_completed, num_trial, simulation_vars, output_file, 
                              self.aspen_file, self.excel_solver_file, self.abort, vars_to_change, 
-                             self.output_columns, save_freq=5, num_processes=self.num_processes, reinit_coms_freq=25)
+                             self.output_columns, save_freq=5, num_processes=self.num_processes, reinit_coms_freq=15)
         self.simulations.append(new_sim)
         self.tot_sim_num += num_trial
         
@@ -588,7 +588,7 @@ class MainApp(tk.Tk):
             fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
             a = fig.add_subplot(111)
             a.hist(values, num_bins, facecolor='blue', alpha=0.5)
-            _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='blue', alpha=0.5)
+            _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='blue', alpha=0.2)
             a.hist(results[var], bins=bins, facecolor='blue', alpha=0.7)
             a.set_title(var)
             fig_list.append(fig)
@@ -654,7 +654,7 @@ class MainApp(tk.Tk):
         var_fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
         a = var_fig.add_subplot(111)
         num_bins = 15
-        _, bins, _ = a.hist(self.simulation_dist[current_var], num_bins, facecolor='blue', alpha=0.5)
+        _, bins, _ = a.hist(self.simulation_dist[current_var], num_bins, facecolor='blue', alpha=0.2)
         a.hist(results[current_var], bins=bins, facecolor='blue', alpha=0.7)
         a.set_title(current_var)
         fig_list.append(var_fig)
@@ -884,7 +884,7 @@ class Simulation(object):
             self.close_all_COMS()
             self.terminate_processes()
             self.wait()
-            #self.processes = []
+            self.processes = []
             
         save_data(self.output_file, self.results)
         self.abort.value = False    
@@ -899,7 +899,7 @@ class Simulation(object):
         if not any(p.is_alive() for p in self.processes):
             return
         else:
-            time.sleep(5)
+            time.sleep(2)
             self.wait()
             
             
@@ -1121,7 +1121,9 @@ if __name__ == "__main__":
         main_app.abort_sim()
         print('Waiting for Clearance to Exit...')
         main_app.current_simulation.wait()
+        print('Waiting for Worker Thread to Terminate...')
         main_app.worker_thread.join()
+        print('Waiting for Cleanup Thread to Terminate...')
         main_app.cleanup_thread.join()
     exit()
         
