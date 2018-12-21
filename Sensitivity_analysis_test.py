@@ -580,7 +580,7 @@ class MainApp(tk.Tk):
         num_bins = 15
         mfsp_fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
         b = mfsp_fig.add_subplot(111)
-        b.hist(results['MFSP'], num_bins, facecolor='blue', alpha=0.8)
+        b.hist(results['MFSP'], num_bins, facecolor='blue', alpha=0.85)
         b.set_title('MFSP')
         fig_list.append(mfsp_fig)
         
@@ -588,7 +588,7 @@ class MainApp(tk.Tk):
             fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
             a = fig.add_subplot(111)
             a.hist(values, num_bins, facecolor='blue', alpha=0.5)
-            _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='blue', alpha=0.2)
+            _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='blue', alpha=0.1)
             a.hist(results[var], bins=bins, facecolor='blue', alpha=0.7)
             a.set_title(var)
             fig_list.append(fig)
@@ -654,14 +654,14 @@ class MainApp(tk.Tk):
         var_fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
         a = var_fig.add_subplot(111)
         num_bins = 15
-        _, bins, _ = a.hist(self.simulation_dist[current_var], num_bins, facecolor='blue', alpha=0.2)
+        _, bins, _ = a.hist(self.simulation_dist[current_var], num_bins, facecolor='blue', alpha=0.1)
         a.hist(results[current_var], bins=bins, facecolor='blue', alpha=0.7)
         a.set_title(current_var)
         fig_list.append(var_fig)
         
         mfsp_fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
         b = mfsp_fig.add_subplot(111)
-        b.hist(results['MFSP'], num_bins, facecolor='blue', alpha=0.8)
+        b.hist(results['MFSP'], num_bins, facecolor='blue', alpha=0.85)
         b.set_title('MFSP - ' + current_var)
         fig_list.append(mfsp_fig)
         
@@ -1031,7 +1031,9 @@ def mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_
     
     if obj.FindNode(column[0]) == None:
         print('ERROR in Aspen for fraction '+ str(case_values))
-        return pd.DataFrame(columns=columns)
+        dfstreams = pd.DataFrame(columns=columns)
+        dfstreams.loc[trial_num] = case_values + [None]*13 + ["Aspen Failed to Converge"]
+        return dfstreams
     stream_values = []
     for index,stream in enumerate(column):
         stream_value = obj.FindNode(stream).Value   
@@ -1044,7 +1046,7 @@ def mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_
 
     
     dfstreams = pd.DataFrame(columns=columns)
-    dfstreams.loc[trial_num] = case_values + [x.Value for x in book.Sheets('Output').Evaluate("C3:C15")] + [" ; ".join(errors)]
+    dfstreams.loc[trial_num] = case_values + [x.Value for x in book.Sheets('Output').Evaluate("C3:C15")] + ["; ".join(errors)]
     return dfstreams
 
 
