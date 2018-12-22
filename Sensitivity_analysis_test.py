@@ -881,6 +881,7 @@ class Simulation(object):
         if not self.abort.value:
             self.run_sim(TASKS)
         self.lock_to_signal_finish.acquire()
+        self.wait(t=5)
         self.close_all_COMS()
         self.terminate_processes()
         self.wait()
@@ -894,11 +895,11 @@ class Simulation(object):
             p.terminate()
             p.join()
          
-    def wait(self):
+    def wait(self, t=2):
         if not any(p.is_alive() for p in self.processes):
             return
         else:
-            time.sleep(2)
+            time.sleep(t)
             self.wait()
             
             
@@ -914,7 +915,8 @@ class Simulation(object):
                                                                 self.results_lock, self.results,
                                                                 self.trial_counter, self.save_freq, 
                                                                 self.output_file, self.vars_to_change, 
-                                                                self.output_columns, self.simulation_vars, self.sims_completed, self.lock_to_signal_finish, self.tot_sim)))
+                                                                self.output_columns, self.simulation_vars, self.sims_completed, 
+                                                                self.lock_to_signal_finish, self.tot_sim)))
         for p in self.processes:
             p.start()
         for i in range(self.num_processes):
