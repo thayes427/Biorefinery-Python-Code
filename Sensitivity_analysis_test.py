@@ -1021,8 +1021,10 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
                     local_pids[p.pid] = 1
                     
         aspencom.Engine.ConnectionDialog()
-        if sim_counter.value == tot_sim:
-            lock_to_signal_finish.release()
+    try:
+        lock_to_signal_finish.release()
+    except:
+        pass
             
             
             
