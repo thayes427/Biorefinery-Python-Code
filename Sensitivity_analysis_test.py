@@ -48,8 +48,9 @@ class MainApp(tk.Tk):
         self.sims_completed = mp.Value('i',0)
         self.start_time = None
         self.univar_plot_counter = 1
-        self.univar_old_name = ''
-        self.univar_row_num = 0
+        self.finished_figures = []
+        self.univar_row_num=0
+        self.last_results_plotted = None
 
 
     def construct_home_tab(self):
@@ -246,9 +247,9 @@ class MainApp(tk.Tk):
             Label(self.current_tab, 
                 text= 'Variable Name').grid(row=8, column= 1,pady = 5,padx = 5, sticky= E)
             Label(self.current_tab, 
-                text= 'Sampling Type').grid(row=8, column= 2,pady = 5,padx = 5)
+                text= 'Sampling Type').grid(row=8, column= 2,pady = 5,padx = 5, sticky=E)
             Label(self.current_tab, 
-                text= '# of Trials').grid(row=8, column= 3,pady = 5,padx = 5, sticky = W)
+                text= '# of Trials').grid(row=8, column= 3,pady = 5,padx = 5)
             # Create a frame for the canvas with non-zero row&column weights
             frame_canvas1 = ttk.Frame(self.current_tab)
             frame_canvas1.grid(row=9, column=1, columnspan =3, pady=(5, 0))
@@ -364,7 +365,7 @@ class MainApp(tk.Tk):
                         lb_ub = row['Range of Values'].split(',')
                         lb_uniform, ub_uniform = float(lb_ub[0].strip()), float(lb_ub[1].strip())
                         distribution = self.sample_uniform(lb_uniform, ub_uniform, lb, ub, ntrials)
-                    simulation_dist[aspen_variable] = distribution
+                    simulation_dist[aspen_variable] = distribution[:]
                     fortran_index = (0,0)
                     if row['Fortran Call'].strip() != "":
                         fortran_call = row['Fortran Call']
@@ -489,6 +490,7 @@ class MainApp(tk.Tk):
             self.current_simulation.init_sims()
             if self.abort_univar_overall.value:
                 self.abort.value = True
+            self.univar_plot_counter += 1
             
         
     def create_simulation_object(self, simulation_vars, vars_to_change, output_file, num_trial):
@@ -499,7 +501,7 @@ class MainApp(tk.Tk):
         
         new_sim = Simulation(self.sims_completed, num_trial, simulation_vars, output_file, 
                              self.aspen_file, self.excel_solver_file, self.abort, vars_to_change, 
-                             self.output_columns, save_freq=5, num_processes=self.num_processes, reinit_coms_freq=25)
+                             self.output_columns, save_freq=5, num_processes=self.num_processes, reinit_coms_freq=15)
         self.simulations.append(new_sim)
         self.tot_sim_num += num_trial
         
@@ -535,7 +537,11 @@ class MainApp(tk.Tk):
             else:
                 tmp = Label(self.current_tab, text= 'Status: Simulation Running | {} Results Collected'.format(
                         len(self.current_simulation.results)))
-            tmp.grid(row=15, column = 1, sticky=W, columnspan=2)
+            if self.univar_row_num != 0:
+                row = 15
+            else:
+                row = 8
+            tmp.grid(row=row, column = 1, sticky=W, columnspan=2)
             if self.status_label:
                 self.status_label.destroy()
             self.status_label = tmp
@@ -550,154 +556,65 @@ class MainApp(tk.Tk):
                 tmp = Label(self.current_tab, text='Time Remaining: {} Hours, {} Minutes    '.format(int(hours), int(minutes)))
             else:
                 tmp = Label(self.current_tab, text='Time Remaining: N/A')
-            tmp.grid(row=16, column=1, columnspan=2,sticky=W)
+            if self.univar_row_num != 0:
+                row = 16
+            else:
+                row = 9
+            tmp.grid(row=row, column=1, columnspan=2,sticky=W)
             if self.time_rem_label:
                 self.time_rem_label.destroy()
             self.time_rem_label = tmp
             
             
     def plot_on_GUI(self):
-        '''
-        This function will autoupdate the GUI to display the histogram distribution of MFSP
-        and and histogram distributions of all other variables that were passed to the 
-        function. 
-    
-        Inputs: 
-            d_f_outputs: dictionary with output of a single simulation, where the 
-                key is the variable and the value is the output value of the variable
-                after the simulation
-            vars_to_change: list of variables that were input
         
-        '''
-        if self.current_simulation and self.current_simulation.results:
-            d_f_output = pd.concat(self.current_simulation.results).sort_index()
-            vars_to_change = self.current_simulation.vars_to_change
-            columns = 2
-            num_rows= ((len(vars_to_change) + 1) // columns) + 1
-            counter = 1
-            fig = Figure(figsize = (5,5))
-            a = fig.add_subplot(num_rows,columns,counter)
-            counter += 1
-            total_MFSP = d_f_output["MFSP"]
-            num_bins = 15
-            try:
-                n, bins, patches = a.hist(total_MFSP, num_bins, facecolor='blue', alpha=0.5)
-            except Exception:
-                pass
-            a.set_title ("MFSP Distribution")
-            a.set_xlabel("MFSP ($)")
-            if len(vars_to_change) != 0:
-                for var in vars_to_change:
-                    a = fig.add_subplot(num_rows,columns,counter)
-                    counter += 1
-                    total_data = d_f_output[var]
-                    num_bins = 15
-                    try:
-                        n, bins, patches = a.hist(total_data, num_bins, facecolor='blue', alpha=0.5)
-                    except Exception:
-                        pass
-                    a.set_title(var)
+        if not self.current_simulation or not self.current_simulation.results:
+            return
+        if len(self.current_simulation.results) == self.last_results_plotted:
+                return
+        self.last_results_plotted = len(self.current_simulation.results)
         
-            #a = fig.tight_layout()
-            canvas = FigureCanvasTkAgg(fig)
-            canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5,)
-                
-    def plot_univ_on_GUI(self):
-        '''
-        Allows Unviariate to be plotted on the GUI
-        
-        It will plot the graphs as follows: the number of rows is the number of variables that have
-        to be plotted, and there will be a width of two columns, with the first column graphing 
-        the variable distribution, and the second one plotting the MFSP distribution.   
-        
-        '''
-        
-        if self.current_simulation and self.current_simulation.results:
-            dfstreams = pd.concat(self.current_simulation.results).sort_index()
-            var = self.current_simulation.vars_to_change[0]
-            c = self.current_simulation.trial_counter.value + 1
-            columns = 2
-            num_rows= ((len(self.simulation_dist) + 1) // columns) + 1
-            fig = Figure(figsize = (5,5))
-            a = fig.add_subplot(num_rows,columns,self.univar_plot_counter)
-            if var != self.univar_old_name and self.univar_old_name != '':
-                self.univar_plot_counter += 2
-                self.univar_old_name = var
-            if var != self.univar_old_name:
-                self.univar_old_name = var
-            self.univar_plot_counter += 1
-            num_bins = 15
-            try:
-                n, bins, patches = a.hist(self.simulation_dist[var][:c], num_bins, facecolor='blue', alpha=0.5)
-            except Exception:
-                pass
-            a.set_title(var)
-            a = fig.add_subplot(num_rows,columns,self.univar_plot_counter)
-            self.univar_plot_counter -= 1
-            num_bins = 15
-            try:
-                n, bins, patches = a.hist(dfstreams['MFSP'], num_bins, facecolor='blue', alpha=0.5)
-            except Exception:
-                pass
-            a.set_title('MFSP - ' + var)
-            #a = fig.tight_layout()
-            canvas = FigureCanvasTkAgg(fig)
-            canvas.get_tk_widget().grid(row=8, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5,)
-            
-            #vsb = ttk.Scrollbar(fig, orient="vertical", command=canvas.yview)
-            #vsb.grid(row=8, column=1,sticky = 'ns')
-            #canvas.configure(yscrollcommand=vsb.set)
-            
-            #canvas.config(scrollregion=canvas.bbox("all"))
-            
-    def plot_init_dist(self):
-        '''
-        This function will plot the distribution of variable calls prior to running
-        the simulation. This will enable users to see whether the distributions are as they expected.
-        
-        '''
-        
-        self.get_distributions()
-        
-        columns = 1
-        num_rows= ((len(self.simulation_dist) + 1) // columns) + 1
-        counter = 1
-        
+
+        results = pd.concat(self.current_simulation.results).sort_index()
         fig_list =[]
+        num_bins = 15
+        mfsp_fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
+        b = mfsp_fig.add_subplot(111)
+        b.hist(results['MFSP'], num_bins, facecolor='blue', alpha=0.85)
+        b.set_title('MFSP')
+        fig_list.append(mfsp_fig)
+        
         for var, values in self.simulation_dist.items():
-            fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255],tight_layout =True)
+            fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
             a = fig.add_subplot(111)
-            #counter += 1
-            num_bins = 5
-            try:
-                n, bins, patches = a.hist(values, num_bins, facecolor='blue', alpha=0.5)
-            except Exception:
-                pass
+            a.hist(values, num_bins, facecolor='blue', alpha=0.5)
+            _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='blue', alpha=0.1)
+            a.hist(results[var], bins=bins, facecolor='blue', alpha=0.7)
             a.set_title(var)
             fig_list.append(fig)
-        #a = fig.tight_layout()
+        
         if self.univar_row_num != 0:
-            row_num = 16
+            row_num = 17
         else:
-            row_num = 8
-            
+            row_num = 10
+        
         frame_canvas = ttk.Frame(self.current_tab)
-        frame_canvas.grid(row=row_num, column=1, columnspan = 4,pady=(5, 0),padx =(5,0))
+        frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
         frame_canvas.grid_rowconfigure(0, weight=1)
         frame_canvas.grid_columnconfigure(0, weight=1)
-        frame_canvas.config(height = '10c', width = '12c')
+        frame_canvas.config(height = '10c', width='12c')
         
         main_canvas = Canvas(frame_canvas)
         main_canvas.grid(row=0, column=0, sticky="news")
-        main_canvas.config(height = '10c', width = '12c')
+        main_canvas.config(height = '10c', width='12c')
         
         vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
-        vsb.grid(row=0, column=2,sticky = 'ns')
+        vsb.grid(row=0, column=1,sticky = 'ns')
         main_canvas.configure(yscrollcommand=vsb.set)
         
         figure_frame = ttk.Frame(main_canvas)
         main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
-        figure_frame.config(height = '10c', width = '12c')
+        figure_frame.config(height = '10c', width='12c')
     
         row_num = 0
         column = False
@@ -708,18 +625,153 @@ class MainApp(tk.Tk):
             else:
                 col = 1
             #figure_canvas.draw()
-
-            figure_canvas.get_tk_widget().grid(row=row_num, column=col,columnspan =3, rowspan = 5, pady = 5,padx = 8, sticky=E)
+            figure_canvas.get_tk_widget().grid(
+                    row=row_num, column=col,columnspan=2, rowspan = 5, pady = 5,padx = 8, sticky=E)
             #figure_canvas._tkcanvas.grid(row=row_num, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
             if column:
                 row_num += 5
             column = not column
         
-        
+
         figure_frame.update_idletasks()
-        frame_canvas.config(width='12c', height='15c')
+        frame_canvas.config(width='12c', height='10c')
         
         # Set the canvas scrolling region
+        main_canvas.config(scrollregion=figure_frame.bbox("all"))
+                
+            
+    def plot_univ_on_GUI(self):
+        
+        if not self.current_simulation or not self.current_simulation.results:
+            return
+        if len(self.current_simulation.results) == self.last_results_plotted:
+                return
+        self.last_results_plotted = len(self.current_simulation.results)
+        
+        current_var = self.current_simulation.vars_to_change[0]
+        results = pd.concat(self.current_simulation.results).sort_index()
+        fig_list =[]
+        var_fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
+        a = var_fig.add_subplot(111)
+        num_bins = 15
+        _, bins, _ = a.hist(self.simulation_dist[current_var], num_bins, facecolor='blue', alpha=0.1)
+        a.hist(results[current_var], bins=bins, facecolor='blue', alpha=0.7)
+        a.set_title(current_var)
+        fig_list.append(var_fig)
+        
+        mfsp_fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
+        b = mfsp_fig.add_subplot(111)
+        b.hist(results['MFSP'], num_bins, facecolor='blue', alpha=0.85)
+        b.set_title('MFSP - ' + current_var)
+        fig_list.append(mfsp_fig)
+        
+        figs_to_plot = self.finished_figures[:] + fig_list
+        if len(self.current_simulation.results) == self.current_simulation.tot_sim:
+            self.finished_figures += fig_list
+        
+        if self.univar_row_num != 0:
+            row_num = 17
+        else:
+            row_num = 10
+        
+        frame_canvas = ttk.Frame(self.current_tab)
+        frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
+        frame_canvas.grid_rowconfigure(0, weight=1)
+        frame_canvas.grid_columnconfigure(0, weight=1)
+        frame_canvas.config(height = '10c', width='12c')
+        
+        main_canvas = Canvas(frame_canvas)
+        main_canvas.grid(row=0, column=0, sticky="news")
+        main_canvas.config(height = '10c', width='12c')
+        
+        vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
+        vsb.grid(row=0, column=1,sticky = 'ns')
+        main_canvas.configure(yscrollcommand=vsb.set)
+        
+        figure_frame = ttk.Frame(main_canvas)
+        main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
+        figure_frame.config(height = '10c', width='12c')
+    
+        row_num = 0
+        column = False
+        for figs in figs_to_plot:
+            figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
+            if column:
+                col = 4
+            else:
+                col = 1
+            #figure_canvas.draw()
+            figure_canvas.get_tk_widget().grid(
+                    row=row_num, column=col,columnspan=2, rowspan = 5, pady = 5,padx = 8, sticky=E)
+            #figure_canvas._tkcanvas.grid(row=row_num, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
+            if column:
+                row_num += 5
+            column = not column
+        
+
+        figure_frame.update_idletasks()
+        frame_canvas.config(width='12c', height='10c')
+        
+        # Set the canvas scrolling region
+        main_canvas.config(scrollregion=figure_frame.bbox("all"))
+        
+            
+    def plot_init_dist(self):
+        '''
+        This function will plot the distribution of variable calls prior to running
+        the simulation. This will enable users to see whether the distributions are as they expected.
+        
+        '''
+        
+        self.get_distributions()        
+        fig_list =[]
+        for var, values in self.simulation_dist.items():
+            fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
+            a = fig.add_subplot(111)
+            num_bins = 15
+            a.hist(values, num_bins, facecolor='blue', alpha=0.5)
+            a.set_title(var)
+            fig_list.append(fig)
+            
+        if self.univar_row_num != 0:
+            row_num = 17
+        else:
+            row_num = 10
+        frame_canvas = ttk.Frame(self.current_tab)
+        frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
+        frame_canvas.grid_rowconfigure(0, weight=1)
+        frame_canvas.grid_columnconfigure(0, weight=1)
+        frame_canvas.config(height = '10c', width='12c')
+        
+        main_canvas = Canvas(frame_canvas)
+        main_canvas.grid(row=0, column=0, sticky="news")
+        main_canvas.config(height = '10c', width='12c')
+        
+        vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
+        vsb.grid(row=0, column=2,sticky = 'ns')
+        main_canvas.configure(yscrollcommand=vsb.set)
+        
+        figure_frame = ttk.Frame(main_canvas)
+        main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
+        figure_frame.config(height = '10c', width='12c')
+    
+        row_num = 0
+        column = False
+        for figs in fig_list:
+            figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
+            if column:
+                col = 4
+            else:
+                col = 1
+            figure_canvas.get_tk_widget().grid(
+                    row=row_num, column=col,columnspan=2, rowspan = 5, pady = 5,padx = 8, sticky=E)
+
+            if column:
+                row_num += 5
+            column = not column
+
+        figure_frame.update_idletasks()
+        frame_canvas.config(width='12c', height='10c')
         main_canvas.config(scrollregion=figure_frame.bbox("all"))
         
     def univar_gui_update(self):
@@ -830,9 +882,10 @@ class Simulation(object):
             if not self.abort.value:
                 self.run_sim(TASKS)
             self.wait()
-            self.terminate_processes()
-            self.processes = []
             self.close_all_COMS()
+            self.terminate_processes()
+            self.wait()
+            self.processes = []
             
         save_data(self.output_file, self.results)
         self.abort.value = False    
@@ -847,7 +900,7 @@ class Simulation(object):
         if not any(p.is_alive() for p in self.processes):
             return
         else:
-            time.sleep(5)
+            time.sleep(2)
             self.wait()
             
             
@@ -909,7 +962,7 @@ def save_data(outputfilename, results):
         collected_data = pd.concat(results).sort_index()
         writer = pd.ExcelWriter(outputfilename.value + '.xlsx')
         collected_data.to_excel(writer, sheet_name ='Sheet1')
-        stats = collected_data['MFSP'].describe()
+        stats = collected_data.describe()
         stats.to_excel(writer, sheet_name = 'Summary Stats')
         writer.save()
     
@@ -979,7 +1032,9 @@ def mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_
     
     if obj.FindNode(column[0]) == None:
         print('ERROR in Aspen for fraction '+ str(case_values))
-        return pd.DataFrame(columns=columns)
+        dfstreams = pd.DataFrame(columns=columns)
+        dfstreams.loc[trial_num] = case_values + [None]*13 + ["Aspen Failed to Converge"]
+        return dfstreams
     stream_values = []
     for index,stream in enumerate(column):
         stream_value = obj.FindNode(stream).Value   
@@ -992,7 +1047,7 @@ def mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_
 
     
     dfstreams = pd.DataFrame(columns=columns)
-    dfstreams.loc[trial_num] = case_values + [x.Value for x in book.Sheets('Output').Evaluate("C3:C15")] + [" ; ".join(errors)]
+    dfstreams.loc[trial_num] = case_values + [x.Value for x in book.Sheets('Output').Evaluate("C3:C15")] + ["; ".join(errors)]
     return dfstreams
 
 
@@ -1067,8 +1122,12 @@ if __name__ == "__main__":
     main_app.mainloop()
     if main_app.current_simulation:
         main_app.abort_sim()
-        print('now waiting for clearance')
+        print('Waiting for Clearance to Exit...')
         main_app.current_simulation.wait()
+        print('Waiting for Worker Thread to Terminate...')
+        main_app.worker_thread.join()
+        print('Waiting for Cleanup Thread to Terminate...')
+        main_app.cleanup_thread.join()
     exit()
         
         
