@@ -873,19 +873,19 @@ class Simulation(object):
         self.vars_to_change = self.manager.list(vars_to_change)
         self.aspenlock = mp.Lock()
         self.excellock = mp.Lock()
+        self.lock_to_signal_finish = mp.Lock()
           
     
     def init_sims(self):
-        for i in range(0, self.tot_sim, self.reinit_coms_freq):
-            upper_bound = min(i + self.reinit_coms_freq, self.tot_sim)
-            TASKS = [trial for trial in range(i, upper_bound)]
-            if not self.abort.value:
-                self.run_sim(TASKS)
-            self.wait()
-            self.close_all_COMS()
-            self.terminate_processes()
-            self.wait()
-            self.processes = []
+        TASKS = [trial for trial in range(0, self.tot_sim)]
+        self.lock_to_signal_finish.acquire()
+        if not self.abort.value:
+            self.run_sim(TASKS)
+        self.lock_to_signal_finish.acquire()
+        self.wait(t=5)
+        self.close_all_COMS()
+        self.terminate_processes()
+        self.wait()
             
         save_data(self.output_file, self.results)
         self.abort.value = False    
@@ -896,11 +896,11 @@ class Simulation(object):
             p.terminate()
             p.join()
          
-    def wait(self):
+    def wait(self, t=2):
         if not any(p.is_alive() for p in self.processes):
             return
         else:
-            time.sleep(2)
+            time.sleep(t)
             self.wait()
             
             
@@ -916,7 +916,8 @@ class Simulation(object):
                                                                 self.results_lock, self.results,
                                                                 self.trial_counter, self.save_freq, 
                                                                 self.output_file, self.vars_to_change, 
-                                                                self.output_columns, self.simulation_vars, self.sims_completed)))
+                                                                self.output_columns, self.simulation_vars, self.sims_completed, 
+                                                                self.lock_to_signal_finish, self.tot_sim)))
         for p in self.processes:
             p.start()
         for i in range(self.num_processes):
@@ -969,8 +970,9 @@ def save_data(outputfilename, results):
 
 def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilename, 
            excelfilename, task_queue, abort, results_lock, results,
-           sim_counter, save_freq, outputfilename, vars_to_change, columns, simulation_vars, sims_completed):
+           sim_counter, save_freq, outputfilename, vars_to_change, columns, simulation_vars, sims_completed, lock_to_signal_finish, tot_sim):
     
+    local_pids = {}
     aspenlock.acquire()
     if not abort.value:
         aspencom,obj = open_aspenCOMS(aspenfilename.value)
@@ -983,6 +985,8 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
     for p in psutil.process_iter(): #register the pids of COMS objects
         if ('aspen' in p.name().lower() or 'excel' in p.name().lower()) and p.pid not in pids_to_ignore:
             current_COMS_pids[p.pid] = 1
+            local_pids[p.pid] = 1
+            
             
     for trial_num in iter(task_queue.get, 'STOP'):
         if abort.value:
@@ -998,13 +1002,41 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
             save_data(outputfilename, results)
         sims_completed.value += 1
         results_lock.release()
+        
+        if psutil.virtual_memory().percent > 95:
+            for p in psutil.process_iter():
+                if p.pid in local_pids:
+                    p.terminate()
+                    del self.current_COMS_pids[p.pid]
+                    del local_pids[p.pid]
+            aspenlock.acquire()
+            if not abort.value:
+                aspencom,obj = open_aspenCOMS(aspenfilename.value)
+            aspenlock.release()
+            excellock.acquire()
+            if not abort.value:
+                excel,book = open_excelCOMS(excelfilename.value)
+            excellock.release() 
+            
+            for p in psutil.process_iter(): #register the pids of COMS objects
+                if ('aspen' in p.name().lower() or 'excel' in p.name().lower()) and p.pid not in pids_to_ignore:
+                    current_COMS_pids[p.pid] = 1
+                    local_pids[p.pid] = 1
+                    
         aspencom.Engine.ConnectionDialog()
+    try:
+        lock_to_signal_finish.release()
+    except:
+        pass
+            
+            
+            
 
 
 def aspen_run(aspencom, obj, simulation_vars, trial, vars_to_change):
     
-    SUC_LOC = r"\Data\Blocks\A300\Data\Blocks\B1\Input\FRAC\TOC5"
-    obj.FindNode(SUC_LOC).Value = 0.4
+    #SUC_LOC = r"\Data\Blocks\A300\Data\Blocks\B1\Input\FRAC\TOC5"
+    #suobj.FindNode(SUC_LOC).Value = 0.4
     
     variable_values = {}
     for (aspen_variable, aspen_call, fortran_index), dist in simulation_vars.items():
@@ -1021,7 +1053,7 @@ def aspen_run(aspencom, obj, simulation_vars, trial, vars_to_change):
     
     aspencom.Reinit()
     aspencom.Engine.Run2()
-    stop = CheckConverge(aspencom)
+    #stop = CheckConverge(aspencom)
     errors = FindErrors(aspencom)
     
     return aspencom, case_values, errors, obj
@@ -1031,7 +1063,7 @@ def mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_
     column = [x for x in book.Sheets('Aspen_Streams').Evaluate("D1:D100") if x.Value != None] 
     
     if obj.FindNode(column[0]) == None:
-        print('ERROR in Aspen for fraction '+ str(case_values))
+        print('ERROR in Aspen for '+ str(case_values))
         dfstreams = pd.DataFrame(columns=columns)
         dfstreams.loc[trial_num] = case_values + [None]*13 + ["Aspen Failed to Converge"]
         return dfstreams

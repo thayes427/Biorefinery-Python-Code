@@ -48,5 +48,7 @@ canvas.draw()
 canvas.get_tk_widget().grid()
 canvas._tkcanvas.grid()
 
+home_tab.forget(canvas)
+
 
 Tk.mainloop()
