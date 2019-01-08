@@ -1034,8 +1034,8 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
 
 def aspen_run(aspencom, obj, simulation_vars, trial, vars_to_change):
     
-    SUC_LOC = r"\Data\Blocks\A300\Data\Blocks\B1\Input\FRAC\TOC5"
-    obj.FindNode(SUC_LOC).Value = 0.4
+    #SUC_LOC = r"\Data\Blocks\A300\Data\Blocks\B1\Input\FRAC\TOC5"
+    #suobj.FindNode(SUC_LOC).Value = 0.4
     
     variable_values = {}
     for (aspen_variable, aspen_call, fortran_index), dist in simulation_vars.items():
@@ -1052,7 +1052,7 @@ def aspen_run(aspencom, obj, simulation_vars, trial, vars_to_change):
     
     aspencom.Reinit()
     aspencom.Engine.Run2()
-    stop = CheckConverge(aspencom)
+    #stop = CheckConverge(aspencom)
     errors = FindErrors(aspencom)
     
     return aspencom, case_values, errors, obj
@@ -1062,7 +1062,7 @@ def mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_
     column = [x for x in book.Sheets('Aspen_Streams').Evaluate("D1:D100") if x.Value != None] 
     
     if obj.FindNode(column[0]) == None:
-        print('ERROR in Aspen for fraction '+ str(case_values))
+        print('ERROR in Aspen for '+ str(case_values))
         dfstreams = pd.DataFrame(columns=columns)
         dfstreams.loc[trial_num] = case_values + [None]*13 + ["Aspen Failed to Converge"]
         return dfstreams
