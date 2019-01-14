@@ -4,35 +4,30 @@ Created on Sat Dec 15 19:58:47 2018
 
 @author: MENGstudents
 """
-import tkinter as tk
-from tkinter import *
-from tkinter import messagebox
-from tkinter import ttk
+
+from tkinter import Tk,Button,Label,Entry,StringVar,E,W,OptionMenu,Canvas,END
+from tkinter.ttk import Frame, Labelframe, Scrollbar, Notebook
 from tkinter.filedialog import askopenfilename
-import threading
-import pandas as pd
-import multiprocessing as mp
-import time
-import numpy as np
-import psutil
-import random
+from threading import Thread
+from pandas import ExcelWriter, DataFrame, concat
+from multiprocessing import Value, Manager, Lock, Queue, Process
+from time import time, sleep
+from numpy import linspace, random
+from psutil import process_iter, virtual_memory
 from win32com.client import Dispatch, DispatchEx
-import pythoncom
-import os
-from math import ceil
-import csv
+import pythoncom ### I DONT THINK YOU NEED THIS
+from os import path
+from csv import DictReader
 from multiprocessing import freeze_support
-import matplotlib
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
  
 
-class MainApp(tk.Tk):
+class MainApp(Tk):
 
     def __init__(self):
-        ####### Do something ######
-        tk.Tk.__init__(self)
-        self.notebook = ttk.Notebook(self)
+        Tk.__init__(self)
+        self.notebook = Notebook(self)
         self.wm_title("Sensitivity Analysis Tool")
         self.notebook.grid()
         self.construct_home_tab()
@@ -40,22 +35,23 @@ class MainApp(tk.Tk):
         self.simulations = []
         self.current_simulation = None
         self.current_tab = None
-        self.abort = mp.Value('b', False)
-        self.abort_univar_overall = mp.Value('b', False)
+        self.abort = Value('b', False)
+        self.abort_univar_overall = Value('b', False)
         self.simulation_vars = {}
         self.attributes("-topmost", True)
         self.tot_sim_num = 0
-        self.sims_completed = mp.Value('i',0)
+        self.sims_completed = Value('i',0)
         self.start_time = None
         self.univar_plot_counter = 1
         self.finished_figures = []
         self.univar_row_num=0
         self.last_results_plotted = None
+        self.last_update = None
 
 
     def construct_home_tab(self):
-        self.home_tab = ttk.Frame(self.notebook)
-        self.notebook.add(self.home_tab, text = 'File Upload')
+        self.home_tab = Frame(self.notebook)
+        self.notebook.add(self.home_tab, text = 'Home')
         Button(self.home_tab, 
         text='Upload Excel Data',
         command=self.open_excel_file).grid(row=0,column=1, sticky = E, pady = 5,padx = 5)
@@ -84,11 +80,10 @@ class MainApp(tk.Tk):
         self.analysis_type = StringVar(self.home_tab)
         self.analysis_type.set("Choose Analysis Type")
         
-        analysis_type_options = OptionMenu(
-                self.home_tab, self.analysis_type,"Single Point Analysis","Univariate Sensitivity", 
+        OptionMenu(self.home_tab, self.analysis_type,"Single Point Analysis","Univariate Sensitivity", 
                 "Multivariate Sensitivity").grid(row = 5,sticky = E,column = 2,padx =5, pady = 5)
         
-        Label(self.home_tab, text='Number of Processes :').grid(row=3, column=1, sticky=E)
+        Label(self.home_tab, text='CPU Core Count :').grid(row=3, column=1, sticky=E)
         self.num_processes_entry = Entry(self.home_tab)
         self.num_processes_entry.grid(row=3, column=2, pady=5, padx=5)
 
@@ -99,7 +94,7 @@ class MainApp(tk.Tk):
         if self.analysis_type.get() == 'Choose Analysis Type':
             print("ERROR: Select an Analysis Type")
         elif self.analysis_type.get() == 'Univariate Sensitivity':
-            self.current_tab = ttk.Frame(self.notebook)
+            self.current_tab = Frame(self.notebook)
             self.notebook.add(self.current_tab,text = "Univariate Analysis")
             ##############Tab 2 LABELS##################
             
@@ -130,7 +125,7 @@ class MainApp(tk.Tk):
             self.fill_num_sims.grid(row=7,column = 3,sticky =W, pady =2, padx = 2)
             self.fill_num_sims.config(width = 10)
             
-            self.options_box = ttk.Labelframe(self.current_tab, text='Run Options:')
+            self.options_box = Labelframe(self.current_tab, text='Run Options:')
             self.options_box.grid(row = 15,column = 3, pady = 10,padx = 10)
     
             Button(self.options_box, text = "Next Variable", command=self.abort_sim).grid(
@@ -139,7 +134,7 @@ class MainApp(tk.Tk):
             Button(self.options_box, text = "Abort", command=self.abort_univar_overall_fun).grid(
                     row= 6,columnspan = 1, column = 3, sticky=W)
         elif  self.analysis_type.get() == 'Single Point Analysis':
-            self.current_tab = ttk.Frame(self.notebook)
+            self.current_tab = Frame(self.notebook)
             self.notebook.add(self.current_tab, text = 'Single Point')
              
             Label(self.current_tab, 
@@ -152,7 +147,7 @@ class MainApp(tk.Tk):
             column=1, columnspan=2, pady=4)
             
         elif  self.analysis_type.get() == 'Multivariate Sensitivity':
-            self.current_tab = ttk.Frame(self.notebook)
+            self.current_tab = Frame(self.notebook)
             self.notebook.add(self.current_tab,text = "Multivariate Analysis")
     
             Label(self.current_tab, 
@@ -186,7 +181,7 @@ class MainApp(tk.Tk):
         multivariate_vars = []
         type_of_analysis = self.analysis_type.get()
         with open(sens_vars) as f:
-            reader = csv.DictReader(f)# Skip the header row
+            reader = DictReader(f)# Skip the header row
             for row in reader:
                 if row['Toggle'].lower().strip() == 'true':          
                     if type_of_analysis =='Single Point Analysis':
@@ -204,7 +199,7 @@ class MainApp(tk.Tk):
             self.sp_value_entries = {}
             
             # Create a frame for the canvas with non-zero row&column weights
-            frame_canvas = ttk.Frame(self.current_tab)
+            frame_canvas = Frame(self.current_tab)
             frame_canvas.grid(row=2, column=1, pady=(5, 0))
             frame_canvas.grid_rowconfigure(0, weight=1)
             frame_canvas.grid_columnconfigure(0, weight=1)
@@ -215,12 +210,12 @@ class MainApp(tk.Tk):
             canvas.grid(row=0, column=0, sticky="news")
             canvas.config(height = '5c')
             # Link a scrollbar to the canvas
-            vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=canvas.yview)
+            vsb = Scrollbar(frame_canvas, orient="vertical", command=canvas.yview)
             vsb.grid(row=0, column=1,sticky = 'ns')
             canvas.configure(yscrollcommand=vsb.set)
             
             # Create a frame to contain the variables
-            frame_vars = ttk.Frame(canvas)
+            frame_vars = Frame(canvas)
             canvas.create_window((0, 0), window=frame_vars, anchor='nw')
             frame_vars.config(height = '5c')
             
@@ -251,7 +246,7 @@ class MainApp(tk.Tk):
             Label(self.current_tab, 
                 text= '# of Trials').grid(row=8, column= 3,pady = 5,padx = 5)
             # Create a frame for the canvas with non-zero row&column weights
-            frame_canvas1 = ttk.Frame(self.current_tab)
+            frame_canvas1 = Frame(self.current_tab)
             frame_canvas1.grid(row=9, column=1, columnspan =3, pady=(5, 0))
             frame_canvas1.grid_rowconfigure(0, weight=1)
             frame_canvas1.grid_columnconfigure(0, weight=1)
@@ -263,12 +258,12 @@ class MainApp(tk.Tk):
             canvas1.config(height = '3c')
             
             # Link a scrollbar to the canvas
-            vsb = ttk.Scrollbar(frame_canvas1, orient="vertical", command=canvas1.yview)
+            vsb = Scrollbar(frame_canvas1, orient="vertical", command=canvas1.yview)
             vsb.grid(row=0, column=1,sticky = 'ns')
             canvas1.configure(yscrollcommand=vsb.set)
             
             # Create a frame to contain the variables
-            frame_vars1 = ttk.Frame(canvas1)
+            frame_vars1 = Frame(canvas1)
             frame_vars1.config(height = '3c')
             canvas1.create_window((0, 0), window=frame_vars1, anchor='nw')
             for name, format_of_data, vals in univariate_vars:
@@ -285,7 +280,7 @@ class MainApp(tk.Tk):
                 else:
                     if format_of_data == 'linspace':
                         
-                        Label(frame_vars1,text= str(vals[2])).grid(row=univar_row_num, column= 3,pady = 5,padx = 5)
+                        Label(frame_vars1,text= str(vals[2])).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5)
                     else:
                         Label(frame_vars1,text= str(len(vals))).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5)
                 self.univar_row_num += 1
@@ -302,13 +297,22 @@ class MainApp(tk.Tk):
     def get_distributions(self):
         if self.analysis_type.get() == 'Univariate Sensitivity':
             if self.univar_ntrials_entries:
-                max_num_sim = max(int(slot.get()) for slot in self.univar_ntrials_entries.values())
+                max_num_sim = 0
+                for slot in self.univar_ntrials_entries.values():
+                    try:
+                        cur_num_sim = int(slot.get())
+                    except:
+                        cur_num_sim = 1
+                    max_num_sim = max(max_num_sim, cur_num_sim)
             else:
                 max_num_sim = 1
             self.simulation_vars, self.simulation_dist = self.construct_distributions(ntrials=max_num_sim)
             for (aspen_variable, aspen_call, fortran_index), dist in self.simulation_vars.items():
                 if aspen_variable in self.univar_ntrials_entries:
-                    num_trials_per_var = int(self.univar_ntrials_entries[aspen_variable].get())
+                    try:
+                        num_trials_per_var = int(self.univar_ntrials_entries[aspen_variable].get())
+                    except:
+                        num_trials_per_var = 1
                     self.simulation_vars[(aspen_variable, aspen_call, fortran_index)] = dist[:num_trials_per_var]
                     self.simulation_dist[aspen_variable] = dist[:num_trials_per_var]                
         else:
@@ -328,7 +332,7 @@ class MainApp(tk.Tk):
         
         gui_excel_input = str(self.input_csv_entry.get())
         with open(gui_excel_input) as f:
-            reader = csv.DictReader(f)# Skip the header row
+            reader = DictReader(f)# Skip the header row
             simulation_vars = {}
             simulation_dist = {}
             for row in reader:
@@ -345,7 +349,7 @@ class MainApp(tk.Tk):
                                   float(dist_variables[1].strip()), lb, ub, ntrials)
                     if 'linspace' in dist_type:
                         linspace_vars = row['Range of Values'].split(',')
-                        distribution = np.linspace(float(linspace_vars[0].strip()), 
+                        distribution = linspace(float(linspace_vars[0].strip()), 
                                                    float(linspace_vars[1].strip()),
                                                    float(linspace_vars[2].strip()))
                     if 'poisson' in dist_type:
@@ -382,18 +386,18 @@ class MainApp(tk.Tk):
     def sample_gauss(self,mean, std, lb, ub, ntrials):
         d = []
         for i in range(ntrials):
-            rand_sample = np.random.normal(mean,std)
+            rand_sample = random.normal(mean,std)
             while(rand_sample < lb or rand_sample > ub):
-                rand_sample = np.random.normal(mean,std)
+                rand_sample = random.normal(mean,std)
             d.append(rand_sample)
         return d
     
     def sample_uniform(self,lb_uniform, ub_uniform, lb, ub, ntrials):
         d = []
         for i in range(ntrials):
-            rand_sample = np.random.uniform(lb_uniform, ub_uniform)
+            rand_sample = random.uniform(lb_uniform, ub_uniform)
             while(rand_sample < lb or rand_sample > ub):
-                rand_sample = np.random.uniform(lb_uniform, ub_uniform)
+                rand_sample = random.uniform(lb_uniform, ub_uniform)
             d.append(rand_sample)
         return d
     
@@ -401,18 +405,18 @@ class MainApp(tk.Tk):
     def sample_poisson(self,lambda_p, lb, ub, ntrials):
         d = []
         for i in range(ntrials):
-            rand_sample = np.random.poisson(10000*lambda_p)/10000
+            rand_sample = random.poisson(10000*lambda_p)/10000
             while(rand_sample < lb or rand_sample > ub):
-                rand_sample = np.random.poisson(10000*lambda_p)/10000
+                rand_sample = random.poisson(10000*lambda_p)/10000
             d.append(rand_sample)
         return d
     
     def sample_pareto(self, shape, scale, lb, ub, ntrials):
         d = []
         for i in range(ntrials):
-            rand_sample = (np.random.pareto(shape) + 1) * scale
+            rand_sample = (random.pareto(shape) + 1) * scale
             while(rand_sample < lb or rand_sample > ub):
-                rand_sample = (np.random.pareto(shape) + 1) * scale
+                rand_sample = (random.pareto(shape) + 1) * scale
             d.append(rand_sample)
         return d
     
@@ -420,11 +424,14 @@ class MainApp(tk.Tk):
         return fortran_call[:fortran_index[0]] + str(val) + fortran_call[fortran_index[1]:]
     
     def disp_sp_mfsp(self):
-        print('checking for result')
         try:
             if self.current_simulation.results:
                 mfsp = self.current_simulation.results[0].at[0, 'MFSP']
-                Label(self.current_tab, text= 'MFSP = ${:.2f}'.format(mfsp)).grid(
+                if mfsp:
+                    Label(self.current_tab, text= 'MFSP = ${:.2f}'.format(mfsp)).grid(
+                        row=self.sp_row_num+1, column = 1)
+                else:
+                    Label(self.current_tab, text= 'Aspen Failed to Converge').grid(
                         row=self.sp_row_num+1, column = 1)
             else:
                 self.after(5000, self.disp_sp_mfsp)
@@ -465,7 +472,10 @@ class MainApp(tk.Tk):
     
     def store_user_inputs(self):
         self.aspen_file = str(self.aspen_file_entry.get())
-        self.num_processes = int(self.num_processes_entry.get())
+        try:
+            self.num_processes = int(self.num_processes_entry.get())
+        except:
+            self.num_processes = 1
         self.excel_solver_file= str(self.excel_solver_entry.get())
         try:
             self.num_trial = int(self.num_sim_entry.get())
@@ -476,14 +486,14 @@ class MainApp(tk.Tk):
         
         self.vars_to_change = []
         with open(self.input_csv) as f:
-            reader = csv.DictReader(f)# Skip the header row
+            reader = DictReader(f)# Skip the header row
             for row in reader:
                 if row['Toggle'].lower().strip() == 'true':
                     self.vars_to_change.append(row["Variable Name"])
         
         
     def run_simulations(self):
-        self.start_time = time.time()
+        self.start_time = time()
         
         for sim in self.simulations: 
             self.current_simulation = sim
@@ -491,29 +501,50 @@ class MainApp(tk.Tk):
             if self.abort_univar_overall.value:
                 self.abort.value = True
             self.univar_plot_counter += 1
+    
+    def parse_output_vars(self):
+        excels_to_ignore = {}
+        for p in process_iter():
+            if 'excel' in p.name().lower():
+                excels_to_ignore[p.pid] = 1
+        excel, book = open_excelCOMS(self.excel_solver_file)
+        self.output_vars = []
+        row_counter = 3
+        while True:
+            var_name = book.Sheets('Output').Evaluate("B" + str(row_counter)).Value
+            if var_name:
+                units = book.Sheets('Output').Evaluate("D" + str(row_counter)).Value
+                column_name = var_name + ' (' + units + ')' if units else var_name
+                self.output_vars.append(column_name)
+            else:
+                break
+            row_counter += 1
+        self.output_value_cells = "C3:C" + str(row_counter - 1)
+        self.output_vars += ['Aspen Errors']
+        for p in process_iter():
+            if 'excel' in p.name().lower() and p.pid not in excels_to_ignore:
+                p.terminate()
             
         
     def create_simulation_object(self, simulation_vars, vars_to_change, output_file, num_trial):
-        self.output_columns = vars_to_change + ['Biofuel Output', 'Succinic Acid Output', 'Fixed Op Costs',\
-              'Var OpCosts', ' Capital Costs', 'MFSP','Fixed Capital Investment',\
-              'Capital Investment with Interest','Loan Payment per Year','Depreciation','Cash on Hand',\
-              'Steam Plant Value','Bag Cost', 'Aspen Errors']
+        self.parse_output_vars()
+        self.output_columns = vars_to_change + self.output_vars
         
-        new_sim = Simulation(self.sims_completed, num_trial, simulation_vars, output_file, 
-                             self.aspen_file, self.excel_solver_file, self.abort, vars_to_change, 
-                             self.output_columns, save_freq=5, num_processes=self.num_processes, reinit_coms_freq=15)
+        new_sim = Simulation(self.sims_completed, num_trial, simulation_vars, output_file, path.dirname(str(self.input_csv_entry.get())),
+                             self.aspen_file, self.excel_solver_file, self.abort, vars_to_change, self.output_value_cells,
+                             self.output_columns, save_freq=5, num_processes=self.num_processes)
         self.simulations.append(new_sim)
         self.tot_sim_num += num_trial
         
         
     def initialize_single_point(self):
-        self.worker_thread = threading.Thread(
+        self.worker_thread = Thread(
                 target=lambda: self.single_point_analysis())
         self.worker_thread.start()
         self.after(5000, self.disp_sp_mfsp)
         
     def initialize_univar_analysis(self):
-        self.worker_thread = threading.Thread(
+        self.worker_thread = Thread(
             target=lambda: self.run_univ_sens())
         self.worker_thread.start()
         self.status_label = None
@@ -522,7 +553,7 @@ class MainApp(tk.Tk):
 
     
     def initialize_multivar_analysis(self):
-        self.worker_thread = threading.Thread(
+        self.worker_thread = Thread(
             target=lambda: self.run_multivar_sens())
         self.worker_thread.start()
         self.status_label = None
@@ -548,8 +579,9 @@ class MainApp(tk.Tk):
         
         
     def disp_time_remaining(self):
-        if self.start_time:
-            elapsed_time = time.time() - self.start_time
+        if self.start_time and self.sims_completed.value != self.last_update:
+            self.last_update = self.sims_completed.value
+            elapsed_time = time() - self.start_time
             if self.sims_completed.value > 0:
                 remaining_time = ((elapsed_time / self.sims_completed.value) * (self.tot_sim_num - self.sims_completed.value))//60
                 hours, minutes = divmod(remaining_time, 60)
@@ -568,28 +600,31 @@ class MainApp(tk.Tk):
             
     def plot_on_GUI(self):
         
-        if not self.current_simulation or not self.current_simulation.results:
+        if not self.current_simulation:
             return
         if len(self.current_simulation.results) == self.last_results_plotted:
-                return
+            return
         self.last_results_plotted = len(self.current_simulation.results)
         
+        if self.current_simulation.results:
+            results = concat(self.current_simulation.results).sort_index()
+            results = results[[d is not None for d in results['MFSP']]] # filter to make sure you aren't plotting None results
+        else:
+            results = DataFrame(columns=self.output_columns)
 
-        results = pd.concat(self.current_simulation.results).sort_index()
         fig_list =[]
         num_bins = 15
         mfsp_fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
         b = mfsp_fig.add_subplot(111)
-        b.hist(results['MFSP'], num_bins, facecolor='blue', alpha=0.85)
+        b.hist(results['MFSP'], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
         b.set_title('MFSP')
         fig_list.append(mfsp_fig)
         
         for var, values in self.simulation_dist.items():
             fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
             a = fig.add_subplot(111)
-            a.hist(values, num_bins, facecolor='blue', alpha=0.5)
-            _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='blue', alpha=0.1)
-            a.hist(results[var], bins=bins, facecolor='blue', alpha=0.7)
+            _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
+            a.hist(results[var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
             a.set_title(var)
             fig_list.append(fig)
         
@@ -598,23 +633,23 @@ class MainApp(tk.Tk):
         else:
             row_num = 10
         
-        frame_canvas = ttk.Frame(self.current_tab)
+        frame_canvas = Frame(self.current_tab)
         frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
         frame_canvas.grid_rowconfigure(0, weight=1)
         frame_canvas.grid_columnconfigure(0, weight=1)
-        frame_canvas.config(height = '10c', width='12c')
+        frame_canvas.config(height = '10c', width='16c')
         
         main_canvas = Canvas(frame_canvas)
         main_canvas.grid(row=0, column=0, sticky="news")
-        main_canvas.config(height = '10c', width='12c')
+        main_canvas.config(height = '10c', width='16c')
         
-        vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
+        vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
         vsb.grid(row=0, column=1,sticky = 'ns')
         main_canvas.configure(yscrollcommand=vsb.set)
         
-        figure_frame = ttk.Frame(main_canvas)
+        figure_frame = Frame(main_canvas)
         main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
-        figure_frame.config(height = '10c', width='12c')
+        figure_frame.config(height = '10c', width='16c')
     
         row_num = 0
         column = False
@@ -634,7 +669,7 @@ class MainApp(tk.Tk):
         
 
         figure_frame.update_idletasks()
-        frame_canvas.config(width='12c', height='10c')
+        frame_canvas.config(width='16c', height='10c')
         
         # Set the canvas scrolling region
         main_canvas.config(scrollregion=figure_frame.bbox("all"))
@@ -642,26 +677,31 @@ class MainApp(tk.Tk):
             
     def plot_univ_on_GUI(self):
         
-        if not self.current_simulation or not self.current_simulation.results:
+        if not self.current_simulation:
             return
         if len(self.current_simulation.results) == self.last_results_plotted:
-                return
+            return
         self.last_results_plotted = len(self.current_simulation.results)
         
         current_var = self.current_simulation.vars_to_change[0]
-        results = pd.concat(self.current_simulation.results).sort_index()
+        if self.current_simulation.results:
+            results = concat(self.current_simulation.results).sort_index()
+            results = results[[d is not None for d in results['MFSP']]] # filter to make sure you aren't plotting None results
+        else:
+            results = DataFrame(columns=self.output_columns)
+
         fig_list =[]
         var_fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
         a = var_fig.add_subplot(111)
         num_bins = 15
-        _, bins, _ = a.hist(self.simulation_dist[current_var], num_bins, facecolor='blue', alpha=0.1)
-        a.hist(results[current_var], bins=bins, facecolor='blue', alpha=0.7)
+        _, bins, _ = a.hist(self.simulation_dist[current_var], num_bins, facecolor='white',edgecolor='black', alpha=1.0)
+        a.hist(results[current_var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
         a.set_title(current_var)
         fig_list.append(var_fig)
         
         mfsp_fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
         b = mfsp_fig.add_subplot(111)
-        b.hist(results['MFSP'], num_bins, facecolor='blue', alpha=0.85)
+        b.hist(results['MFSP'], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
         b.set_title('MFSP - ' + current_var)
         fig_list.append(mfsp_fig)
         
@@ -674,23 +714,23 @@ class MainApp(tk.Tk):
         else:
             row_num = 10
         
-        frame_canvas = ttk.Frame(self.current_tab)
+        frame_canvas = Frame(self.current_tab)
         frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
         frame_canvas.grid_rowconfigure(0, weight=1)
         frame_canvas.grid_columnconfigure(0, weight=1)
-        frame_canvas.config(height = '10c', width='12c')
+        frame_canvas.config(height = '10c', width='16c')
         
         main_canvas = Canvas(frame_canvas)
         main_canvas.grid(row=0, column=0, sticky="news")
-        main_canvas.config(height = '10c', width='12c')
+        main_canvas.config(height = '10c', width='16c')
         
-        vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
+        vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
         vsb.grid(row=0, column=1,sticky = 'ns')
         main_canvas.configure(yscrollcommand=vsb.set)
         
-        figure_frame = ttk.Frame(main_canvas)
+        figure_frame = Frame(main_canvas)
         main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
-        figure_frame.config(height = '10c', width='12c')
+        figure_frame.config(height = '10c', width='16c')
     
         row_num = 0
         column = False
@@ -710,7 +750,7 @@ class MainApp(tk.Tk):
         
 
         figure_frame.update_idletasks()
-        frame_canvas.config(width='12c', height='10c')
+        frame_canvas.config(width='16c', height='10c')
         
         # Set the canvas scrolling region
         main_canvas.config(scrollregion=figure_frame.bbox("all"))
@@ -729,7 +769,7 @@ class MainApp(tk.Tk):
             fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
             a = fig.add_subplot(111)
             num_bins = 15
-            a.hist(values, num_bins, facecolor='blue', alpha=0.5)
+            a.hist(values, num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
             a.set_title(var)
             fig_list.append(fig)
             
@@ -737,23 +777,23 @@ class MainApp(tk.Tk):
             row_num = 17
         else:
             row_num = 10
-        frame_canvas = ttk.Frame(self.current_tab)
+        frame_canvas = Frame(self.current_tab)
         frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
         frame_canvas.grid_rowconfigure(0, weight=1)
         frame_canvas.grid_columnconfigure(0, weight=1)
-        frame_canvas.config(height = '10c', width='12c')
+        frame_canvas.config(height = '10c', width='16c')
         
         main_canvas = Canvas(frame_canvas)
         main_canvas.grid(row=0, column=0, sticky="news")
-        main_canvas.config(height = '10c', width='12c')
+        main_canvas.config(height = '10c', width='16c')
         
-        vsb = ttk.Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
+        vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
         vsb.grid(row=0, column=2,sticky = 'ns')
         main_canvas.configure(yscrollcommand=vsb.set)
         
-        figure_frame = ttk.Frame(main_canvas)
+        figure_frame = Frame(main_canvas)
         main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
-        figure_frame.config(height = '10c', width='12c')
+        figure_frame.config(height = '10c', width='16c')
     
         row_num = 0
         column = False
@@ -771,7 +811,7 @@ class MainApp(tk.Tk):
             column = not column
 
         figure_frame.update_idletasks()
-        frame_canvas.config(width='12c', height='10c')
+        frame_canvas.config(width='16c', height='10c')
         main_canvas.config(scrollregion=figure_frame.bbox("all"))
         
     def univar_gui_update(self):
@@ -817,7 +857,7 @@ class MainApp(tk.Tk):
         
     def abort_sim(self):
         self.abort.value = True
-        self.cleanup_thread = threading.Thread(target=self.cleanup_processes_and_COMS)
+        self.cleanup_thread = Thread(target=self.cleanup_processes_and_COMS)
         self.cleanup_thread.start()
         
     def abort_univar_overall_fun(self):
@@ -828,7 +868,7 @@ class MainApp(tk.Tk):
         try:
             self.current_simulation.close_all_COMS()
             self.current_simulation.terminate_processes()
-            save_data(self.current_simulation.output_file, self.current_simulation.results)
+            save_data(self.current_simulation.output_file, self.current_simulation.results, self.current_simulation.directory)
         except:
             self.after(1000, self.cleanup_processes_and_COMS)
             
@@ -847,33 +887,34 @@ class MainApp(tk.Tk):
         
         
 class Simulation(object):
-    def __init__(self, sims_completed, tot_sim, simulation_vars, output_file, aspen_file, excel_solver_file,
-                 abort, vars_to_change, output_columns, 
-                 save_freq=10, num_processes=1, reinit_coms_freq=15):
-        self.manager = mp.Manager()
-        self.num_processes = min(num_processes, tot_sim, reinit_coms_freq)
+    def __init__(self, sims_completed, tot_sim, simulation_vars, output_file, directory, 
+                 aspen_file, excel_solver_file,abort, vars_to_change, output_value_cells,
+                 output_columns, save_freq=10, num_processes=1):
+        self.manager = Manager()
+        self.num_processes = min(num_processes, tot_sim)
         self.tot_sim = tot_sim
         self.sims_completed = sims_completed
-        self.reinit_coms_freq = reinit_coms_freq
         self.save_freq = self.manager.Value('i', save_freq)
         self.abort = abort
         self.simulation_vars = self.manager.dict(simulation_vars) 
         self.output_file = self.manager.Value('s', output_file)
+        self.directory = self.manager.Value('s', directory)
         self.aspen_file = self.manager.Value('s', aspen_file)
         self.excel_solver_file = self.manager.Value('s', excel_solver_file)
+        self.output_value_cells = self.manager.Value('s',output_value_cells)
         
         self.results = self.manager.list()
-        self.trial_counter = mp.Value('i',0)
-        self.results_lock = mp.Lock()
+        self.trial_counter = Value('i',0)
+        self.results_lock = Lock()
         self.processes = []
         self.current_COMS_pids = self.manager.dict()
         self.pids_to_ignore = self.manager.dict()
         self.find_pids_to_ignore()
         self.output_columns = self.manager.list(output_columns)
         self.vars_to_change = self.manager.list(vars_to_change)
-        self.aspenlock = mp.Lock()
-        self.excellock = mp.Lock()
-        self.lock_to_signal_finish = mp.Lock()
+        self.aspenlock = Lock()
+        self.excellock = Lock()
+        self.lock_to_signal_finish = Lock()
           
     
     def init_sims(self):
@@ -887,7 +928,7 @@ class Simulation(object):
         self.terminate_processes()
         self.wait()
             
-        save_data(self.output_file, self.results)
+        save_data(self.output_file, self.results, self.directory)
         self.abort.value = False    
         
         
@@ -900,20 +941,20 @@ class Simulation(object):
         if not any(p.is_alive() for p in self.processes):
             return
         else:
-            time.sleep(t)
+            sleep(t)
             self.wait()
             
             
     def run_sim(self, tasks):
-        task_queue = mp.Queue()
+        task_queue = Queue()
         for task in tasks:
             task_queue.put(task)
 
         for i in range(self.num_processes):
-            self.processes.append(mp.Process(target=worker, args=(self.current_COMS_pids, self.pids_to_ignore, 
+            self.processes.append(Process(target=worker, args=(self.current_COMS_pids, self.pids_to_ignore, 
                                                                 self.aspenlock, self.excellock, self.aspen_file, 
                                                                 self.excel_solver_file, task_queue, self.abort, 
-                                                                self.results_lock, self.results,
+                                                                self.results_lock, self.results, self.directory, self.output_value_cells,
                                                                 self.trial_counter, self.save_freq, 
                                                                 self.output_file, self.vars_to_change, 
                                                                 self.output_columns, self.simulation_vars, self.sims_completed, 
@@ -927,8 +968,8 @@ class Simulation(object):
     def close_all_COMS(self):
         self.aspenlock.acquire()
         self.excellock.acquire()
-        time.sleep(3)
-        for p in psutil.process_iter():
+        sleep(3)
+        for p in process_iter():
             if p.pid in self.current_COMS_pids:
                 p.terminate()
                 del self.current_COMS_pids[p.pid]
@@ -937,7 +978,7 @@ class Simulation(object):
                 
                 
     def find_pids_to_ignore(self):
-        for p in psutil.process_iter():
+        for p in process_iter():
             if 'aspen' in p.name().lower() or 'excel' in p.name().lower():
                 self.pids_to_ignore[p.pid] = 1
         
@@ -947,21 +988,22 @@ class Simulation(object):
                 
 def open_aspenCOMS(aspenfilename):
     aspencom = Dispatch('Apwn.Document')
-    aspencom.InitFromArchive(os.path.abspath(aspenfilename))
+    aspencom.InitFromArchive(path.abspath(aspenfilename))
     obj = aspencom.Tree     
     return aspencom,obj
 
 
 def open_excelCOMS(excelfilename):
+    pythoncom.CoInitialize()
     excel = DispatchEx('Excel.Application')
-    book = excel.Workbooks.Open(os.path.abspath(excelfilename))
+    book = excel.Workbooks.Open(path.abspath(excelfilename))
     return excel,book  
    
     
-def save_data(outputfilename, results):
+def save_data(outputfilename, results, directory):
     if results:
-        collected_data = pd.concat(results).sort_index()
-        writer = pd.ExcelWriter(outputfilename.value + '.xlsx')
+        collected_data = concat(results).sort_index()
+        writer = ExcelWriter(directory.value + '/' + outputfilename.value + '.xlsx')
         collected_data.to_excel(writer, sheet_name ='Sheet1')
         stats = collected_data.describe()
         stats.to_excel(writer, sheet_name = 'Summary Stats')
@@ -969,7 +1011,7 @@ def save_data(outputfilename, results):
     
 
 def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilename, 
-           excelfilename, task_queue, abort, results_lock, results,
+           excelfilename, task_queue, abort, results_lock, results, directory, output_value_cells,
            sim_counter, save_freq, outputfilename, vars_to_change, columns, simulation_vars, sims_completed, lock_to_signal_finish, tot_sim):
     
     local_pids = {}
@@ -982,7 +1024,7 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
         excel,book = open_excelCOMS(excelfilename.value)
     excellock.release() 
     
-    for p in psutil.process_iter(): #register the pids of COMS objects
+    for p in process_iter(): #register the pids of COMS objects
         if ('aspen' in p.name().lower() or 'excel' in p.name().lower()) and p.pid not in pids_to_ignore:
             current_COMS_pids[p.pid] = 1
             local_pids[p.pid] = 1
@@ -993,21 +1035,21 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
             continue
         
         aspencom, case_values, errors, obj = aspen_run(aspencom, obj, simulation_vars, trial_num, vars_to_change) 
-        result = mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_num)
+        result = mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_num, output_value_cells)
         
         results_lock.acquire()
         results.append(result) 
         sim_counter.value = len(results)
         if sim_counter.value % save_freq.value == 0:
-            save_data(outputfilename, results)
+            save_data(outputfilename, results, directory)
         sims_completed.value += 1
         results_lock.release()
         
-        if psutil.virtual_memory().percent > 95:
-            for p in psutil.process_iter():
+        if virtual_memory().percent > 95:
+            for p in process_iter():
                 if p.pid in local_pids:
                     p.terminate()
-                    del self.current_COMS_pids[p.pid]
+                    del current_COMS_pids[p.pid]
                     del local_pids[p.pid]
             aspenlock.acquire()
             if not abort.value:
@@ -1018,7 +1060,7 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
                 excel,book = open_excelCOMS(excelfilename.value)
             excellock.release() 
             
-            for p in psutil.process_iter(): #register the pids of COMS objects
+            for p in process_iter(): #register the pids of COMS objects
                 if ('aspen' in p.name().lower() or 'excel' in p.name().lower()) and p.pid not in pids_to_ignore:
                     current_COMS_pids[p.pid] = 1
                     local_pids[p.pid] = 1
@@ -1053,18 +1095,17 @@ def aspen_run(aspencom, obj, simulation_vars, trial, vars_to_change):
     
     aspencom.Reinit()
     aspencom.Engine.Run2()
-    #stop = CheckConverge(aspencom)
     errors = FindErrors(aspencom)
     
     return aspencom, case_values, errors, obj
 
-def mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_num):
+def mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_num, output_value_cells):
 
     column = [x for x in book.Sheets('Aspen_Streams').Evaluate("D1:D100") if x.Value != None] 
     
-    if obj.FindNode(column[0]) == None:
+    if obj.FindNode(column[0]) == None: # basically, if the massflow out of the system is None, then it failed to converge
         print('ERROR in Aspen for '+ str(case_values))
-        dfstreams = pd.DataFrame(columns=columns)
+        dfstreams = DataFrame(columns=columns)
         dfstreams.loc[trial_num] = case_values + [None]*13 + ["Aspen Failed to Converge"]
         return dfstreams
     stream_values = []
@@ -1078,8 +1119,8 @@ def mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_
     excel.Run('SOLVE_DCFROR')
 
     
-    dfstreams = pd.DataFrame(columns=columns)
-    dfstreams.loc[trial_num] = case_values + [x.Value for x in book.Sheets('Output').Evaluate("C3:C15")] + ["; ".join(errors)]
+    dfstreams = DataFrame(columns=columns)
+    dfstreams.loc[trial_num] = case_values + [x.Value for x in book.Sheets('Output').Evaluate(output_value_cells.value)] + ["; ".join(errors)]
     return dfstreams
 
 
@@ -1111,41 +1152,6 @@ def FindErrors(aspencom):
             not_done = False
     return error_statements
 
-
-
-def CheckConverge(aspencom):
-    obj = aspencom.Tree
-    error = r'\Data\Blocks\REFINE\Data\Blocks\FRAC\Output\PER_ERROR\1'
-    stage = r'\Data\Blocks\REFINE\Data\Blocks\FRAC\Input\NSTAGE'
-    fracstm = r'\Data\Blocks\REFINE\Data\Blocks\FRAC\Input\FEED_STAGE\FRACSTM'
-    fracfd = r'\Data\Blocks\REFINE\Data\Blocks\FRAC\Input\FEED_STAGE\FRACFD' 
-    stm_stage = r'\Data\Blocks\REFINE\Data\Blocks\FRAC\Input\FEED_CONVEN\FRACSTM'
-    #fd_stage = r'\Data\Blocks\REFINE\Data\Blocks\FRAC\Input\FEED_CONVEN\FRACFD'
-    nstage = obj.FindNode(stage)
-    
-    while obj.FindNode(error) != None:
-        
-        nstage = obj.FindNode(stage)
-        
-        obj.FindNode(stm_stage).Value = "ABOVE-STAGE"
-        nstage.Value -= 1
-        obj.FindNode(fracstm).Value -= 1
-        obj.FindNode(stm_stage).Value = "ON-STAGE"
-        obj.FindNode(fracfd).Value = ceil(nstage.Value/2)
-        
-        print('Failed to Converge, Adjusting stages and Feed Stage #')
-        print('Number of Stages: ', nstage.Value)
-        print('Feed Stage: ', obj.FindNode(fracfd).Value)
-        
-        if nstage.Value < 2:
-            return True
-        
-        aspencom.Reinit()
-        aspencom.Engine.Run2()
-        
-    print("Converged with " + str(nstage.Value) + ' stages')
-    print('Feed Stage: ', obj.FindNode(fracfd).Value)
-    return False
 
         
 if __name__ == "__main__":
