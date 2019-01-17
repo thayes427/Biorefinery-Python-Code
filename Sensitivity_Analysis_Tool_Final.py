@@ -5,7 +5,7 @@ Created on Sat Dec 15 19:58:47 2018
 @author: MENGstudents
 """
 
-from tkinter import Tk,Button,Label,Entry,StringVar,E,W,OptionMenu,Canvas,END
+from tkinter import Tk,Button,Label,Entry,StringVar,E,W,OptionMenu,Canvas,END,Checkbutton, IntVar
 from tkinter.ttk import Frame, Labelframe, Scrollbar, Notebook
 from tkinter.filedialog import askopenfilename
 from threading import Thread
@@ -51,7 +51,7 @@ class MainApp(Tk):
 
     def construct_home_tab(self):
         self.home_tab = Frame(self.notebook)
-        self.notebook.add(self.home_tab, text = 'Home')
+        self.notebook.add(self.home_tab, text = 'File Upload Tab')
         Button(self.home_tab, 
         text='Upload Excel Data',
         command=self.open_excel_file).grid(row=0,column=1, sticky = E, pady = 5,padx = 5)
@@ -83,9 +83,9 @@ class MainApp(Tk):
         OptionMenu(self.home_tab, self.analysis_type,"Single Point Analysis","Univariate Sensitivity", 
                 "Multivariate Sensitivity").grid(row = 5,sticky = E,column = 2,padx =5, pady = 5)
         
-        Label(self.home_tab, text='CPU Core Count :').grid(row=3, column=1, sticky=E)
-        self.num_processes_entry = Entry(self.home_tab)
-        self.num_processes_entry.grid(row=3, column=2, pady=5, padx=5)
+        #Label(self.home_tab, text='CPU Core Count :').grid(row=3, column=1, sticky=E)
+        #self.num_processes_entry = Entry(self.home_tab)
+        #self.num_processes_entry.grid(row=3, column=2, pady=5, padx=5)
 
     def make_new_tab(self):
         if self.current_tab:
@@ -93,6 +93,7 @@ class MainApp(Tk):
             self.current_tab = None
         if self.analysis_type.get() == 'Choose Analysis Type':
             print("ERROR: Select an Analysis Type")
+ 
         elif self.analysis_type.get() == 'Univariate Sensitivity':
             self.current_tab = Frame(self.notebook)
             self.notebook.add(self.current_tab,text = "Univariate Analysis")
@@ -503,6 +504,7 @@ class MainApp(Tk):
             self.univar_plot_counter += 1
     
     def parse_output_vars(self):
+        self.excel_solver_file= str(self.excel_solver_entry.get())
         excels_to_ignore = {}
         for p in process_iter():
             if 'excel' in p.name().lower():
@@ -633,7 +635,7 @@ class MainApp(Tk):
         else:
             row_num = 10
         
-        frame_canvas = Frame(self.current_tab)
+        frame_canvas = Frame(self.display_tab)
         frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
         frame_canvas.grid_rowconfigure(0, weight=1)
         frame_canvas.grid_columnconfigure(0, weight=1)
@@ -689,7 +691,7 @@ class MainApp(Tk):
             results = results[[d is not None for d in results['MFSP']]] # filter to make sure you aren't plotting None results
         else:
             results = DataFrame(columns=self.output_columns)
-
+        
         fig_list =[]
         var_fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
         a = var_fig.add_subplot(111)
@@ -714,7 +716,7 @@ class MainApp(Tk):
         else:
             row_num = 10
         
-        frame_canvas = Frame(self.current_tab)
+        frame_canvas = Frame(self.display_tab)
         frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
         frame_canvas.grid_rowconfigure(0, weight=1)
         frame_canvas.grid_columnconfigure(0, weight=1)
@@ -724,9 +726,9 @@ class MainApp(Tk):
         main_canvas.grid(row=0, column=0, sticky="news")
         main_canvas.config(height = '10c', width='16c')
         
-        vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
-        vsb.grid(row=0, column=1,sticky = 'ns')
-        main_canvas.configure(yscrollcommand=vsb.set)
+        vsb = Scrollbar(frame_canvas, orient="horizontal", command=main_canvas.xview)
+        vsb.grid(row=0, column=1,sticky = 'we')
+        main_canvas.configure(xscrollcommand=vsb.set)
         
         figure_frame = Frame(main_canvas)
         main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
@@ -764,6 +766,8 @@ class MainApp(Tk):
         '''
         
         self.get_distributions()        
+        self.display_tab = Frame(self.notebook)
+        self.notebook.add(self.display_tab,text = "Results (Graphed)")
         fig_list =[]
         for var, values in self.simulation_dist.items():
             fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
@@ -777,7 +781,7 @@ class MainApp(Tk):
             row_num = 17
         else:
             row_num = 10
-        frame_canvas = Frame(self.current_tab)
+        frame_canvas = Frame(self.display_tab)
         frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
         frame_canvas.grid_rowconfigure(0, weight=1)
         frame_canvas.grid_columnconfigure(0, weight=1)
@@ -841,6 +845,7 @@ class MainApp(Tk):
         filename = askopenfilename(title = "Select file", filetypes = (("csv files","*.csv"),("all files","*.*")))
         self.input_csv_entry.delete(0, END)
         self.input_csv_entry.insert(0, filename)
+                
         
         
     def open_aspen_file(self):
@@ -853,7 +858,26 @@ class MainApp(Tk):
         filename = askopenfilename(title = "Select file", filetypes = (("Excel Files","*.xlsm"),("all files","*.*")))
         self.excel_solver_entry.delete(0, END)
         self.excel_solver_entry.insert(0, filename)
-        
+        plot_output_disp_thread = Thread(target=self.graph_toggle)
+        plot_output_disp_thread.start()
+        self.wait= Label(self.home_tab, text="Wait While Output Variables Are Loading ...")
+        self.wait.grid(row=3, column= 1, columnspan = 2, sticky = E,pady = 5,padx = 5)
+       
+    def graph_toggle(self):
+        self.parse_output_vars()
+    
+        self.disp_output_vars= Labelframe(self.home_tab, text='Output Variables to Graph:')
+        self.disp_output_vars.grid(row = 3,column = 1, columnspan = 2, pady = 10, padx = 10, sticky = E )
+        count = 1
+        self.graph_toggles = {}
+        print(self.output_vars)
+        bools = [False]*(len(self.output_vars)-1)
+        for i,v in enumerate(self.output_vars[:-1]):
+            self.graph_toggles[v] = IntVar()
+            Checkbutton(self.disp_output_vars, text = v, variable = self.graph_toggles[v]).grid(row=count,columnspan = 1, column = 2, sticky=W)
+            count += 1
+        self.wait.destroy()
+       
         
     def abort_sim(self):
         self.abort.value = True
