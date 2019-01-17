@@ -9,7 +9,7 @@ from tkinter import Tk,Button,Label,Entry,StringVar,E,W,OptionMenu,Canvas,END,Ch
 from tkinter.ttk import Frame, Labelframe, Scrollbar, Notebook
 from tkinter.filedialog import askopenfilename
 from threading import Thread
-from pandas import ExcelWriter, DataFrame, concat
+from pandas import ExcelWriter, DataFrame, concat, isna
 from multiprocessing import Value, Manager, Lock, Queue, Process
 from time import time, sleep
 from numpy import linspace, random
@@ -39,6 +39,7 @@ class MainApp(Tk):
         self.abort_univar_overall = Value('b', False)
         self.simulation_vars = {}
         self.attributes("-topmost", True)
+        #self.geometry("5000x200+30+30")
         self.tot_sim_num = 0
         self.sims_completed = Value('i',0)
         self.start_time = None
@@ -609,8 +610,8 @@ class MainApp(Tk):
         self.last_results_plotted = len(self.current_simulation.results)
         
         if self.current_simulation.results:
-            results = concat(self.current_simulation.results).sort_index()
-            results = results[[d is not None for d in results['MFSP']]] # filter to make sure you aren't plotting None results
+            results_to_plot = filter(lambda x: not isna(x['MFSP'].values[0]), self.current_simulation.results)
+            results = concat(results_to_plot).sort_index()
         else:
             results = DataFrame(columns=self.output_columns)
 
@@ -687,8 +688,8 @@ class MainApp(Tk):
         
         current_var = self.current_simulation.vars_to_change[0]
         if self.current_simulation.results:
-            results = concat(self.current_simulation.results).sort_index()
-            results = results[[d is not None for d in results['MFSP']]] # filter to make sure you aren't plotting None results
+            results_to_plot = filter(lambda x: not isna(x['MFSP'].values[0]), self.current_simulation.results)
+            results = concat(results_to_plot).sort_index()
         else:
             results = DataFrame(columns=self.output_columns)
         
@@ -878,6 +879,7 @@ class MainApp(Tk):
             count += 1
         self.wait.destroy()
        
+        
         
     def abort_sim(self):
         self.abort.value = True
@@ -1069,7 +1071,7 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
         sims_completed.value += 1
         results_lock.release()
         
-        if virtual_memory().percent > 95:
+        if virtual_memory().percent > 94:
             for p in process_iter():
                 if p.pid in local_pids:
                     p.terminate()
@@ -1183,7 +1185,8 @@ if __name__ == "__main__":
     main_app = MainApp()
     main_app.mainloop()
     if main_app.current_simulation:
-        main_app.abort_sim()
+        if not main_app.current_simulation.abort.value:
+            main_app.abort_sim()
         print('Waiting for Clearance to Exit...')
         main_app.current_simulation.wait()
         print('Waiting for Worker Thread to Terminate...')
