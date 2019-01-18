@@ -1060,7 +1060,7 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
         sims_completed.value += 1
         results_lock.release()
         
-        if virtual_memory().percent > 21:
+        if virtual_memory().percent > 94:
             aspenlock.acquire()
             for p in process_iter():
                 if p.pid in local_pids:
