@@ -47,6 +47,10 @@ class MainApp(Tk):
         self.univar_row_num=0
         self.last_results_plotted = None
         self.last_update = None
+        self.win_lim_x = self.winfo_screenwidth()
+        self.win_lim_y = self.winfo_screenheight()
+        print(self.win_lim_x)
+        print(self.win_lim_y)
 
 
     def construct_home_tab(self):
@@ -114,7 +118,7 @@ class MainApp(Tk):
                    pady=4)
             Button(self.current_tab,
                    text='Display Variable Distributions',
-                   command=self.plot_init_dist).grid(row=14,
+                   command=self.plot_init_univar_dist).grid(row=14,
                    column=1, columnspan=2, sticky = W,
                    pady=4)
             Button(self.current_tab,
@@ -169,7 +173,7 @@ class MainApp(Tk):
                    column=3, columnspan=2, sticky=W, pady=4)
             Button(self.current_tab,
                    text='Display Variable Distributions',
-                   command=self.plot_init_dist).grid(row=6,
+                   command=self.plot_init_multi_dist).grid(row=6,
                    column=1, columnspan=2, sticky=W, pady=4)
             
         self.load_variables_into_GUI()
@@ -690,8 +694,9 @@ class MainApp(Tk):
             results = concat(self.current_simulation.results).sort_index()
             results = results[[d is not None for d in results['MFSP']]] # filter to make sure you aren't plotting None results
         else:
-            results = DataFrame(columns=self.output_columns)
-        
+
+            results = DataFrame(columns=self.current_simulation.output_columns)
+            
         fig_list =[]
         var_fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
         a = var_fig.add_subplot(111)
@@ -727,7 +732,7 @@ class MainApp(Tk):
         main_canvas.config(height = '10c', width='16c')
         
         vsb = Scrollbar(frame_canvas, orient="horizontal", command=main_canvas.xview)
-        vsb.grid(row=0, column=1,sticky = 'we')
+        vsb.grid(row=1, column=1,sticky = 'we')
         main_canvas.configure(xscrollcommand=vsb.set)
         
         figure_frame = Frame(main_canvas)
@@ -758,11 +763,62 @@ class MainApp(Tk):
         main_canvas.config(scrollregion=figure_frame.bbox("all"))
         
             
-    def plot_init_dist(self):
+    def plot_init_univar_dist(self):
         '''
         This function will plot the distribution of variable calls prior to running
         the simulation. This will enable users to see whether the distributions are as they expected.
         
+        '''
+
+
+        self.get_distributions()        
+        self.display_tab = Frame(self.notebook)
+        self.notebook.add(self.display_tab,text = "Results (Graphed)")
+        fig_list =[]
+        for var, values in self.simulation_dist.items():
+            fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
+            a = fig.add_subplot(111)
+            num_bins = 15
+            a.hist(values, num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
+            a.set_title(var)
+            fig_list.append(fig)
+            
+        if self.univar_row_num != 0:
+            row_num = 17
+        else:
+            row_num = 10
+        frame_canvas = Frame(self.display_tab)
+        frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
+        frame_canvas.grid_rowconfigure(0, weight=1)
+        frame_canvas.grid_columnconfigure(0, weight=1)
+        frame_canvas.config(height = '10c', width='16c')
+        
+        main_canvas = Canvas(frame_canvas)
+        main_canvas.grid(row=0, column=0, sticky="news")
+        main_canvas.config(height = '10c', width='16c')
+        
+        vsb = Scrollbar(frame_canvas, orient="horizontal", command=main_canvas.xview)
+        vsb.grid(row=2, column=0,sticky = 'we')
+        main_canvas.configure(xscrollcommand=vsb.set)
+        
+        figure_frame = Frame(main_canvas)
+        main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
+        figure_frame.config(height = '10c', width='16c')
+        
+        count = 0
+        for figs in fig_list:
+            figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
+            figure_canvas.get_tk_widget().place(x = 10 + 250*count, y= 30, width = 200, height =200)
+            count += 1
+        figure_frame.update_idletasks()
+        frame_canvas.config(width='16c', height='10c')
+        main_canvas.config(scrollregion=figure_frame.bbox("all"))
+        
+        
+    def plot_init_multi_dist(self):
+        '''
+        This function will plot the distribution of variable calls prior to running
+        the simulation. This will enable users to see whether the distributions are as they expected.
         '''
         
         self.get_distributions()        
@@ -1038,8 +1094,13 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
            excelfilename, task_queue, abort, results_lock, results, directory, output_value_cells,
            sim_counter, save_freq, outputfilename, vars_to_change, columns, simulation_vars, sims_completed, lock_to_signal_finish, tot_sim):
     
+    local_pids_to_ignore = {}
     local_pids = {}
+    
     aspenlock.acquire()
+    for p in process_iter():
+        if 'aspen' in p.name().lower():
+            local_pids_to_ignore[p.pid] = 1
     if not abort.value:
         aspencom,obj = open_aspenCOMS(aspenfilename.value)
     aspenlock.release()
@@ -1050,8 +1111,9 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
     
     for p in process_iter(): #register the pids of COMS objects
         if ('aspen' in p.name().lower() or 'excel' in p.name().lower()) and p.pid not in pids_to_ignore:
+            if 'aspen' in p.name().lower() and p.pid not in local_pids_to_ignore:
+                local_pids[p.pid]=1
             current_COMS_pids[p.pid] = 1
-            local_pids[p.pid] = 1
             
             
     for trial_num in iter(task_queue.get, 'STOP'):
@@ -1075,19 +1137,24 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
                     p.terminate()
                     del current_COMS_pids[p.pid]
                     del local_pids[p.pid]
+                    
             aspenlock.acquire()
+            for p in process_iter():
+                if 'aspen' in p.name().lower():
+                    local_pids_to_ignore[p.pid] = 1
             if not abort.value:
                 aspencom,obj = open_aspenCOMS(aspenfilename.value)
             aspenlock.release()
-            excellock.acquire()
-            if not abort.value:
-                excel,book = open_excelCOMS(excelfilename.value)
-            excellock.release() 
+#            excellock.acquire()
+#            if not abort.value:
+#                excel,book = open_excelCOMS(excelfilename.value)
+#            excellock.release() 
             
             for p in process_iter(): #register the pids of COMS objects
-                if ('aspen' in p.name().lower() or 'excel' in p.name().lower()) and p.pid not in pids_to_ignore:
+                if 'aspen' in p.name().lower() and p.pid not in local_pids_to_ignore:
                     current_COMS_pids[p.pid] = 1
                     local_pids[p.pid] = 1
+        
                     
         aspencom.Engine.ConnectionDialog()
     try:
