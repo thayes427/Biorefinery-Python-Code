@@ -690,7 +690,7 @@ class MainApp(Tk):
             results_to_plot = filter(lambda x: not isna(x['MFSP'].values[0]), self.current_simulation.results)
             results = concat(results_to_plot).sort_index()
         else:
-            results = DataFrame(columns=self.output_columns)
+            results = DataFrame(columns=self.current_simulation.output_columns)
 
         fig_list =[]
         var_fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
@@ -1017,8 +1017,13 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
            excelfilename, task_queue, abort, results_lock, results, directory, output_value_cells,
            sim_counter, save_freq, outputfilename, vars_to_change, columns, simulation_vars, sims_completed, lock_to_signal_finish, tot_sim):
     
+    local_pids_to_ignore = {}
     local_pids = {}
+    
     aspenlock.acquire()
+    for p in process_iter():
+        if 'aspen' in p.name().lower():
+            local_pids_to_ignore[p.pid] = 1
     if not abort.value:
         aspencom,obj = open_aspenCOMS(aspenfilename.value)
     aspenlock.release()
@@ -1029,8 +1034,9 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
     
     for p in process_iter(): #register the pids of COMS objects
         if ('aspen' in p.name().lower() or 'excel' in p.name().lower()) and p.pid not in pids_to_ignore:
+            if 'aspen' in p.name().lower() and p.pid not in local_pids_to_ignore:
+                local_pids[p.pid]=1
             current_COMS_pids[p.pid] = 1
-            local_pids[p.pid] = 1
             
             
     for trial_num in iter(task_queue.get, 'STOP'):
@@ -1048,25 +1054,31 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
         sims_completed.value += 1
         results_lock.release()
         
-        if virtual_memory().percent > 94:
+        if virtual_memory().percent > 95:
+            
             for p in process_iter():
                 if p.pid in local_pids:
                     p.terminate()
                     del current_COMS_pids[p.pid]
                     del local_pids[p.pid]
+                    
             aspenlock.acquire()
+            for p in process_iter():
+                if 'aspen' in p.name().lower():
+                    local_pids_to_ignore[p.pid] = 1
             if not abort.value:
                 aspencom,obj = open_aspenCOMS(aspenfilename.value)
             aspenlock.release()
-            excellock.acquire()
-            if not abort.value:
-                excel,book = open_excelCOMS(excelfilename.value)
-            excellock.release() 
+#            excellock.acquire()
+#            if not abort.value:
+#                excel,book = open_excelCOMS(excelfilename.value)
+#            excellock.release() 
             
             for p in process_iter(): #register the pids of COMS objects
-                if ('aspen' in p.name().lower() or 'excel' in p.name().lower()) and p.pid not in pids_to_ignore:
+                if 'aspen' in p.name().lower() and p.pid not in local_pids_to_ignore:
                     current_COMS_pids[p.pid] = 1
                     local_pids[p.pid] = 1
+        
                     
         aspencom.Engine.ConnectionDialog()
     try:
