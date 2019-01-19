@@ -952,6 +952,10 @@ class MainApp(Tk):
         try:
             self.current_simulation.close_all_COMS()
             self.current_simulation.terminate_processes()
+            try:
+                self.current_simulation.lock_to_signal_finish.release()
+            except:
+                pass
             save_data(self.current_simulation.output_file, self.current_simulation.results, self.current_simulation.directory)
         except:
             self.after(1000, self.cleanup_processes_and_COMS)
@@ -1007,7 +1011,7 @@ class Simulation(object):
         if not self.abort.value:
             self.run_sim(TASKS)
         self.lock_to_signal_finish.acquire()
-        self.wait(t=5)
+        self.wait()
         self.close_all_COMS()
         self.terminate_processes()
         self.wait()
@@ -1021,7 +1025,7 @@ class Simulation(object):
             p.terminate()
             p.join()
          
-    def wait(self, t=2):
+    def wait(self, t=0.25):
         if not any(p.is_alive() for p in self.processes):
             return
         else:
@@ -1254,6 +1258,9 @@ def FindErrors(aspencom):
 if __name__ == "__main__":
     freeze_support()
     main_app = MainApp()
+    main_app.iconify()
+    main_app.update()
+    main_app.deiconify()
     main_app.mainloop()
     if main_app.current_simulation:
         main_app.abort_sim()
