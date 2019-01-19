@@ -10,7 +10,7 @@ from tkinter.ttk import Frame, Labelframe, Scrollbar, Notebook
 from tkinter.filedialog import askopenfilename
 from threading import Thread
 from pandas import ExcelWriter, DataFrame, concat, isna
-from multiprocessing import Value, Manager, Lock, Queue, Process
+from multiprocessing import Value, Manager, Lock, Queue, Process, cpu_count
 from time import time, sleep
 from numpy import linspace, random
 from psutil import process_iter, virtual_memory
@@ -115,6 +115,13 @@ class MainApp(Tk):
             self.save_as_entry.grid(row=4, column=2,pady = 5,padx = 5)
             
             Label(self.current_tab,text = ".csv").grid(row = 4, column = 3, sticky = W)
+            
+            Label(self.current_tab, text='CPU Core Count :').grid(row=5, column=1, sticky=E)
+            self.num_processes_entry = Entry(self.current_tab)
+            self.num_processes_entry.grid(row=5, column=2, pady=5, padx=5)
+            
+            rec_core = int(cpu_count()//2)
+            Label(self.current_tab, text = 'Recommend Proccesors: ' + str(rec_core)).grid(row = 5, column = 3, sticky = W)
             
             Label(self.current_tab, text ='').grid(row= 13, column =1)
             Button(self.current_tab,
