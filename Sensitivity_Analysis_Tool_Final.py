@@ -543,7 +543,6 @@ class MainApp(Tk):
             
         
     def create_simulation_object(self, simulation_vars, vars_to_change, output_file, num_trial):
-        self.parse_output_vars()
         self.output_columns = vars_to_change + self.output_vars
         
         new_sim = Simulation(self.sims_completed, num_trial, simulation_vars, output_file, path.dirname(str(self.input_csv_entry.get())),
@@ -956,7 +955,6 @@ class MainApp(Tk):
         count = 1
         self.graph_toggles = {}
         print(self.output_vars)
-        bools = [False]*(len(self.output_vars)-1)
         for i,v in enumerate(self.output_vars[:-1]):
             self.graph_toggles[v] = IntVar()
             Checkbutton(self.disp_output_vars, text = v, variable = self.graph_toggles[v]).grid(row=count,columnspan = 1, column = 2, sticky=W)
