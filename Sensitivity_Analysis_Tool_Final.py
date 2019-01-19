@@ -805,7 +805,6 @@ class MainApp(Tk):
         
         '''
 
-
         self.get_distributions()   
         self.display_tab = Frame(self.notebook)
         self.notebook.add(self.display_tab,text = "Results (Graphed)")
@@ -961,7 +960,7 @@ class MainApp(Tk):
         self.disp_output_vars.grid(row = 3,column = 1, columnspan = 2, pady = 10, padx = 10, sticky = E )
         count = 1
         self.graph_toggles = {}
-        print(self.output_vars)
+        print(self.output_vars[:-1])
         for i,v in enumerate(self.output_vars[:-1]):
             self.graph_toggles[v] = IntVar()
             Checkbutton(self.disp_output_vars, text = v, variable = self.graph_toggles[v]).grid(row=count,columnspan = 1, column = 2, sticky=W)
@@ -1239,7 +1238,8 @@ def mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_
     if obj.FindNode(column[0]) == None: # basically, if the massflow out of the system is None, then it failed to converge
         print('ERROR in Aspen for '+ str(case_values))
         dfstreams = DataFrame(columns=columns)
-        dfstreams.loc[trial_num] = case_values + [None]*13 + ["Aspen Failed to Converge"]
+        num_nones = len(columns) - 1 - len(case_values)
+        dfstreams.loc[trial_num] = case_values + [None]*(len(columns) - 1 - len(case_values)) + ["Aspen Failed to Converge"]
         return dfstreams
     stream_values = []
     for index,stream in enumerate(column):
