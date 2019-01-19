@@ -9,7 +9,7 @@ from tkinter import Tk,Button,Label,Entry,StringVar,E,W,OptionMenu,Canvas,END,Ch
 from tkinter.ttk import Frame, Labelframe, Scrollbar, Notebook
 from tkinter.filedialog import askopenfilename
 from threading import Thread
-from pandas import ExcelWriter, DataFrame, concat
+from pandas import ExcelWriter, DataFrame, concat, isna
 from multiprocessing import Value, Manager, Lock, Queue, Process
 from time import time, sleep
 from numpy import linspace, random
@@ -38,7 +38,11 @@ class MainApp(Tk):
         self.abort = Value('b', False)
         self.abort_univar_overall = Value('b', False)
         self.simulation_vars = {}
-        self.attributes("-topmost", True)
+        self.attributes('-topmost', True)
+        self.focus_force()
+        self.bind('<FocusIn>', OnFocusIn)
+        #self.attributes("-topmost", True)
+        #self.geometry("5000x200+30+30")
         self.tot_sim_num = 0
         self.sims_completed = Value('i',0)
         self.start_time = None
@@ -51,6 +55,7 @@ class MainApp(Tk):
         self.win_lim_y = self.winfo_screenheight()
         print(self.win_lim_x)
         print(self.win_lim_y)
+        self.worker_thread = None
 
 
     def construct_home_tab(self):
@@ -503,9 +508,13 @@ class MainApp(Tk):
         for sim in self.simulations: 
             self.current_simulation = sim
             self.current_simulation.init_sims()
+            print(self.abort.value)
+            
             if self.abort_univar_overall.value:
                 self.abort.value = True
             self.univar_plot_counter += 1
+            print('hi, worker is done')
+        self.simulations = []
     
     def parse_output_vars(self):
         self.excel_solver_file= str(self.excel_solver_entry.get())
@@ -544,12 +553,18 @@ class MainApp(Tk):
         
         
     def initialize_single_point(self):
+        if self.worker_thread and self.worker_thread.isAlive():
+            print('simulations already running')
+            return
         self.worker_thread = Thread(
                 target=lambda: self.single_point_analysis())
         self.worker_thread.start()
         self.after(5000, self.disp_sp_mfsp)
         
     def initialize_univar_analysis(self):
+        if self.worker_thread and self.worker_thread.isAlive():
+            print('simulations already running')
+            return
         self.worker_thread = Thread(
             target=lambda: self.run_univ_sens())
         self.worker_thread.start()
@@ -559,9 +574,13 @@ class MainApp(Tk):
 
     
     def initialize_multivar_analysis(self):
+        if self.worker_thread and self.worker_thread.isAlive():
+            print('simulations already running')
+            return
         self.worker_thread = Thread(
             target=lambda: self.run_multivar_sens())
         self.worker_thread.start()
+        print('started new worker thread')
         self.status_label = None
         self.time_rem_label = None
         self.multivar_gui_update()
@@ -1010,7 +1029,9 @@ class Simulation(object):
         self.lock_to_signal_finish.acquire()
         if not self.abort.value:
             self.run_sim(TASKS)
+        print('waiting for acquire')
         self.lock_to_signal_finish.acquire()
+        print('acquired')
         self.wait()
         self.close_all_COMS()
         self.terminate_processes()
@@ -1127,7 +1148,10 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
             
     for trial_num in iter(task_queue.get, 'STOP'):
         if abort.value:
-            continue
+            try:
+                lock_to_signal_finish.release()
+            except:
+                continue
         
         aspencom, case_values, errors, obj = aspen_run(aspencom, obj, simulation_vars, trial_num, vars_to_change) 
         result = mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_num, output_value_cells)
@@ -1140,12 +1164,9 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
         sims_completed.value += 1
         results_lock.release()
         
-<<<<<<< HEAD
-        if virtual_memory().percent > 95:
-=======
+
         if virtual_memory().percent > 94:
             aspenlock.acquire()
->>>>>>> b3712a34704222cc8c7055296728e9d0823da7c0
             for p in process_iter():
                 if p.pid in local_pids:
                     p.terminate()
@@ -1253,14 +1274,14 @@ def FindErrors(aspencom):
             not_done = False
     return error_statements
 
+def OnFocusIn(event):
+    if type(event.widget).__name__ == 'MainApp':
+        event.widget.attributes('-topmost', False)
 
         
 if __name__ == "__main__":
     freeze_support()
     main_app = MainApp()
-    main_app.iconify()
-    main_app.update()
-    main_app.deiconify()
     main_app.mainloop()
     if main_app.current_simulation:
         main_app.abort_sim()
