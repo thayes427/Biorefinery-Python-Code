@@ -56,6 +56,7 @@ class MainApp(Tk):
         print(self.win_lim_x)
         print(self.win_lim_y)
         self.worker_thread = None
+        self.display_tab = None
 
 
     def construct_home_tab(self):
@@ -624,6 +625,9 @@ class MainApp(Tk):
             
             
     def plot_on_GUI(self):
+        if not self.display_tab:
+            self.display_tab = Frame(self.notebook)
+            self.notebook.add(self.display_tab,text = "Results (Graphed)")
         
         if not self.current_simulation:
             return
@@ -704,7 +708,9 @@ class MainApp(Tk):
                 
             
     def plot_univ_on_GUI(self):
-        
+        if not self.display_tab:
+            self.display_tab = Frame(self.notebook)
+            self.notebook.add(self.display_tab,text = "Results (Graphed)")
         if not self.current_simulation:
             return
         if len(self.current_simulation.results) == self.last_results_plotted:
@@ -794,7 +800,7 @@ class MainApp(Tk):
         '''
 
 
-        self.get_distributions()        
+        self.get_distributions()   
         self.display_tab = Frame(self.notebook)
         self.notebook.add(self.display_tab,text = "Results (Graphed)")
         fig_list =[]
