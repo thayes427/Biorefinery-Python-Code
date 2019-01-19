@@ -613,24 +613,27 @@ class MainApp(Tk):
         self.last_results_plotted = len(self.current_simulation.results)
         
         if self.current_simulation.results:
-            results = concat(self.current_simulation.results).sort_index()
-            results = results[[d is not None for d in results['MFSP']]] # filter to make sure you aren't plotting None results
+            results_to_plot = filter(lambda x: not isna(x['MFSP'].values[0]), self.current_simulation.results)
+            results_filtered = concat(results_to_plot).sort_index()
+            results_unfiltered = concat(self.current_simulation.results).sort_index()
         else:
-            results = DataFrame(columns=self.output_columns)
+            results_filtered = DataFrame(columns=self.output_columns)
+            results_unfiltered = results_filtered
 
         fig_list =[]
         num_bins = 15
         mfsp_fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
         b = mfsp_fig.add_subplot(111)
-        b.hist(results['MFSP'], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
+        b.hist(results_filtered['MFSP'], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
         b.set_title('MFSP')
         fig_list.append(mfsp_fig)
+        
         
         for var, values in self.simulation_dist.items():
             fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
             a = fig.add_subplot(111)
             _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
-            a.hist(results[var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
+            a.hist(results_unfiltered[var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
             a.set_title(var)
             fig_list.append(fig)
         
@@ -691,24 +694,25 @@ class MainApp(Tk):
         
         current_var = self.current_simulation.vars_to_change[0]
         if self.current_simulation.results:
-            results = concat(self.current_simulation.results).sort_index()
-            results = results[[d is not None for d in results['MFSP']]] # filter to make sure you aren't plotting None results
+            results_to_plot = filter(lambda x: not isna(x['MFSP'].values[0]), self.current_simulation.results)
+            results_filtered = concat(results_to_plot).sort_index()
+            results_unfiltered = concat(self.current_simulation.results).sort_index()
         else:
-
-            results = DataFrame(columns=self.current_simulation.output_columns)
+            results_filtered = DataFrame(columns=self.current_simulation.output_columns)
+            results_unfiltered = results_filtered
             
         fig_list =[]
         var_fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
         a = var_fig.add_subplot(111)
         num_bins = 15
         _, bins, _ = a.hist(self.simulation_dist[current_var], num_bins, facecolor='white',edgecolor='black', alpha=1.0)
-        a.hist(results[current_var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
+        a.hist(results_unfiltered[current_var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
         a.set_title(current_var)
         fig_list.append(var_fig)
         
         mfsp_fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
         b = mfsp_fig.add_subplot(111)
-        b.hist(results['MFSP'], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
+        b.hist(results_filtered['MFSP'], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
         b.set_title('MFSP - ' + current_var)
         fig_list.append(mfsp_fig)
         
@@ -1103,6 +1107,9 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
             local_pids_to_ignore[p.pid] = 1
     if not abort.value:
         aspencom,obj = open_aspenCOMS(aspenfilename.value)
+    for p in process_iter():
+        if 'aspen' in p.name().lower() and p.pid not in local_pids_to_ignore:
+            local_pids[p.pid] = 1
     aspenlock.release()
     excellock.acquire()
     if not abort.value:
@@ -1111,8 +1118,6 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
     
     for p in process_iter(): #register the pids of COMS objects
         if ('aspen' in p.name().lower() or 'excel' in p.name().lower()) and p.pid not in pids_to_ignore:
-            if 'aspen' in p.name().lower() and p.pid not in local_pids_to_ignore:
-                local_pids[p.pid]=1
             current_COMS_pids[p.pid] = 1
             
             
@@ -1131,29 +1136,30 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
         sims_completed.value += 1
         results_lock.release()
         
+<<<<<<< HEAD
         if virtual_memory().percent > 95:
+=======
+        if virtual_memory().percent > 94:
+            aspenlock.acquire()
+>>>>>>> b3712a34704222cc8c7055296728e9d0823da7c0
             for p in process_iter():
                 if p.pid in local_pids:
                     p.terminate()
                     del current_COMS_pids[p.pid]
                     del local_pids[p.pid]
                     
-            aspenlock.acquire()
+            
             for p in process_iter():
                 if 'aspen' in p.name().lower():
                     local_pids_to_ignore[p.pid] = 1
             if not abort.value:
                 aspencom,obj = open_aspenCOMS(aspenfilename.value)
-            aspenlock.release()
-#            excellock.acquire()
-#            if not abort.value:
-#                excel,book = open_excelCOMS(excelfilename.value)
-#            excellock.release() 
             
             for p in process_iter(): #register the pids of COMS objects
                 if 'aspen' in p.name().lower() and p.pid not in local_pids_to_ignore:
                     current_COMS_pids[p.pid] = 1
                     local_pids[p.pid] = 1
+            aspenlock.release()
         
                     
         aspencom.Engine.ConnectionDialog()
