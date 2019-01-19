@@ -131,7 +131,7 @@ class MainApp(Tk):
                    pady=4)
             Button(self.current_tab,
                    text='Display Variable Distributions',
-                   command=self.plot_init_univar_dist).grid(row=14,
+                   command=self.plot_init_dist).grid(row=14,
                    column=1, columnspan=2, sticky = W,
                    pady=4)
             Button(self.current_tab,
@@ -179,6 +179,13 @@ class MainApp(Tk):
             self.save_as_entry.grid(row=4, column=2,pady = 5,padx = 5)
             
             Label(self.current_tab,text = ".csv").grid(row = 4, column = 3, sticky = W)
+            
+            Label(self.current_tab, text='CPU Core Count :').grid(row=5, column=1, sticky=E)
+            self.num_processes_entry = Entry(self.current_tab)
+            self.num_processes_entry.grid(row=5, column=2, pady=5, padx=5)
+            
+            rec_core = int(cpu_count()//2)
+            Label(self.current_tab, text = 'Recommend Proccesors: ' + str(rec_core)).grid(row = 5, column = 3, sticky = W)
                    
             Button(self.current_tab,
                    text='Run Multivariate Analysis',
@@ -186,7 +193,7 @@ class MainApp(Tk):
                    column=3, columnspan=2, sticky=W, pady=4)
             Button(self.current_tab,
                    text='Display Variable Distributions',
-                   command=self.plot_init_multi_dist).grid(row=6,
+                   command=self.plot_init_dist).grid(row=6,
                    column=1, columnspan=2, sticky=W, pady=4)
             
         self.load_variables_into_GUI()
@@ -633,7 +640,7 @@ class MainApp(Tk):
     def plot_on_GUI(self):
         if not self.display_tab:
             self.display_tab = Frame(self.notebook)
-            self.notebook.add(self.display_tab,text = "Results (Graphed)")
+            self.notebook.add(self.display_tab,text = "Simulation Status")
         
         if not self.current_simulation:
             return
@@ -642,34 +649,35 @@ class MainApp(Tk):
         self.last_results_plotted = len(self.current_simulation.results)
         
         if self.current_simulation.results:
-            results_to_plot = filter(lambda x: not isna(x['MFSP'].values[0]), self.current_simulation.results)
+            results_to_plot = list(filter(lambda x: not isna(x[self.current_simulation.output_columns[len(
+                    self.current_simulation.vars_to_change)]].values[0]), self.current_simulation.results))
             results_filtered = concat(results_to_plot).sort_index()
             results_unfiltered = concat(self.current_simulation.results).sort_index()
         else:
             results_filtered = DataFrame(columns=self.output_columns)
             results_unfiltered = results_filtered
 
-        fig_list =[]
+        results_fig_list =[]
         num_bins = 15
-        mfsp_fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
-        b = mfsp_fig.add_subplot(111)
-        b.hist(results_filtered['MFSP'], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-        b.set_title('MFSP')
-        fig_list.append(mfsp_fig)
+        for var, toggled in self.graph_toggles.items():
+            if toggled.get():
+                fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
+                ax = fig.add_subplot(111)
+                ax.hist(results_filtered[var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
+                ax.set_title(var)
+                
+                results_fig_list.append(fig)
         
-        
+        inputs_fig_list = []
         for var, values in self.simulation_dist.items():
             fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
             a = fig.add_subplot(111)
             _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
             a.hist(results_unfiltered[var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
             a.set_title(var)
-            fig_list.append(fig)
+            inputs_fig_list.append(fig)
         
-        if self.univar_row_num != 0:
-            row_num = 17
-        else:
-            row_num = 10
+        row_num = 0
         
         frame_canvas = Frame(self.display_tab)
         frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
@@ -691,7 +699,8 @@ class MainApp(Tk):
     
         row_num = 0
         column = False
-        for figs in fig_list:
+        count = 1
+        for figs in results_fig_list + inputs_fig_list:
             figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
             if column:
                 col = 4
@@ -704,6 +713,7 @@ class MainApp(Tk):
             if column:
                 row_num += 5
             column = not column
+            count += 1
         
 
         figure_frame.update_idletasks()
@@ -711,12 +721,13 @@ class MainApp(Tk):
         
         # Set the canvas scrolling region
         main_canvas.config(scrollregion=figure_frame.bbox("all"))
+        self.notebook.select(self.display_tab)
                 
             
     def plot_univ_on_GUI(self):
         if not self.display_tab:
             self.display_tab = Frame(self.notebook)
-            self.notebook.add(self.display_tab,text = "Results (Graphed)")
+            self.notebook.add(self.display_tab,text = "Simulation Status")
         if not self.current_simulation:
             return
         if len(self.current_simulation.results) == self.last_results_plotted:
@@ -725,7 +736,8 @@ class MainApp(Tk):
         
         current_var = self.current_simulation.vars_to_change[0]
         if self.current_simulation.results:
-            results_to_plot = filter(lambda x: not isna(x['MFSP'].values[0]), self.current_simulation.results)
+            results_to_plot = list(filter(lambda x: not isna(x[self.current_simulation.output_columns[len(
+                    self.current_simulation.vars_to_change)]].values[0]), self.current_simulation.results))
             results_filtered = concat(results_to_plot).sort_index()
             results_unfiltered = concat(self.current_simulation.results).sort_index()
         else:
@@ -751,10 +763,7 @@ class MainApp(Tk):
         if len(self.current_simulation.results) == self.current_simulation.tot_sim:
             self.finished_figures += fig_list
         
-        if self.univar_row_num != 0:
-            row_num = 17
-        else:
-            row_num = 10
+        row_num = 0
         
         frame_canvas = Frame(self.display_tab)
         frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
@@ -766,9 +775,13 @@ class MainApp(Tk):
         main_canvas.grid(row=0, column=0, sticky="news")
         main_canvas.config(height = '10c', width='16c')
         
-        vsb = Scrollbar(frame_canvas, orient="horizontal", command=main_canvas.xview)
-        vsb.grid(row=1, column=1,sticky = 'we')
-        main_canvas.configure(xscrollcommand=vsb.set)
+        hsb = Scrollbar(frame_canvas, orient="horizontal", command=main_canvas.xview)
+        hsb.grid(row=1, column=0,sticky = 'we')
+        main_canvas.configure(xscrollcommand=hsb.set)
+        
+        vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
+        vsb.grid(row=0, column=1,sticky = 'ns')
+        main_canvas.configure(yscrollcommand=vsb.set)
         
         figure_frame = Frame(main_canvas)
         main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
@@ -796,18 +809,21 @@ class MainApp(Tk):
         
         # Set the canvas scrolling region
         main_canvas.config(scrollregion=figure_frame.bbox("all"))
+        self.notebook.select(self.display_tab)
         
             
-    def plot_init_univar_dist(self):
+    def plot_init_dist(self):
         '''
         This function will plot the distribution of variable calls prior to running
         the simulation. This will enable users to see whether the distributions are as they expected.
         
         '''
 
+#        if self.display_tab:
+#                self.notebook.forget(self.display_tab)
         self.get_distributions()   
-        self.display_tab = Frame(self.notebook)
-        self.notebook.add(self.display_tab,text = "Results (Graphed)")
+#        self.display_tab = Frame(self.notebook)
+#        self.notebook.add(self.display_tab,text = "Results (Graphed)")
         fig_list =[]
         for var, values in self.simulation_dist.items():
             fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
@@ -821,92 +837,48 @@ class MainApp(Tk):
             row_num = 17
         else:
             row_num = 10
-        frame_canvas = Frame(self.display_tab)
+        frame_height = 30+(250*((len(fig_list)-1)//2 + 1))  
+        frame_width = 500
+        
+        frame_canvas = Frame(self.current_tab)
         frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
         frame_canvas.grid_rowconfigure(0, weight=1)
         frame_canvas.grid_columnconfigure(0, weight=1)
-        frame_canvas.config(height = '10c', width='16c')
+        frame_canvas.config(height = '10c', width=frame_width)
         
         main_canvas = Canvas(frame_canvas)
         main_canvas.grid(row=0, column=0, sticky="news")
-        main_canvas.config(height = '10c', width='16c')
+        main_canvas.config(height = '10c', width=frame_width)
         
-        vsb = Scrollbar(frame_canvas, orient="horizontal", command=main_canvas.xview)
-        vsb.grid(row=2, column=0,sticky = 'we')
-        main_canvas.configure(xscrollcommand=vsb.set)
-        
-        figure_frame = Frame(main_canvas)
-        main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
-        figure_frame.config(height = '10c', width='16c')
-        
-        count = 0
-        for figs in fig_list:
-            figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
-            figure_canvas.get_tk_widget().place(x = 10 + 250*count, y= 30, width = 200, height =200)
-            count += 1
-        figure_frame.update_idletasks()
-        frame_canvas.config(width='16c', height='10c')
-        main_canvas.config(scrollregion=figure_frame.bbox("all"))
-        
-        
-    def plot_init_multi_dist(self):
-        '''
-        This function will plot the distribution of variable calls prior to running
-        the simulation. This will enable users to see whether the distributions are as they expected.
-        '''
-        
-        self.get_distributions()        
-        self.display_tab = Frame(self.notebook)
-        self.notebook.add(self.display_tab,text = "Results (Graphed)")
-        fig_list =[]
-        for var, values in self.simulation_dist.items():
-            fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
-            a = fig.add_subplot(111)
-            num_bins = 15
-            a.hist(values, num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-            a.set_title(var)
-            fig_list.append(fig)
-            
-        if self.univar_row_num != 0:
-            row_num = 17
-        else:
-            row_num = 10
-        frame_canvas = Frame(self.display_tab)
-        frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
-        frame_canvas.grid_rowconfigure(0, weight=1)
-        frame_canvas.grid_columnconfigure(0, weight=1)
-        frame_canvas.config(height = '10c', width='16c')
-        
-        main_canvas = Canvas(frame_canvas)
-        main_canvas.grid(row=0, column=0, sticky="news")
-        main_canvas.config(height = '10c', width='16c')
+#        hsb = Scrollbar(frame_canvas, orient="horizontal", command=main_canvas.xview)
+#        hsb.grid(row=1, column=0,sticky = 'we')
+#        main_canvas.configure(xscrollcommand=hsb.set)
         
         vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
-        vsb.grid(row=0, column=2,sticky = 'ns')
+        vsb.grid(row=0, column=1,sticky = 'ns')
         main_canvas.configure(yscrollcommand=vsb.set)
         
         figure_frame = Frame(main_canvas)
         main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
-        figure_frame.config(height = '10c', width='16c')
-    
-        row_num = 0
-        column = False
+        figure_frame.config(height = frame_height, width=frame_width)
+        
+        count = 0
+        x, y = 10, 30
         for figs in fig_list:
             figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
-            if column:
-                col = 4
+            if count % 2:
+                x = 260
             else:
-                col = 1
-            figure_canvas.get_tk_widget().grid(
-                    row=row_num, column=col,columnspan=2, rowspan = 5, pady = 5,padx = 8, sticky=E)
-
-            if column:
-                row_num += 5
-            column = not column
-
+                x = 10
+            figure_canvas.get_tk_widget().place(x = x, y= y, width = 200, height =200)
+            if count % 2:
+                y += 250
+            count += 1
         figure_frame.update_idletasks()
-        frame_canvas.config(width='16c', height='10c')
-        main_canvas.config(scrollregion=figure_frame.bbox("all"))
+        frame_canvas.config(width=frame_width, height='10c')
+        main_canvas.config(scrollregion=(0,0,x,30+(250*((len(fig_list)-1)//2 + 1))))
+        
+        
         
     def univar_gui_update(self):
         self.disp_status_update()
@@ -963,7 +935,9 @@ class MainApp(Tk):
         print(self.output_vars[:-1])
         for i,v in enumerate(self.output_vars[:-1]):
             self.graph_toggles[v] = IntVar()
-            Checkbutton(self.disp_output_vars, text = v, variable = self.graph_toggles[v]).grid(row=count,columnspan = 1, column = 2, sticky=W)
+            cb = Checkbutton(self.disp_output_vars, text = v, variable = self.graph_toggles[v])
+            cb.grid(row=count,columnspan = 1, column = 2, sticky=W)
+            cb.select()
             count += 1
         self.wait.destroy()
        
