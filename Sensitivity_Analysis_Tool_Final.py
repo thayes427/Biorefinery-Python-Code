@@ -179,6 +179,13 @@ class MainApp(Tk):
             self.save_as_entry.grid(row=4, column=2,pady = 5,padx = 5)
             
             Label(self.current_tab,text = ".csv").grid(row = 4, column = 3, sticky = W)
+            
+            Label(self.current_tab, text='CPU Core Count :').grid(row=5, column=1, sticky=E)
+            self.num_processes_entry = Entry(self.current_tab)
+            self.num_processes_entry.grid(row=5, column=2, pady=5, padx=5)
+            
+            rec_core = int(cpu_count()//2)
+            Label(self.current_tab, text = 'Recommend Proccesors: ' + str(rec_core)).grid(row = 5, column = 3, sticky = W)
                    
             Button(self.current_tab,
                    text='Run Multivariate Analysis',
@@ -712,6 +719,7 @@ class MainApp(Tk):
         
         # Set the canvas scrolling region
         main_canvas.config(scrollregion=figure_frame.bbox("all"))
+        self.notebook.select(self.display_tab)
                 
             
     def plot_univ_on_GUI(self):
@@ -767,9 +775,13 @@ class MainApp(Tk):
         main_canvas.grid(row=0, column=0, sticky="news")
         main_canvas.config(height = '10c', width='16c')
         
-        vsb = Scrollbar(frame_canvas, orient="horizontal", command=main_canvas.xview)
-        vsb.grid(row=1, column=1,sticky = 'we')
-        main_canvas.configure(xscrollcommand=vsb.set)
+        hsb = Scrollbar(frame_canvas, orient="horizontal", command=main_canvas.xview)
+        hsb.grid(row=1, column=0,sticky = 'we')
+        main_canvas.configure(xscrollcommand=hsb.set)
+        
+        vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
+        vsb.grid(row=0, column=1,sticky = 'ns')
+        main_canvas.configure(yscrollcommand=vsb.set)
         
         figure_frame = Frame(main_canvas)
         main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
@@ -797,6 +809,7 @@ class MainApp(Tk):
         
         # Set the canvas scrolling region
         main_canvas.config(scrollregion=figure_frame.bbox("all"))
+        self.notebook.select(self.display_tab)
         
             
     def plot_init_univar_dist(self):
@@ -806,7 +819,8 @@ class MainApp(Tk):
         
         '''
 
-
+        if self.display_tab:
+                self.notebook.forget(self.display_tab)
         self.get_distributions()   
         self.display_tab = Frame(self.notebook)
         self.notebook.add(self.display_tab,text = "Results (Graphed)")
@@ -833,9 +847,13 @@ class MainApp(Tk):
         main_canvas.grid(row=0, column=0, sticky="news")
         main_canvas.config(height = '10c', width='16c')
         
-        vsb = Scrollbar(frame_canvas, orient="horizontal", command=main_canvas.xview)
-        vsb.grid(row=2, column=0,sticky = 'we')
-        main_canvas.configure(xscrollcommand=vsb.set)
+        hsb = Scrollbar(frame_canvas, orient="horizontal", command=main_canvas.xview)
+        hsb.grid(row=1, column=0,sticky = 'we')
+        main_canvas.configure(xscrollcommand=hsb.set)
+        
+        vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
+        vsb.grid(row=0, column=1,sticky = 'ns')
+        main_canvas.configure(yscrollcommand=vsb.set)
         
         figure_frame = Frame(main_canvas)
         main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
@@ -849,6 +867,7 @@ class MainApp(Tk):
         figure_frame.update_idletasks()
         frame_canvas.config(width='16c', height='10c')
         main_canvas.config(scrollregion=figure_frame.bbox("all"))
+        self.notebook.select(self.display_tab)
         
         
     def plot_init_multi_dist(self):
@@ -857,6 +876,8 @@ class MainApp(Tk):
         the simulation. This will enable users to see whether the distributions are as they expected.
         '''
         
+        if self.display_tab:
+                self.display_tab.forget()
         self.get_distributions()        
         self.display_tab = Frame(self.notebook)
         self.notebook.add(self.display_tab,text = "Results (Graphed)")
@@ -909,6 +930,7 @@ class MainApp(Tk):
         figure_frame.update_idletasks()
         frame_canvas.config(width='16c', height='10c')
         main_canvas.config(scrollregion=figure_frame.bbox("all"))
+        self.notebook.select(self.display_tab)
         
     def univar_gui_update(self):
         self.disp_status_update()
