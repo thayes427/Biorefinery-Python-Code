@@ -42,7 +42,6 @@ class MainApp(Tk):
         self.focus_force()
         self.bind('<FocusIn>', OnFocusIn)
         #self.attributes("-topmost", True)
-        #self.geometry("5000x200+30+30")
         self.tot_sim_num = 0
         self.sims_completed = Value('i',0)
         self.start_time = None
@@ -51,8 +50,9 @@ class MainApp(Tk):
         self.univar_row_num=0
         self.last_results_plotted = None
         self.last_update = None
-        self.win_lim_x = self.winfo_screenwidth()
-        self.win_lim_y = self.winfo_screenheight()
+        self.win_lim_x = self.winfo_screenwidth()//2
+        self.win_lim_y = int(self.winfo_screenheight()*0.9)
+        self.geometry(str(self.win_lim_x) + 'x' + str(self.win_lim_y) + '+0+0')
         print(self.win_lim_x)
         print(self.win_lim_y)
         self.worker_thread = None
@@ -603,15 +603,11 @@ class MainApp(Tk):
     def disp_status_update(self):
         if self.current_simulation and not self.abort.value:
             if len(self.current_simulation.results) == self.current_simulation.tot_sim:
-                tmp = Label(self.current_tab, text= 'Status: Simulation Complete                   ')
+                tmp = Label(self.display_tab, text= 'Status: Simulation Complete                   ')
             else:
-                tmp = Label(self.current_tab, text= 'Status: Simulation Running | {} Results Collected'.format(
+                tmp = Label(self.display_tab, text= 'Status: Simulation Running | {} Results Collected'.format(
                         len(self.current_simulation.results)))
-            if self.univar_row_num != 0:
-                row = 15
-            else:
-                row = 8
-            tmp.grid(row=row, column = 1, sticky=W, columnspan=2)
+            tmp.place(x=6, y=4)
             if self.status_label:
                 self.status_label.destroy()
             self.status_label = tmp
@@ -624,23 +620,23 @@ class MainApp(Tk):
             if self.sims_completed.value > 0:
                 remaining_time = ((elapsed_time / self.sims_completed.value) * (self.tot_sim_num - self.sims_completed.value))//60
                 hours, minutes = divmod(remaining_time, 60)
-                tmp = Label(self.current_tab, text='Time Remaining: {} Hours, {} Minutes    '.format(int(hours), int(minutes)))
+                tmp = Label(self.display_tab, text='Time Remaining: {} Hours, {} Minutes    '.format(int(hours), int(minutes)))
             else:
-                tmp = Label(self.current_tab, text='Time Remaining: N/A')
-            if self.univar_row_num != 0:
-                row = 16
-            else:
-                row = 9
-            tmp.grid(row=row, column=1, columnspan=2,sticky=W)
+                tmp = Label(self.display_tab, text='Time Remaining: N/A')
+            tmp.place(x=self.win_lim_x//2, y=4)
             if self.time_rem_label:
                 self.time_rem_label.destroy()
             self.time_rem_label = tmp
             
             
     def plot_on_GUI(self):
+        status_label = None
         if not self.display_tab:
             self.display_tab = Frame(self.notebook)
             self.notebook.add(self.display_tab,text = "Simulation Status")
+            self.notebook.select(self.display_tab)
+            status_label = Label(self.display_tab, text='Setting Up Simulation...')
+            status_label.place(x=6, y=4)
         
         if not self.current_simulation:
             return
@@ -678,16 +674,20 @@ class MainApp(Tk):
             inputs_fig_list.append(fig)
         
         row_num = 0
+        frame_width = self.win_lim_x - 30
+        num_graphs_per_row = frame_width//210
+        frame_height = 30+(220*((len(inputs_fig_list) + len(results_fig_list)-1)//num_graphs_per_row + 1))  
+        window_height = self.win_lim_y - 30
         
         frame_canvas = Frame(self.display_tab)
         frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
         frame_canvas.grid_rowconfigure(0, weight=1)
         frame_canvas.grid_columnconfigure(0, weight=1)
-        frame_canvas.config(height = '10c', width='16c')
+        frame_canvas.config(height = window_height, width=frame_width)
         
         main_canvas = Canvas(frame_canvas)
         main_canvas.grid(row=0, column=0, sticky="news")
-        main_canvas.config(height = '10c', width='16c')
+        main_canvas.config(height = window_height, width=frame_width)
         
         vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
         vsb.grid(row=0, column=1,sticky = 'ns')
@@ -695,39 +695,61 @@ class MainApp(Tk):
         
         figure_frame = Frame(main_canvas)
         main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
-        figure_frame.config(height = '10c', width='16c')
+        figure_frame.config(height = frame_height, width=frame_width)
+        if status_label:
+            status_label.destroy()
     
-        row_num = 0
-        column = False
-        count = 1
-        for figs in results_fig_list + inputs_fig_list:
-            figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
-            if column:
-                col = 4
-            else:
-                col = 1
-            #figure_canvas.draw()
-            figure_canvas.get_tk_widget().grid(
-                    row=row_num, column=col,columnspan=2, rowspan = 5, pady = 5,padx = 8, sticky=E)
-            #figure_canvas._tkcanvas.grid(row=row_num, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
-            if column:
-                row_num += 5
-            column = not column
-            count += 1
+#        row_num = 0
+#        column = False
+#        count = 1
+#        for figs in results_fig_list + inputs_fig_list:
+#            figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
+#            if column:
+#                col = 4
+#            else:
+#                col = 1
+#            #figure_canvas.draw()
+#            figure_canvas.get_tk_widget().grid(
+#                    row=row_num, column=col,columnspan=2, rowspan = 5, pady = 5,padx = 8, sticky=E)
+#            #figure_canvas._tkcanvas.grid(row=row_num, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
+#            if column:
+#                row_num += 5
+#            column = not column
+#            count += 1
         
+        
+        
+        count = 0
+        x, y = 10, 30
+        for figs in results_fig_list:
+            figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
+            x = 10 + 210*(count % num_graphs_per_row)
+            figure_canvas.get_tk_widget().place(x = x, y= y, width = 200, height =200)
+            if (count+1) % num_graphs_per_row==0:
+                y += 220
+            count += 1
+        y += 220
+        x=10
+        count = 0
+        for figs in inputs_fig_list:
+            figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
+            x = 10 + 210*(count % num_graphs_per_row)
+            figure_canvas.get_tk_widget().place(x = x, y= y, width = 200, height =200)
+            if (count+1) % num_graphs_per_row==0:
+                y += 220
+            count += 1
 
         figure_frame.update_idletasks()
-        frame_canvas.config(width='16c', height='10c')
-        
-        # Set the canvas scrolling region
-        main_canvas.config(scrollregion=figure_frame.bbox("all"))
-        self.notebook.select(self.display_tab)
+        frame_canvas.config(width=frame_width, height=window_height)
+        main_canvas.config(scrollregion=(0,0,x,frame_height))
+    
                 
             
     def plot_univ_on_GUI(self):
         if not self.display_tab:
             self.display_tab = Frame(self.notebook)
             self.notebook.add(self.display_tab,text = "Simulation Status")
+            self.notebook.select(self.display_tab)
         if not self.current_simulation:
             return
         if len(self.current_simulation.results) == self.last_results_plotted:
@@ -809,7 +831,7 @@ class MainApp(Tk):
         
         # Set the canvas scrolling region
         main_canvas.config(scrollregion=figure_frame.bbox("all"))
-        self.notebook.select(self.display_tab)
+    
         
             
     def plot_init_dist(self):
@@ -837,22 +859,22 @@ class MainApp(Tk):
             row_num = 17
         else:
             row_num = 10
-        frame_height = 30+(250*((len(fig_list)-1)//2 + 1))  
-        frame_width = 500
+        
+        frame_width = self.win_lim_x - 30
+        num_graphs_per_row = frame_width//210
+        frame_height = 30+(220*((len(fig_list)-1)//num_graphs_per_row + 1))  
+        window_height = self.win_lim_y - 160
         
         frame_canvas = Frame(self.current_tab)
         frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
         frame_canvas.grid_rowconfigure(0, weight=1)
         frame_canvas.grid_columnconfigure(0, weight=1)
-        frame_canvas.config(height = '10c', width=frame_width)
+        frame_canvas.config(height = window_height, width=frame_width)
         
         main_canvas = Canvas(frame_canvas)
         main_canvas.grid(row=0, column=0, sticky="news")
-        main_canvas.config(height = '10c', width=frame_width)
+        main_canvas.config(height = window_height, width=frame_width)
         
-#        hsb = Scrollbar(frame_canvas, orient="horizontal", command=main_canvas.xview)
-#        hsb.grid(row=1, column=0,sticky = 'we')
-#        main_canvas.configure(xscrollcommand=hsb.set)
         
         vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
         vsb.grid(row=0, column=1,sticky = 'ns')
@@ -866,17 +888,14 @@ class MainApp(Tk):
         x, y = 10, 30
         for figs in fig_list:
             figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
-            if count % 2:
-                x = 260
-            else:
-                x = 10
+            x = 10 + 210*(count % num_graphs_per_row)
             figure_canvas.get_tk_widget().place(x = x, y= y, width = 200, height =200)
-            if count % 2:
-                y += 250
+            if (count+1) % num_graphs_per_row==0:
+                y += 220
             count += 1
         figure_frame.update_idletasks()
-        frame_canvas.config(width=frame_width, height='10c')
-        main_canvas.config(scrollregion=(0,0,x,30+(250*((len(fig_list)-1)//2 + 1))))
+        frame_canvas.config(width=frame_width, height=window_height)
+        main_canvas.config(scrollregion=(0,0,x,frame_height))
         
         
         
@@ -884,15 +903,13 @@ class MainApp(Tk):
         self.disp_status_update()
         self.disp_time_remaining()
         self.plot_univ_on_GUI()
-        ####################### ADD AUTO UPDATE GRAPHS #############
         self.after(10000, self.univar_gui_update)
         
         
     def multivar_gui_update(self):
+        self.plot_on_GUI()
         self.disp_status_update()
         self.disp_time_remaining()
-        self.plot_on_GUI()
-        ####################### ADD AUTO UPDATE GRAPHS #############
         self.after(10000, self.multivar_gui_update)
         
     
