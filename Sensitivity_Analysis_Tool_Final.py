@@ -167,26 +167,23 @@ class MainApp(Tk):
         elif  self.analysis_type.get() == 'Multivariate Sensitivity':
             self.current_tab = Frame(self.notebook)
             self.notebook.add(self.current_tab,text = "Multivariate Analysis")
-    
-            Label(self.current_tab, 
-                  text="Number of Simulations :").grid(row=3, column= 1, sticky = E,pady = 5,padx = 5)
-            self.num_sim_entry = Entry(self.current_tab)
-            self.num_sim_entry.grid(row=3, column=2,pady = 5,padx = 5)
             
             Label(self.current_tab, 
-                  text="Save As :").grid(row=4, column= 1, sticky = E,pady = 5,padx = 5)
+                  text="Save As :").grid(row=3, column= 1, sticky = E,pady = 5,padx = 5)
             self.save_as_entry = Entry(self.current_tab)
             self.save_as_entry.grid(row=4, column=2,pady = 5,padx = 5)
             
-            Label(self.current_tab,text = ".csv").grid(row = 4, column = 3, sticky = W)
-            
-            Label(self.current_tab, text='CPU Core Count :').grid(row=5, column=1, sticky=E)
-            self.num_processes_entry = Entry(self.current_tab)
-            self.num_processes_entry.grid(row=5, column=2, pady=5, padx=5)
+            Label(self.current_tab,text = ".csv").grid(row = 3, column = 3, sticky = W)
+            Label(self.current_tab, 
+                  text="Number of Simulations :").grid(row=4, column= 1, sticky = E,pady = 5,padx = 5)
+            self.num_sim_entry = Entry(self.current_tab)
+            self.num_sim_entry.grid(row=3, column=2,pady = 5,padx = 5)
             
             rec_core = int(cpu_count()//2)
-            Label(self.current_tab, text = 'Recommend Proccesors: ' + str(rec_core)).grid(row = 5, column = 3, sticky = W)
-                   
+            Label(self.current_tab, text='CPU Core Count (Recommend '+ str(rec_core)+ '):').grid(row=5, column=1, sticky=E)
+            self.num_processes_entry = Entry(self.current_tab)
+            self.num_processes_entry.grid(row=5, column=2, pady=5, padx=5)
+                               
             Button(self.current_tab,
                    text='Run Multivariate Analysis',
                    command=self.initialize_multivar_analysis).grid(row=6,
@@ -676,7 +673,7 @@ class MainApp(Tk):
         row_num = 0
         frame_width = self.win_lim_x - 30
         num_graphs_per_row = frame_width//210
-        frame_height = 30+(220*((len(inputs_fig_list) + len(results_fig_list)-1)//num_graphs_per_row + 1))  
+        frame_height = 30+(220*((len(inputs_fig_list) + len(results_fig_list)+1)//num_graphs_per_row + 1))  
         window_height = self.win_lim_y - 30
         
         frame_canvas = Frame(self.display_tab)
@@ -721,6 +718,9 @@ class MainApp(Tk):
         
         count = 0
         x, y = 10, 30
+        output_dis = Label(figure_frame, text = 'Outputs:', font='Helvetica 10 bold')
+        output_dis.place(x = x, y = y)
+        y += 20
         for figs in results_fig_list:
             figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
             x = 10 + 210*(count % num_graphs_per_row)
@@ -728,7 +728,12 @@ class MainApp(Tk):
             if (count+1) % num_graphs_per_row==0:
                 y += 220
             count += 1
-        y += 220
+        y += 200
+        line= Label(figure_frame, text = '------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------')
+        line.place(x = 0, y = y-12)
+        input_dis = Label(figure_frame, text = 'Inputs:', font='Helvetica 10 bold')
+        input_dis.place(x = x, y = y)
+        y += 20
         x=10
         count = 0
         for figs in inputs_fig_list:
@@ -885,7 +890,10 @@ class MainApp(Tk):
         figure_frame.config(height = frame_height, width=frame_width)
         
         count = 0
-        x, y = 10, 30
+        x, y = 10, 10
+        output_dis = Label(figure_frame, text = 'Inputs:', font='Helvetica 10 bold')
+        output_dis.place(x = x, y = y)
+        y = 30
         for figs in fig_list:
             figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
             x = 10 + 210*(count % num_graphs_per_row)
