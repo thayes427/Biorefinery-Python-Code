@@ -518,17 +518,17 @@ class MainApp(Tk):
         
         
     def run_simulations(self):
-        self.start_time = time()
         
-        for sim in self.simulations: 
+        for sim in self.simulations:
+            self.start_time = time()
             self.current_simulation = sim
             self.current_simulation.init_sims()
-            print(self.abort.value)
             
             if self.abort_univar_overall.value:
                 self.abort.value = True
             self.univar_plot_counter += 1
             print('hi, worker is done')
+            self.last_update = None
         self.simulations = []
     
     def parse_output_vars(self):
@@ -676,7 +676,7 @@ class MainApp(Tk):
         row_num = 0
         frame_width = self.win_lim_x - 30
         num_graphs_per_row = frame_width//210
-        frame_height = 30+(220*((len(inputs_fig_list) + len(results_fig_list)-1)//num_graphs_per_row + 1))  
+        frame_height = 30+(220*((len(inputs_fig_list) + len(results_fig_list)+1)//num_graphs_per_row + 1))  
         window_height = self.win_lim_y - 30
         
         frame_canvas = Frame(self.display_tab)
@@ -746,15 +746,24 @@ class MainApp(Tk):
                 
             
     def plot_univ_on_GUI(self):
+        status_label = None
+        
         if not self.display_tab:
             self.display_tab = Frame(self.notebook)
             self.notebook.add(self.display_tab,text = "Simulation Status")
             self.notebook.select(self.display_tab)
+            status_label = Label(self.display_tab, text='Setting Up Simulation...')
+            status_label.place(x=6, y=4)
+            self.init_plots_constructed = False
+            self.plots_dictionary = {}
+            
         if not self.current_simulation:
             return
         if len(self.current_simulation.results) == self.last_results_plotted:
             return
+        
         self.last_results_plotted = len(self.current_simulation.results)
+        
         
         current_var = self.current_simulation.vars_to_change[0]
         if self.current_simulation.results:
@@ -766,71 +775,95 @@ class MainApp(Tk):
             results_filtered = DataFrame(columns=self.current_simulation.output_columns)
             results_unfiltered = results_filtered
             
-        fig_list =[]
-        var_fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
-        a = var_fig.add_subplot(111)
-        num_bins = 15
-        _, bins, _ = a.hist(self.simulation_dist[current_var], num_bins, facecolor='white',edgecolor='black', alpha=1.0)
-        a.hist(results_unfiltered[current_var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
-        a.set_title(current_var)
-        fig_list.append(var_fig)
+        if not self.init_plots_constructed:
+            num_bins = 15
+            fig_list = []                
+            for var, values in self.simulation_dist.items():
+                self.plots_dictionary[var] = {}
+                fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
+                a = fig.add_subplot(111)
+                _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
+                #a.hist(results_unfiltered[var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
+                a.set_title(var)
+                fig_list.append(fig)
+                self.plots_dictionary[var][var] = a
+                self.num_toggled = 0
+                for output_var, toggled in self.graph_toggles.items():
+                    if toggled.get():
+                        self.num_toggled += 1
+                        fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
+                        ax = fig.add_subplot(111)
+                        ax.hist(results_filtered[output_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
+                        ax.set_title(output_var)
+                        fig_list.append(fig)
+                        self.plots_dictionary[var][output_var] = ax
+                
         
-        mfsp_fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
-        b = mfsp_fig.add_subplot(111)
-        b.hist(results_filtered['MFSP'], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-        b.set_title('MFSP - ' + current_var)
-        fig_list.append(mfsp_fig)
+            row_num = 0
+            frame_width = self.win_lim_x - 30
+            num_graphs_per_row = self.num_toggled + 1
+            graphs_frame_width = 30 + 210*(num_graphs_per_row)
+            frame_height = 30+(220*((len(fig_list)+1)//num_graphs_per_row + 1))
+            window_height = self.win_lim_y - 60
+            
+            
+            frame_canvas = Frame(self.display_tab)
+            frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
+            frame_canvas.grid_rowconfigure(0, weight=1)
+            frame_canvas.grid_columnconfigure(0, weight=1)
+            frame_canvas.config(height = window_height, width=frame_width)
+            
+            main_canvas = Canvas(frame_canvas)
+            main_canvas.grid(row=0, column=0, sticky="news")
+            main_canvas.config(height = window_height, width=frame_width)
+            
+            hsb = Scrollbar(frame_canvas, orient="horizontal", command=main_canvas.xview)
+            hsb.grid(row=1, column=0,sticky = 'we')
+            main_canvas.configure(xscrollcommand=hsb.set)
+            
+            vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
+            vsb.grid(row=0, column=1,sticky = 'ns')
+            main_canvas.configure(yscrollcommand=vsb.set)
+            
+            figure_frame = Frame(main_canvas)
+            main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
+            figure_frame.config(height = frame_height, width=graphs_frame_width)
         
-        figs_to_plot = self.finished_figures[:] + fig_list
-        if len(self.current_simulation.results) == self.current_simulation.tot_sim:
-            self.finished_figures += fig_list
-        
-        row_num = 0
-        
-        frame_canvas = Frame(self.display_tab)
-        frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
-        frame_canvas.grid_rowconfigure(0, weight=1)
-        frame_canvas.grid_columnconfigure(0, weight=1)
-        frame_canvas.config(height = '10c', width='16c')
-        
-        main_canvas = Canvas(frame_canvas)
-        main_canvas.grid(row=0, column=0, sticky="news")
-        main_canvas.config(height = '10c', width='16c')
-        
-        hsb = Scrollbar(frame_canvas, orient="horizontal", command=main_canvas.xview)
-        hsb.grid(row=1, column=0,sticky = 'we')
-        main_canvas.configure(xscrollcommand=hsb.set)
-        
-        vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
-        vsb.grid(row=0, column=1,sticky = 'ns')
-        main_canvas.configure(yscrollcommand=vsb.set)
-        
-        figure_frame = Frame(main_canvas)
-        main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
-        figure_frame.config(height = '10c', width='16c')
     
-        row_num = 0
-        column = False
-        for figs in figs_to_plot:
-            figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
-            if column:
-                col = 4
-            else:
-                col = 1
-            #figure_canvas.draw()
-            figure_canvas.get_tk_widget().grid(
-                    row=row_num, column=col,columnspan=2, rowspan = 5, pady = 5,padx = 8, sticky=E)
-            #figure_canvas._tkcanvas.grid(row=row_num, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
-            if column:
-                row_num += 5
-            column = not column
-        
+            count = 0
+            x, y = 10, 30
+            self.graphs_displayed = []
+            for figs in fig_list:
+                figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
+                self.graphs_displayed.append(figure_canvas)
+                x = 10 + 210*(count % num_graphs_per_row)
+                figure_canvas.get_tk_widget().place(x = x, y= y, width = 200, height =200)
+                if (count+1) % num_graphs_per_row==0:
+                    y += 220
+                count += 1
+                
+            frame_canvas.config(width=frame_width, height=window_height)
+            self.init_plots_constructed = True
 
-        figure_frame.update_idletasks()
-        frame_canvas.config(width='16c', height='10c')
-        
-        # Set the canvas scrolling region
-        main_canvas.config(scrollregion=figure_frame.bbox("all"))
+            figure_frame.update_idletasks()
+            # Set the canvas scrolling region
+            main_canvas.config(scrollregion=(0,0,graphs_frame_width,frame_height))
+        else:
+            for f in self.plots_dictionary[current_var].values():
+                f.cla()
+                f.clear()
+            num_bins = 15
+            for output_var, toggled in self.graph_toggles.items():
+                if toggled.get():
+                    self.plots_dictionary[current_var][output_var].hist(
+                            results_filtered[output_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
+                    self.plots_dictionary[current_var][output_var].set_title(output_var)
+            self.plots_dictionary[current_var][current_var].hist(results_unfiltered[current_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
+            self.plots_dictionary[current_var][current_var].set_title(current_var)
+
+
+            for fig in self.graphs_displayed:
+                fig.draw()
     
         
             
@@ -900,9 +933,10 @@ class MainApp(Tk):
         
         
     def univar_gui_update(self):
+        self.plot_univ_on_GUI()
         self.disp_status_update()
         self.disp_time_remaining()
-        self.plot_univ_on_GUI()
+        
         self.after(10000, self.univar_gui_update)
         
         
@@ -1030,6 +1064,11 @@ class Simulation(object):
         self.lock_to_signal_finish.acquire()
         if not self.abort.value:
             self.run_sim(TASKS)
+        else:
+            try:
+                self.lock_to_signal_finish.release()
+            except:
+                pass
         print('waiting for acquire')
         self.lock_to_signal_finish.acquire()
         print('acquired')
@@ -1227,10 +1266,8 @@ def mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_
     column = [x for x in book.Sheets('Aspen_Streams').Evaluate("D1:D100") if x.Value != None] 
     
     if obj.FindNode(column[0]) == None: # basically, if the massflow out of the system is None, then it failed to converge
-        print('ERROR in Aspen for '+ str(case_values))
         dfstreams = DataFrame(columns=columns)
-        num_nones = len(columns) - 1 - len(case_values)
-        dfstreams.loc[trial_num] = case_values + [None]*(len(columns) - 1 - len(case_values)) + ["Aspen Failed to Converge"]
+        dfstreams.loc[trial_num+1] = case_values + [None]*(len(columns) - 1 - len(case_values)) + ["Aspen Failed to Converge"]
         return dfstreams
     stream_values = []
     for index,stream in enumerate(column):
@@ -1244,7 +1281,7 @@ def mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_
 
     
     dfstreams = DataFrame(columns=columns)
-    dfstreams.loc[trial_num] = case_values + [x.Value for x in book.Sheets('Output').Evaluate(output_value_cells.value)] + ["; ".join(errors)]
+    dfstreams.loc[trial_num+1] = case_values + [x.Value for x in book.Sheets('Output').Evaluate(output_value_cells.value)] + ["; ".join(errors)]
     return dfstreams
 
 
@@ -1286,6 +1323,7 @@ if __name__ == "__main__":
     main_app = MainApp()
     main_app.mainloop()
     if main_app.current_simulation:
+        main_app.abort_univar_overall.value = True
         main_app.abort_sim()
         print('Waiting for Clearance to Exit...')
         main_app.current_simulation.wait()
