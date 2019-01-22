@@ -465,8 +465,6 @@ class MainApp(Tk):
         
     
     def run_multivar_sens(self):
-        Button(self.current_tab, text = "Abort", command=self.abort_sim).grid(
-                    row=7,columnspan = 1, column = 3, sticky=W)
         self.store_user_inputs()
         if len(self.simulation_vars) == 0:
             self.get_distributions()
@@ -614,6 +612,7 @@ class MainApp(Tk):
             else:
                 tmp = Label(self.display_tab, text='Time Remaining: N/A')
             tmp.place(x=self.win_lim_x//2, y=4)
+            Button(self.display_tab, text = "Abort", command=self.abort_sim).place(x=(4*self.win_lim_x)//5, y = 5)
             if self.time_rem_label:
                 self.time_rem_label.destroy()
             self.time_rem_label = tmp
