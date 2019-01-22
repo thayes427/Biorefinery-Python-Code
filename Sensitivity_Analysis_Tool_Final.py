@@ -144,7 +144,7 @@ class MainApp(Tk):
             self.fill_num_sims.config(width = 10)
             
             self.options_box = Labelframe(self.current_tab, text='Run Options:')
-            self.options_box.grid(row = 15,column = 3, pady = 10,padx = 10)
+            self.options_box.grid(row = 15, column = 3, pady = 10, padx = 10)
     
             Button(self.options_box, text = "Next Variable", command=self.abort_sim).grid(
                     row=6,columnspan = 1, column = 2, sticky=W)
@@ -156,9 +156,9 @@ class MainApp(Tk):
             self.notebook.add(self.current_tab, text = 'Single Point')
              
             Label(self.current_tab, 
-                  text="Save As :").grid(row=0, column= 0, sticky = E,pady = 5,padx = 5)
+                  text="Save As :").grid(row=0, column= 0, sticky = E, pady = 5, padx = 5)
             self.save_as_entry = Entry(self.current_tab)
-            self.save_as_entry.grid(row=0, column=1,pady = 5,padx = 5)
+            self.save_as_entry.grid(row=0, column=1, pady = 5, padx = 5)
             
             Button(self.current_tab, text='Calculate MFSP',
             command=self.initialize_single_point).grid(row=7,
@@ -169,15 +169,15 @@ class MainApp(Tk):
             self.notebook.add(self.current_tab,text = "Multivariate Analysis")
             
             Label(self.current_tab, 
-                  text="Save As :").grid(row=3, column= 1, sticky = E,pady = 5,padx = 5)
+                  text="Save As :").grid(row=3, column= 1, sticky = E, pady = 5, padx = 5)
             self.save_as_entry = Entry(self.current_tab)
-            self.save_as_entry.grid(row=4, column=2,pady = 5,padx = 5)
+            self.save_as_entry.grid(row=4, column=2, pady = 5, padx = 5)
             
             Label(self.current_tab,text = ".csv").grid(row = 3, column = 3, sticky = W)
             Label(self.current_tab, 
-                  text="Number of Simulations :").grid(row=4, column= 1, sticky = E,pady = 5,padx = 5)
+                  text="Number of Simulations :").grid(row=4, column= 1, sticky = E, pady = 5, padx = 5)
             self.num_sim_entry = Entry(self.current_tab)
-            self.num_sim_entry.grid(row=3, column=2,pady = 5,padx = 5)
+            self.num_sim_entry.grid(row=3, column=2, pady = 5, padx = 5)
             
             rec_core = int(cpu_count()//2)
             Label(self.current_tab, text='CPU Core Count (Recommend '+ str(rec_core)+ '):').grid(row=5, column=1, sticky=E)
