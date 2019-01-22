@@ -53,20 +53,19 @@ class MainApp(Tk):
         self.win_lim_x = self.winfo_screenwidth()//2
         self.win_lim_y = int(self.winfo_screenheight()*0.9)
         self.geometry(str(self.win_lim_x) + 'x' + str(self.win_lim_y) + '+0+0')
-        print(self.win_lim_x)
-        print(self.win_lim_y)
         self.worker_thread = None
         self.display_tab = None
+      
 
 
     def construct_home_tab(self):
         self.home_tab = Frame(self.notebook)
         self.notebook.add(self.home_tab, text = 'File Upload Tab')
-        Button(self.home_tab, 
-        text='Upload Excel Data',
+        Button(self.home_tab, text='Upload Excel Data',
         command=self.open_excel_file).grid(row=0,column=1, sticky = E, pady = 5,padx = 5)
         self.input_csv_entry = Entry(self.home_tab)
         self.input_csv_entry.grid(row=0, column=2)
+        Label(self.home_tab, text=' ')
         
         Button(self.home_tab, 
               text="Upload Aspen Model",
@@ -143,14 +142,6 @@ class MainApp(Tk):
             self.fill_num_sims.grid(row=7,column = 3,sticky =W, pady =2, padx = 2)
             self.fill_num_sims.config(width = 10)
             
-            self.options_box = Labelframe(self.current_tab, text='Run Options:')
-            self.options_box.grid(row = 15,column = 3, pady = 10,padx = 10)
-    
-            Button(self.options_box, text = "Next Variable", command=self.abort_sim).grid(
-                    row=6,columnspan = 1, column = 2, sticky=W)
-            
-            Button(self.options_box, text = "Abort", command=self.abort_univar_overall_fun).grid(
-                    row= 6,columnspan = 1, column = 3, sticky=W)
         elif  self.analysis_type.get() == 'Single Point Analysis':
             self.current_tab = Frame(self.notebook)
             self.notebook.add(self.current_tab, text = 'Single Point')
@@ -160,8 +151,8 @@ class MainApp(Tk):
             self.save_as_entry = Entry(self.current_tab)
             self.save_as_entry.grid(row=0, column=1,pady = 5,padx = 5)
             
-            Button(self.current_tab, text='Calculate MFSP',
-            command=self.initialize_single_point).grid(row=7,
+            Button(self.current_tab, text='Run Analysis',
+            command=self.initialize_single_point).grid(row=3,
             column=1, columnspan=2, pady=4)
             
         elif  self.analysis_type.get() == 'Multivariate Sensitivity':
@@ -446,19 +437,21 @@ class MainApp(Tk):
         return fortran_call[:fortran_index[0]] + str(val) + fortran_call[fortran_index[1]:]
     
     def disp_sp_mfsp(self):
-        try:
-            if self.current_simulation.results:
-                mfsp = self.current_simulation.results[0].at[0, 'MFSP']
-                if mfsp:
-                    Label(self.current_tab, text= 'MFSP = ${:.2f}'.format(mfsp)).grid(
-                        row=self.sp_row_num+1, column = 1)
-                else:
-                    Label(self.current_tab, text= 'Aspen Failed to Converge').grid(
-                        row=self.sp_row_num+1, column = 1)
-            else:
-                self.after(5000, self.disp_sp_mfsp)
-        except:
+        if self.current_simulation and self.current_simulation.results:
+            row = 4
+            for output_var, toggled in self.graph_toggles.items():
+                if toggled.get():
+                    output_val = self.current_simulation.results[0].at[1, output_var]
+                    output_val = "{:,}".format(float("%.2f" % output_val))
+                    if isna(output_val):
+                        Label(self.current_tab, text= 'Aspen Failed to Converge').grid(row=row, column = 1)
+                        break
+                    Label(self.current_tab, text=str(output_var) + '= ' + output_val).grid(
+                    row=row, column = 1)
+                    row += 1
+        else:
             self.after(5000, self.disp_sp_mfsp)
+
     
     def single_point_analysis(self):
         self.store_user_inputs()
@@ -761,6 +754,7 @@ class MainApp(Tk):
             status_label.place(x=6, y=4)
             self.init_plots_constructed = False
             self.plots_dictionary = {}
+
             
         if not self.current_simulation:
             return
@@ -853,6 +847,11 @@ class MainApp(Tk):
             figure_frame.update_idletasks()
             # Set the canvas scrolling region
             main_canvas.config(scrollregion=(0,0,graphs_frame_width,frame_height))
+        
+    
+            Button(self.display_tab, text = "Next Variable", command=self.abort_sim).place(x=self.win_lim_x - 110, y=3)
+            
+            Button(self.display_tab, text = "Abort", command=self.abort_univar_overall_fun).place(x=self.win_lim_x-160, y=3)
         else:
             for f in self.plots_dictionary[current_var].values():
                 f.cla()
