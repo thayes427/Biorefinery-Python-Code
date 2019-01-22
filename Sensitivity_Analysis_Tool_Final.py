@@ -162,13 +162,13 @@ class MainApp(Tk):
             Label(self.current_tab, 
                   text="Save As :").grid(row=3, column= 1, sticky = E,pady = 5,padx = 5)
             self.save_as_entry = Entry(self.current_tab)
-            self.save_as_entry.grid(row=4, column=2,pady = 5,padx = 5)
+            self.save_as_entry.grid(row=3, column=2,pady = 5,padx = 5)
             
             Label(self.current_tab,text = ".csv").grid(row = 3, column = 3, sticky = W)
             Label(self.current_tab, 
                   text="Number of Simulations :").grid(row=4, column= 1, sticky = E,pady = 5,padx = 5)
             self.num_sim_entry = Entry(self.current_tab)
-            self.num_sim_entry.grid(row=3, column=2,pady = 5,padx = 5)
+            self.num_sim_entry.grid(row=4, column=2,pady = 5,padx = 5)
             
             rec_core = int(cpu_count()//2)
             Label(self.current_tab, text='CPU Core Count (Recommend '+ str(rec_core)+ '):').grid(row=5, column=1, sticky=E)
@@ -612,7 +612,6 @@ class MainApp(Tk):
             else:
                 tmp = Label(self.display_tab, text='Time Remaining: N/A')
             tmp.place(x=self.win_lim_x//2, y=4)
-            Button(self.display_tab, text = "Abort", command=self.abort_sim).place(x=(4*self.win_lim_x)//5, y = 5)
             if self.time_rem_label:
                 self.time_rem_label.destroy()
             self.time_rem_label = tmp
@@ -739,6 +738,7 @@ class MainApp(Tk):
         figure_frame.update_idletasks()
         frame_canvas.config(width=frame_width, height=window_height)
         main_canvas.config(scrollregion=(0,0,x,frame_height))
+        Button(self.display_tab, text = "Abort", command=self.abort_sim).place(x=(4*self.win_lim_x)//5, y = 5)
     
                 
             
