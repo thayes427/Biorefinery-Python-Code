@@ -53,20 +53,19 @@ class MainApp(Tk):
         self.win_lim_x = self.winfo_screenwidth()//2
         self.win_lim_y = int(self.winfo_screenheight()*0.9)
         self.geometry(str(self.win_lim_x) + 'x' + str(self.win_lim_y) + '+0+0')
-        print(self.win_lim_x)
-        print(self.win_lim_y)
         self.worker_thread = None
         self.display_tab = None
+      
 
 
     def construct_home_tab(self):
         self.home_tab = Frame(self.notebook)
         self.notebook.add(self.home_tab, text = 'File Upload Tab')
-        Button(self.home_tab, 
-        text='Upload Excel Data',
+        Button(self.home_tab, text='Upload Excel Data',
         command=self.open_excel_file).grid(row=0,column=1, sticky = E, pady = 5,padx = 5)
         self.input_csv_entry = Entry(self.home_tab)
         self.input_csv_entry.grid(row=0, column=2)
+        Label(self.home_tab, text=' ')
         
         Button(self.home_tab, 
               text="Upload Aspen Model",
@@ -143,14 +142,6 @@ class MainApp(Tk):
             self.fill_num_sims.grid(row=7,column = 3,sticky =W, pady =2, padx = 2)
             self.fill_num_sims.config(width = 10)
             
-            self.options_box = Labelframe(self.current_tab, text='Run Options:')
-            self.options_box.grid(row = 15, column = 3, pady = 10, padx = 10)
-    
-            Button(self.options_box, text = "Next Variable", command=self.abort_sim).grid(
-                    row=6,columnspan = 1, column = 2, sticky=W)
-            
-            Button(self.options_box, text = "Abort", command=self.abort_univar_overall_fun).grid(
-                    row= 6,columnspan = 1, column = 3, sticky=W)
         elif  self.analysis_type.get() == 'Single Point Analysis':
             self.current_tab = Frame(self.notebook)
             self.notebook.add(self.current_tab, text = 'Single Point')
@@ -160,8 +151,8 @@ class MainApp(Tk):
             self.save_as_entry = Entry(self.current_tab)
             self.save_as_entry.grid(row=0, column=1, pady = 5, padx = 5)
             
-            Button(self.current_tab, text='Calculate MFSP',
-            command=self.initialize_single_point).grid(row=7,
+            Button(self.current_tab, text='Run Analysis',
+            command=self.initialize_single_point).grid(row=3,
             column=1, columnspan=2, pady=4)
             
         elif  self.analysis_type.get() == 'Multivariate Sensitivity':
@@ -171,13 +162,12 @@ class MainApp(Tk):
             Label(self.current_tab, 
                   text="Save As :").grid(row=3, column= 1, sticky = E, pady = 5, padx = 5)
             self.save_as_entry = Entry(self.current_tab)
-            self.save_as_entry.grid(row=4, column=2, pady = 5, padx = 5)
-            
+            self.save_as_entry.grid(row=3, column=2,pady = 5,padx = 5)
             Label(self.current_tab,text = ".csv").grid(row = 3, column = 3, sticky = W)
             Label(self.current_tab, 
                   text="Number of Simulations :").grid(row=4, column= 1, sticky = E, pady = 5, padx = 5)
             self.num_sim_entry = Entry(self.current_tab)
-            self.num_sim_entry.grid(row=3, column=2, pady = 5, padx = 5)
+            self.num_sim_entry.grid(row=4, column=2,pady = 5,padx = 5)
             
             rec_core = int(cpu_count()//2)
             Label(self.current_tab, text='CPU Core Count (Recommend '+ str(rec_core)+ '):').grid(row=5, column=1, sticky=E)
@@ -377,6 +367,10 @@ class MainApp(Tk):
                     if 'poisson' in dist_type:
                         lambda_p = float(row['Range of Values'].strip())
                         distribution = self.sample_poisson(lambda_p, lb, ub, ntrials)
+                    if 'linspace distribution' in dist_type:
+                        dist_vars= row['Range of Values'].split(',')
+                        distribution = linspace(float(dist_vars[2].strip()),float(dist_vars[3].strip()),float(dist_vars[4].strip()))
+                        self.lin_dist_parameters = (float(dist_vars[0].strip()),float(dist_vars[1].strip()))
                     if 'pareto' in dist_type:
                         pareto_vals = row['Range of Values'].split(',')
                         shape = float(pareto_vals[0].strip())
@@ -446,19 +440,21 @@ class MainApp(Tk):
         return fortran_call[:fortran_index[0]] + str(val) + fortran_call[fortran_index[1]:]
     
     def disp_sp_mfsp(self):
-        try:
-            if self.current_simulation.results:
-                mfsp = self.current_simulation.results[0].at[0, 'MFSP']
-                if mfsp:
-                    Label(self.current_tab, text= 'MFSP = ${:.2f}'.format(mfsp)).grid(
-                        row=self.sp_row_num+1, column = 1)
-                else:
-                    Label(self.current_tab, text= 'Aspen Failed to Converge').grid(
-                        row=self.sp_row_num+1, column = 1)
-            else:
-                self.after(5000, self.disp_sp_mfsp)
-        except:
+        if self.current_simulation and self.current_simulation.results:
+            row = 4
+            for output_var, toggled in self.graph_toggles.items():
+                if toggled.get():
+                    output_val = self.current_simulation.results[0].at[1, output_var]
+                    output_val = "{:,}".format(float("%.2f" % output_val))
+                    if isna(output_val):
+                        Label(self.current_tab, text= 'Aspen Failed to Converge').grid(row=row, column = 1)
+                        break
+                    Label(self.current_tab, text=str(output_var) + '= ' + output_val).grid(
+                    row=row, column = 1)
+                    row += 1
+        else:
             self.after(5000, self.disp_sp_mfsp)
+
     
     def single_point_analysis(self):
         self.store_user_inputs()
@@ -486,7 +482,7 @@ class MainApp(Tk):
         for (aspen_variable, aspen_call, fortran_index), values in self.simulation_vars.items():
             self.create_simulation_object({(aspen_variable, aspen_call, 
                                             fortran_index): values}, [aspen_variable], 
-    self.output_file+'_'+aspen_variable, len(values))
+        self.output_file+'_'+aspen_variable, len(values))
         self.run_simulations()
     
     
@@ -619,7 +615,6 @@ class MainApp(Tk):
             else:
                 tmp = Label(self.display_tab, text='Time Remaining: N/A')
             tmp.place(x=self.win_lim_x//2, y=4)
-            Button(self.display_tab, text = "Abort", command=self.abort_sim).place(x=(4*self.win_lim_x)//5, y = 5)
             if self.time_rem_label:
                 self.time_rem_label.destroy()
             self.time_rem_label = tmp
@@ -633,7 +628,9 @@ class MainApp(Tk):
             self.notebook.select(self.display_tab)
             status_label = Label(self.display_tab, text='Setting Up Simulation...')
             status_label.place(x=6, y=4)
-        
+            self.init_plots_constructed = False
+            self.plots_dictionary = {}
+            
         if not self.current_simulation:
             return
         if len(self.current_simulation.results) == self.last_results_plotted:
@@ -648,104 +645,124 @@ class MainApp(Tk):
         else:
             results_filtered = DataFrame(columns=self.output_columns)
             results_unfiltered = results_filtered
-
-        results_fig_list =[]
-        num_bins = 15
-        for var, toggled in self.graph_toggles.items():
-            if toggled.get():
+            
+        if not self.init_plots_constructed:
+            results_fig_list =[]
+            num_bins = 15
+            for var, toggled in self.graph_toggles.items():
+                if toggled.get():
+                    fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
+                    ax = fig.add_subplot(111)
+                    ax.hist(results_filtered[var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
+                    ax.set_title(var)
+                    self.plots_dictionary[var] = ax
+                    results_fig_list.append(fig)
+            
+            inputs_fig_list = []
+            for var, values in self.simulation_dist.items():
                 fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
-                ax = fig.add_subplot(111)
-                ax.hist(results_filtered[var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-                ax.set_title(var)
-                
-                results_fig_list.append(fig)
+                a = fig.add_subplot(111)
+                _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
+                a.hist(results_unfiltered[var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
+                a.set_title(var)
+                self.plots_dictionary[var] = a
+                inputs_fig_list.append(fig)
+            
+            row_num = 0
+            frame_width = self.win_lim_x - 30
+            num_graphs_per_row = frame_width//210
+            frame_height = 30+(220*((len(inputs_fig_list) + len(results_fig_list)+1)//num_graphs_per_row + 1))  
+            window_height = self.win_lim_y - 30
+            
+            frame_canvas = Frame(self.display_tab)
+            frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
+            frame_canvas.grid_rowconfigure(0, weight=1)
+            frame_canvas.grid_columnconfigure(0, weight=1)
+            frame_canvas.config(height = window_height, width=frame_width)
+            
+            main_canvas = Canvas(frame_canvas)
+            main_canvas.grid(row=0, column=0, sticky="news")
+            main_canvas.config(height = window_height, width=frame_width)
+            
+            vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
+            vsb.grid(row=0, column=1,sticky = 'ns')
+            main_canvas.configure(yscrollcommand=vsb.set)
+            
+            figure_frame = Frame(main_canvas)
+            main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
+            figure_frame.config(height = frame_height, width=frame_width)
+            if status_label:
+                status_label.destroy()
         
-        inputs_fig_list = []
-        for var, values in self.simulation_dist.items():
-            fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
-            a = fig.add_subplot(111)
-            _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
-            a.hist(results_unfiltered[var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
-            a.set_title(var)
-            inputs_fig_list.append(fig)
-        
-        row_num = 0
-        frame_width = self.win_lim_x - 30
-        num_graphs_per_row = frame_width//210
-        frame_height = 30+(220*((len(inputs_fig_list) + len(results_fig_list)+1)//num_graphs_per_row + 1))  
-        window_height = self.win_lim_y - 30
-        
-        frame_canvas = Frame(self.display_tab)
-        frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
-        frame_canvas.grid_rowconfigure(0, weight=1)
-        frame_canvas.grid_columnconfigure(0, weight=1)
-        frame_canvas.config(height = window_height, width=frame_width)
-        
-        main_canvas = Canvas(frame_canvas)
-        main_canvas.grid(row=0, column=0, sticky="news")
-        main_canvas.config(height = window_height, width=frame_width)
-        
-        vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
-        vsb.grid(row=0, column=1,sticky = 'ns')
-        main_canvas.configure(yscrollcommand=vsb.set)
-        
-        figure_frame = Frame(main_canvas)
-        main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
-        figure_frame.config(height = frame_height, width=frame_width)
-        if status_label:
-            status_label.destroy()
+    #        row_num = 0
+    #        column = False
+    #        count = 1
+    #        for figs in results_fig_list + inputs_fig_list:
+    #            figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
+    #            if column:
+    #                col = 4
+    #            else:
+    #                col = 1
+    #            #figure_canvas.draw()
+    #            figure_canvas.get_tk_widget().grid(
+    #                    row=row_num, column=col,columnspan=2, rowspan = 5, pady = 5,padx = 8, sticky=E)
+    #            #figure_canvas._tkcanvas.grid(row=row_num, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
+    #            if column:
+    #                row_num += 5
+    #            column = not column
+    #            count += 1
+            
+            
+            
+            count = 0
+            x, y = 10, 30
+            output_dis = Label(figure_frame, text = 'Outputs:', font='Helvetica 10 bold')
+            output_dis.place(x = x, y = y)
+            y += 20
+            for figs in results_fig_list:
+                figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
+                x = 10 + 210*(count % num_graphs_per_row)
+                figure_canvas.get_tk_widget().place(x = x, y= y, width = 200, height =200)
+                if (count+1) % num_graphs_per_row==0:
+                    y += 220
+                count += 1
+            y += 200
+            line= Label(figure_frame, text = '------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------')
+            line.place(x = 0, y = y-12)
+            input_dis = Label(figure_frame, text = 'Inputs:', font='Helvetica 10 bold')
+            input_dis.place(x = x, y = y)
+            y += 20
+            x=10
+            count = 0
+            for figs in inputs_fig_list:
+                figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
+                x = 10 + 210*(count % num_graphs_per_row)
+                figure_canvas.get_tk_widget().place(x = x, y= y, width = 200, height =200)
+                if (count+1) % num_graphs_per_row==0:
+                    y += 220
+                count += 1
     
-#        row_num = 0
-#        column = False
-#        count = 1
-#        for figs in results_fig_list + inputs_fig_list:
-#            figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
-#            if column:
-#                col = 4
-#            else:
-#                col = 1
-#            #figure_canvas.draw()
-#            figure_canvas.get_tk_widget().grid(
-#                    row=row_num, column=col,columnspan=2, rowspan = 5, pady = 5,padx = 8, sticky=E)
-#            #figure_canvas._tkcanvas.grid(row=row_num, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
-#            if column:
-#                row_num += 5
-#            column = not column
-#            count += 1
-        
-        
-        
-        count = 0
-        x, y = 10, 30
-        output_dis = Label(figure_frame, text = 'Outputs:', font='Helvetica 10 bold')
-        output_dis.place(x = x, y = y)
-        y += 20
-        for figs in results_fig_list:
-            figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
-            x = 10 + 210*(count % num_graphs_per_row)
-            figure_canvas.get_tk_widget().place(x = x, y= y, width = 200, height =200)
-            if (count+1) % num_graphs_per_row==0:
-                y += 220
-            count += 1
-        y += 200
-        line= Label(figure_frame, text = '------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------')
-        line.place(x = 0, y = y-12)
-        input_dis = Label(figure_frame, text = 'Inputs:', font='Helvetica 10 bold')
-        input_dis.place(x = x, y = y)
-        y += 20
-        x=10
-        count = 0
-        for figs in inputs_fig_list:
-            figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
-            x = 10 + 210*(count % num_graphs_per_row)
-            figure_canvas.get_tk_widget().place(x = x, y= y, width = 200, height =200)
-            if (count+1) % num_graphs_per_row==0:
-                y += 220
-            count += 1
+            figure_frame.update_idletasks()
+            frame_canvas.config(width=frame_width, height=window_height)
+            main_canvas.config(scrollregion=(0,0,x,frame_height))
+            Button(self.display_tab, text = "Abort", command=self.abort_sim).place(x=(4*self.win_lim_x)//5, y = 5)
+        else:
+            for f in self.plots_dictionary.values():
+                f.cla()
+                f.clear()
+            num_bins = 15
+            for output_var, toggled in self.graph_toggles.items():
+                if toggled.get():
+                    self.plots_dictionary[output_var].hist(
+                            results_filtered[output_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
+                    self.plots_dictionary[output_var].set_title(output_var)
+            for var, values in self.simulation_dist.items():
+                self.plots_dictionary[var].hist(results_unfiltered[var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
+                self.plots_dictionary[var].set_title(var)
 
-        figure_frame.update_idletasks()
-        frame_canvas.config(width=frame_width, height=window_height)
-        main_canvas.config(scrollregion=(0,0,x,frame_height))
+
+            for fig in self.graphs_displayed:
+                fig.draw()
     
                 
             
@@ -760,6 +777,7 @@ class MainApp(Tk):
             status_label.place(x=6, y=4)
             self.init_plots_constructed = False
             self.plots_dictionary = {}
+
             
         if not self.current_simulation:
             return
@@ -852,6 +870,11 @@ class MainApp(Tk):
             figure_frame.update_idletasks()
             # Set the canvas scrolling region
             main_canvas.config(scrollregion=(0,0,graphs_frame_width,frame_height))
+        
+    
+            Button(self.display_tab, text = "Next Variable", command=self.abort_sim).place(x=self.win_lim_x - 110, y=3)
+            
+            Button(self.display_tab, text = "Abort", command=self.abort_univar_overall_fun).place(x=self.win_lim_x-160, y=3)
         else:
             for f in self.plots_dictionary[current_var].values():
                 f.cla()
