@@ -21,6 +21,7 @@ from csv import DictReader
 from multiprocessing import freeze_support
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
+from scipy.stats import norm
  
 
 class MainApp(Tk):
@@ -55,6 +56,7 @@ class MainApp(Tk):
         self.geometry(str(self.win_lim_x) + 'x' + str(self.win_lim_y) + '+0+0')
         self.worker_thread = None
         self.display_tab = None
+        self.lin_dist_parameters = {}
       
 
 
@@ -359,29 +361,29 @@ class MainApp(Tk):
                         dist_variables = row['Range of Values'].split(',')
                         distribution = self.sample_gauss(float(dist_variables[0].strip()),
                                   float(dist_variables[1].strip()), lb, ub, ntrials)
-                    if 'linspace' in dist_type:
+                    elif 'linspace distribution' in dist_type:
+                        dist_vars= row['Range of Values'].split(',')
+                        distribution = linspace(float(dist_vars[2].strip()),float(dist_vars[3].strip()),int(dist_vars[4].strip()))
+                        self.lin_dist_parameters[aspen_variable] = (float(dist_vars[0].strip()),float(dist_vars[1].strip()))
+                    elif 'linspace' in dist_type:
                         linspace_vars = row['Range of Values'].split(',')
                         distribution = linspace(float(linspace_vars[0].strip()), 
                                                    float(linspace_vars[1].strip()),
-                                                   float(linspace_vars[2].strip()))
-                    if 'poisson' in dist_type:
+                                                   int(linspace_vars[2].strip()))
+                    elif 'poisson' in dist_type:
                         lambda_p = float(row['Range of Values'].strip())
                         distribution = self.sample_poisson(lambda_p, lb, ub, ntrials)
-                    if 'linspace distribution' in dist_type:
-                        dist_vars= row['Range of Values'].split(',')
-                        distribution = linspace(float(dist_vars[2].strip()),float(dist_vars[3].strip()),float(dist_vars[4].strip()))
-                        self.lin_dist_parameters = (float(dist_vars[0].strip()),float(dist_vars[1].strip()))
-                    if 'pareto' in dist_type:
+                    elif 'pareto' in dist_type:
                         pareto_vals = row['Range of Values'].split(',')
                         shape = float(pareto_vals[0].strip())
                         scale = float(pareto_vals[1].strip())
                         distribution = self.sample_pareto(shape, scale, lb, ub, ntrials)
-                    if 'list' in dist_type:
+                    elif 'list' in dist_type:
                         lst = row['Range of Values'].split(',')
                         distribution = []
                         for l in lst:
                             distribution.append(float(l.strip()))                
-                    if 'uniform' in dist_type:
+                    elif 'uniform' in dist_type:
                         lb_ub = row['Range of Values'].split(',')
                         lb_uniform, ub_uniform = float(lb_ub[0].strip()), float(lb_ub[1].strip())
                         distribution = self.sample_uniform(lb_uniform, ub_uniform, lb, ub, ntrials)
@@ -730,7 +732,7 @@ class MainApp(Tk):
             line= Label(figure_frame, text = '------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------')
             line.place(x = 0, y = y-12)
             input_dis = Label(figure_frame, text = 'Inputs:', font='Helvetica 10 bold')
-            input_dis.place(x = x, y = y)
+            input_dis.place(x = 10, y = y)
             y += 20
             x=10
             count = 0
@@ -882,9 +884,18 @@ class MainApp(Tk):
             num_bins = 15
             for output_var, toggled in self.graph_toggles.items():
                 if toggled.get():
-                    self.plots_dictionary[current_var][output_var].hist(
-                            results_filtered[output_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
+                    if current_var in self.lin_dist_parameters:
+                        mean, std = self.lin_dist_parameters[current_var]
+                        weights = []
+                        for v in results_filtered[current_var]:
+                            weights.append(norm(mean,std).pdf(v))
+                        self.plots_dictionary[current_var][output_var].hist(
+                            results_filtered[output_var], num_bins, weights=weights, facecolor='blue', edgecolor='black', alpha=1.0)
+                    else:
+                        self.plots_dictionary[current_var][output_var].hist(
+                                results_filtered[output_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
                     self.plots_dictionary[current_var][output_var].set_title(output_var)
+                    
             self.plots_dictionary[current_var][current_var].hist(results_unfiltered[current_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
             self.plots_dictionary[current_var][current_var].set_title(current_var)
 
