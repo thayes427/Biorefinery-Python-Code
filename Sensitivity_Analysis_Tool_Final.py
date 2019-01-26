@@ -12,10 +12,10 @@ from threading import Thread
 from pandas import ExcelWriter, DataFrame, concat, isna
 from multiprocessing import Value, Manager, Lock, Queue, Process, cpu_count
 from time import time, sleep
-from numpy import linspace, random
+from numpy import linspace, random, histogram
 from psutil import process_iter, virtual_memory
 from win32com.client import Dispatch, DispatchEx
-import pythoncom ### I DONT THINK YOU NEED THIS
+import pythoncom 
 from os import path
 from csv import DictReader
 from multiprocessing import freeze_support
@@ -199,13 +199,13 @@ class MainApp(Tk):
             for row in reader:
                 if row['Toggle'].lower().strip() == 'true':          
                     if type_of_analysis =='Single Point Analysis':
-                        single_pt_vars.append((row["Variable Name"], float(row["Range of Values"].split(',')[0].strip())))
+                        single_pt_vars.append((row["Variable Name"], float(row["Distribution Parameters"].split(',')[0].strip())))
                     elif type_of_analysis == 'Multivariate Analysis':
                         multivariate_vars.append(row["Variable Name"])
                     else:
                         univariate_vars.append((
-                                row["Variable Name"], row["Format of Range"].strip().lower(
-                                        ), row['Range of Values'].split(',')))
+                                row["Variable Name"], row["Distribution Type"].strip().lower(
+                                        ), row['Distribution Parameters'].split(',')))
                         
         #now populate the gui with the appropriate tab and variables stored above
         if type_of_analysis == 'Single Point Analysis':
@@ -351,40 +351,58 @@ class MainApp(Tk):
             simulation_dist = {}
             for row in reader:
                 if row['Toggle'].lower().strip() == 'true':
-                    dist_type = row['Format of Range'].lower()
+                    dist_type = row['Distribution Type'].lower()
                     aspen_variable = row['Variable Name']
                     aspen_call = row['Variable Aspen Call']
                     bounds = row['Bounds'].split(',')
                     lb = float(bounds[0].strip())
                     ub = float(bounds[1].strip())
-                    if 'normal' in dist_type or 'gaussian' in dist_type:
-                        dist_variables = row['Range of Values'].split(',')
+                    if 'mapping' in dist_type:
+                        if 'normal' in dist_type or 'gaussian' in dist_type:
+                            dist_vars= row['Distribution Parameters'].split(',')
+                            lb_dist, ub_dist = float(dist_vars[2].strip()), float(dist_vars[3].strip())
+                            distribution = linspace(lb_dist, ub_dist, int(dist_vars[4].strip()))
+                            mean, std_dev = float(dist_vars[0].strip()), float(dist_vars[1].strip())
+                            pdf_approx = self.sample_gauss(mean, std_dev, lb_dist, ub_dist, ntrials)
+                            pdf, bin_edges = histogram(pdf_approx, bins=linspace(lb_dist, ub_dist, int(dist_vars[4].strip())), density=True)
+                            print(pdf)
+                        if 'pareto' in dist_type:
+                            dist_vars= row['Distribution Parameters'].split(',')
+                            distribution = linspace(float(dist_vars[2].strip()),float(dist_vars[3].strip()),int(dist_vars[4].strip()))
+                            shape, scale = float(dist_vars[0].strip()), float(dist_vars[1].strip())
+                            
+                        if 'poisson' in dist_type:
+                            dist_vars= row['Distribution Parameters'].split(',')
+                            distribution = linspace(float(dist_vars[1].strip()),float(dist_vars[2].strip()),int(dist_vars[3].strip()))
+                            lambda_p = float(dist_vars[0].strip())                         
+                    elif 'normal' in dist_type or 'gaussian' in dist_type:
+                        dist_variables = row['Distribution Parameters'].split(',')
                         distribution = self.sample_gauss(float(dist_variables[0].strip()),
-                                  float(dist_variables[1].strip()), lb, ub, ntrials)
+                                  float(dist_variables[1].strip()), lb, ub, ntrials)        
                     elif 'linspace distribution' in dist_type:
-                        dist_vars= row['Range of Values'].split(',')
+                        dist_vars= row['Distribution Parameters'].split(',')
                         distribution = linspace(float(dist_vars[2].strip()),float(dist_vars[3].strip()),int(dist_vars[4].strip()))
                         self.lin_dist_parameters[aspen_variable] = (float(dist_vars[0].strip()),float(dist_vars[1].strip()))
                     elif 'linspace' in dist_type:
-                        linspace_vars = row['Range of Values'].split(',')
+                        linspace_vars = row['Distribution Parameters'].split(',')
                         distribution = linspace(float(linspace_vars[0].strip()), 
                                                    float(linspace_vars[1].strip()),
                                                    int(linspace_vars[2].strip()))
                     elif 'poisson' in dist_type:
-                        lambda_p = float(row['Range of Values'].strip())
+                        lambda_p = float(row['Distribution Parameters'].strip())
                         distribution = self.sample_poisson(lambda_p, lb, ub, ntrials)
                     elif 'pareto' in dist_type:
-                        pareto_vals = row['Range of Values'].split(',')
+                        pareto_vals = row['Distribution Parameters'].split(',')
                         shape = float(pareto_vals[0].strip())
                         scale = float(pareto_vals[1].strip())
                         distribution = self.sample_pareto(shape, scale, lb, ub, ntrials)
                     elif 'list' in dist_type:
-                        lst = row['Range of Values'].split(',')
+                        lst = row['Distribution Parameters'].split(',')
                         distribution = []
                         for l in lst:
                             distribution.append(float(l.strip()))                
                     elif 'uniform' in dist_type:
-                        lb_ub = row['Range of Values'].split(',')
+                        lb_ub = row['Distribution Parameters'].split(',')
                         lb_uniform, ub_uniform = float(lb_ub[0].strip()), float(lb_ub[1].strip())
                         distribution = self.sample_uniform(lb_uniform, ub_uniform, lb, ub, ntrials)
                     simulation_dist[aspen_variable] = distribution[:]
