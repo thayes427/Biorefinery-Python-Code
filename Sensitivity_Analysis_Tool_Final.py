@@ -653,27 +653,30 @@ class MainApp(Tk):
             num_bins = 15
             for var, toggled in self.graph_toggles.items():
                 if toggled.get():
-                    fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
+                    fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=False)
                     ax = fig.add_subplot(111)
                     ax.hist(results_filtered[var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
                     ax.set_title(var)
+                    ax.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
                     self.plots_dictionary[var] = ax
                     results_fig_list.append(fig)
             
             inputs_fig_list = []
             for var, values in self.simulation_dist.items():
-                fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
+                fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=False)
                 a = fig.add_subplot(111)
                 _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
                 a.hist(results_unfiltered[var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
                 a.set_title(var)
+                a.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
+               # a.get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter(set_powerlimits((n,m))
                 self.plots_dictionary[var] = a
                 inputs_fig_list.append(fig)
             
             row_num = 0
             frame_width = self.win_lim_x - 30
-            num_graphs_per_row = frame_width//210
-            frame_height = 30+(220*((len(inputs_fig_list) + len(results_fig_list)+1)//num_graphs_per_row + 1))  
+            num_graphs_per_row = frame_width//270
+            frame_height = 60+(230*((len(inputs_fig_list) + len(results_fig_list)+1)//num_graphs_per_row + 1))  
             window_height = self.win_lim_y - 30
             
             frame_canvas = Frame(self.display_tab)
@@ -723,12 +726,12 @@ class MainApp(Tk):
             y += 20
             for figs in results_fig_list:
                 figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
-                x = 10 + 210*(count % num_graphs_per_row)
-                figure_canvas.get_tk_widget().place(x = x, y= y, width = 200, height =200)
+                x = 10 + 250*(count % num_graphs_per_row)
+                figure_canvas.get_tk_widget().place(x = x, y= y, width = 240, height =220)
                 if (count+1) % num_graphs_per_row==0:
-                    y += 220
+                    y += 230
                 count += 1
-            y += 200
+            y += 230
             line= Label(figure_frame, text = '------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------')
             line.place(x = 0, y = y-12)
             input_dis = Label(figure_frame, text = 'Inputs:', font='Helvetica 10 bold')
@@ -738,10 +741,10 @@ class MainApp(Tk):
             count = 0
             for figs in inputs_fig_list:
                 figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
-                x = 10 + 210*(count % num_graphs_per_row)
-                figure_canvas.get_tk_widget().place(x = x, y= y, width = 200, height =200)
+                x = 10 + 250*(count % num_graphs_per_row)
+                figure_canvas.get_tk_widget().place(x = x, y= y, width = 240, height =220)
                 if (count+1) % num_graphs_per_row==0:
-                    y += 220
+                    y += 230
                 count += 1
     
             figure_frame.update_idletasks()
