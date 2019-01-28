@@ -1180,7 +1180,7 @@ class Simulation(object):
 ############ GLOBAL FUNCTIONS ################
                 
 def open_aspenCOMS(aspenfilename):
-    aspencom = Dispatch('Apwn.Document')
+    aspencom = Dispatch('{FEC42B31-AA6F-4739-A071-FBF6D9DFE10B}')
     aspencom.InitFromArchive(path.abspath(aspenfilename))
     obj = aspencom.Tree     
     return aspencom,obj
@@ -1378,4 +1378,31 @@ if __name__ == "__main__":
     exit()
         
         
+    
+#from winreg EnumKey, CreateKey, EnumValue
+#from re import search
+#
+#key = winreg.CreateKey(winreg.HKEY_CLASSES_ROOT, '')
+#stop = False
+#i=0
+#versions = dict()
+#while not stop:
+#    try: 
+#        if search(r"Apwn.Document", (EnumKey(key,i))):
+#            subkey = CreateKey(key, EnumKey(key, i))
+#            try:
+#                subbkey = CreateKey(subkey, 'DefaultIcon')
+#            except:
+#                i += 1
+#                continue
+#            default_icon = EnumValue(subbkey, 0)
+#            version = search(r"V\d\d.\d", default_icon[1])
+#            clsid_key = CreateKey(subkey, 'CLSID')
+#            CLSID = EnumValue(clsid_key, 0)[1]
+#            if version:
+#                versions[version.group()] = CLSID
+#    except: stop = True
+#    i += 1
+#print(versions)
+    
 
