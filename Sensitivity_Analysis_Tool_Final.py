@@ -12,10 +12,10 @@ from threading import Thread
 from pandas import ExcelWriter, DataFrame, concat, isna
 from multiprocessing import Value, Manager, Lock, Queue, Process, cpu_count
 from time import time, sleep
-from numpy import linspace, random, histogram
+from numpy import linspace, random
 from psutil import process_iter, virtual_memory
 from win32com.client import Dispatch, DispatchEx
-import pythoncom 
+import pythoncom ### I DONT THINK YOU NEED THIS
 from os import path
 from csv import DictReader
 from multiprocessing import freeze_support
@@ -56,7 +56,7 @@ class MainApp(Tk):
         self.geometry(str(self.win_lim_x) + 'x' + str(self.win_lim_y) + '+0+0')
         self.worker_thread = None
         self.display_tab = None
-        self.mapping_pdfs = {}
+        self.lin_dist_parameters = {}
       
 
 
@@ -199,13 +199,13 @@ class MainApp(Tk):
             for row in reader:
                 if row['Toggle'].lower().strip() == 'true':          
                     if type_of_analysis =='Single Point Analysis':
-                        single_pt_vars.append((row["Variable Name"], float(row["Distribution Parameters"].split(',')[0].strip())))
+                        single_pt_vars.append((row["Variable Name"], float(row["Range of Values"].split(',')[0].strip())))
                     elif type_of_analysis == 'Multivariate Analysis':
                         multivariate_vars.append(row["Variable Name"])
                     else:
                         univariate_vars.append((
-                                row["Variable Name"], row["Distribution Type"].strip().lower(
-                                        ), row['Distribution Parameters'].split(',')))
+                                row["Variable Name"], row["Format of Range"].strip().lower(
+                                        ), row['Range of Values'].split(',')))
                         
         #now populate the gui with the appropriate tab and variables stored above
         if type_of_analysis == 'Single Point Analysis':
@@ -286,19 +286,15 @@ class MainApp(Tk):
                 Label(frame_vars1, 
                 text= format_of_data).grid(row=self.univar_row_num, column= 2,pady = 5,padx = 5)
                 
-                if not(format_of_data == 'linspace' or format_of_data == 'list' or 'mapping' in format_of_data):
+                if not(format_of_data == 'linspace' or format_of_data == 'list'):
                     key2=Entry(frame_vars1)
                     key2.grid(row=self.univar_row_num, column=3,pady = 5,padx = 5)
                     #key2.insert(0,univariate_sims)
                     self.univar_ntrials_entries[name]= key2
                 else:
-                    if "mapping" in format_of_data:
-                        print(vals, format_of_data, name)
-                        print(vals[-1])
-                        Label(frame_vars1,text= vals[-1].strip()).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5)
-                    elif format_of_data == 'linspace':
+                    if format_of_data == 'linspace':
                         
-                        Label(frame_vars1,text= str(vals[2]).strip()).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5)
+                        Label(frame_vars1,text= str(vals[2])).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5)
                     else:
                         Label(frame_vars1,text= str(len(vals))).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5)
                 self.univar_row_num += 1
@@ -355,67 +351,40 @@ class MainApp(Tk):
             simulation_dist = {}
             for row in reader:
                 if row['Toggle'].lower().strip() == 'true':
-                    dist_type = row['Distribution Type'].lower()
+                    dist_type = row['Format of Range'].lower()
                     aspen_variable = row['Variable Name']
                     aspen_call = row['Variable Aspen Call']
                     bounds = row['Bounds'].split(',')
                     lb = float(bounds[0].strip())
                     ub = float(bounds[1].strip())
-                    if 'mapping' in dist_type:
-                        dist_vars = row['Distribution Parameters'].split(',')
-                        lb_dist, ub_dist = float(dist_vars[-3].strip()), float(dist_vars[-2].strip())
-                        num_trials = int(dist_vars[-1].strip())
-                        distribution = linspace(lb_dist, ub_dist, num_trials)
-                        if 'normal' in dist_type or 'gaussian' in dist_type:
-                            mean, std_dev = float(dist_vars[0].strip()), float(dist_vars[1].strip())
-                            pdf_approx = self.sample_gauss(mean, std_dev, lb_dist, ub_dist, 10000)
-
-                        if 'pareto' in dist_type:
-                            shape, scale = float(dist_vars[0].strip()), float(dist_vars[1].strip())
-                            pdf_approx = self.sample_pareto(shape, scale, lb_dist, ub_dist, num_trials)
-                            
-                        if 'poisson' in dist_type:
-                            lambda_p = float(dist_vars[0].strip())
-                            pdf_approx =self.sample_poisson(lambda_p, lb_dist, ub_dist, num_trials)
-                            
-                           
-                        bin_width = (ub_dist - lb_dist)/num_trials
-                        lb_pdf = lb_dist - 0.5*bin_width
-                        ub_pdf = ub_dist + 0.5*bin_width
-                        pdf, bin_edges = histogram(pdf_approx, bins=linspace(lb_pdf, ub_pdf, num_trials+1), density=True)
-                        tot_dens = sum(pdf)
-                        self.mapping_pdfs[aspen_variable] = [p/tot_dens for p in pdf]
-                        print(pdf)
-                        print(bin_edges)
-                        print(distribution)
-                    elif 'normal' in dist_type or 'gaussian' in dist_type:
-                        dist_variables = row['Distribution Parameters'].split(',')
+                    if 'normal' in dist_type or 'gaussian' in dist_type:
+                        dist_variables = row['Range of Values'].split(',')
                         distribution = self.sample_gauss(float(dist_variables[0].strip()),
-                                  float(dist_variables[1].strip()), lb, ub, ntrials)        
+                                  float(dist_variables[1].strip()), lb, ub, ntrials)
                     elif 'linspace distribution' in dist_type:
-                        dist_vars= row['Distribution Parameters'].split(',')
+                        dist_vars= row['Range of Values'].split(',')
                         distribution = linspace(float(dist_vars[2].strip()),float(dist_vars[3].strip()),int(dist_vars[4].strip()))
                         self.lin_dist_parameters[aspen_variable] = (float(dist_vars[0].strip()),float(dist_vars[1].strip()))
                     elif 'linspace' in dist_type:
-                        linspace_vars = row['Distribution Parameters'].split(',')
+                        linspace_vars = row['Range of Values'].split(',')
                         distribution = linspace(float(linspace_vars[0].strip()), 
                                                    float(linspace_vars[1].strip()),
                                                    int(linspace_vars[2].strip()))
                     elif 'poisson' in dist_type:
-                        lambda_p = float(row['Distribution Parameters'].strip())
+                        lambda_p = float(row['Range of Values'].strip())
                         distribution = self.sample_poisson(lambda_p, lb, ub, ntrials)
                     elif 'pareto' in dist_type:
-                        pareto_vals = row['Distribution Parameters'].split(',')
+                        pareto_vals = row['Range of Values'].split(',')
                         shape = float(pareto_vals[0].strip())
                         scale = float(pareto_vals[1].strip())
                         distribution = self.sample_pareto(shape, scale, lb, ub, ntrials)
                     elif 'list' in dist_type:
-                        lst = row['Distribution Parameters'].split(',')
+                        lst = row['Range of Values'].split(',')
                         distribution = []
                         for l in lst:
                             distribution.append(float(l.strip()))                
                     elif 'uniform' in dist_type:
-                        lb_ub = row['Distribution Parameters'].split(',')
+                        lb_ub = row['Range of Values'].split(',')
                         lb_uniform, ub_uniform = float(lb_ub[0].strip()), float(lb_ub[1].strip())
                         distribution = self.sample_uniform(lb_uniform, ub_uniform, lb, ub, ntrials)
                     simulation_dist[aspen_variable] = distribution[:]
@@ -513,10 +482,9 @@ class MainApp(Tk):
         if len(self.simulation_vars) == 0:
             self.get_distributions()
         for (aspen_variable, aspen_call, fortran_index), values in self.simulation_vars.items():
-            weights = self.mapping_pdfs.get(aspen_variable, [])
             self.create_simulation_object({(aspen_variable, aspen_call, 
                                             fortran_index): values}, [aspen_variable], 
-        self.output_file+'_'+aspen_variable, len(values), weights)
+        self.output_file+'_'+aspen_variable, len(values))
         self.run_simulations()
     
     
@@ -581,12 +549,12 @@ class MainApp(Tk):
                 p.terminate()
             
         
-    def create_simulation_object(self, simulation_vars, vars_to_change, output_file, num_trial, weights=[]):
+    def create_simulation_object(self, simulation_vars, vars_to_change, output_file, num_trial):
         self.output_columns = vars_to_change + self.output_vars
         
         new_sim = Simulation(self.sims_completed, num_trial, simulation_vars, output_file, path.dirname(str(self.input_csv_entry.get())),
                              self.aspen_file, self.excel_solver_file, self.abort, vars_to_change, self.output_value_cells,
-                             self.output_columns, weights, save_freq=5, num_processes=self.num_processes)
+                             self.output_columns, save_freq=5, num_processes=self.num_processes)
         self.simulations.append(new_sim)
         self.tot_sim_num += num_trial
         
@@ -628,31 +596,30 @@ class MainApp(Tk):
     def disp_status_update(self):
         if self.current_simulation and not self.abort.value:
             if len(self.current_simulation.results) == self.current_simulation.tot_sim:
-                status_update = 'Status: Simulation Complete'
+                tmp = Label(self.display_tab, text= 'Status: Simulation Complete                   ')
             else:
-                status_update = 'Status: Simulation Running | {} Results Collected'.format(
-                        len(self.current_simulation.results))
-            return status_update
-        return None
+                tmp = Label(self.display_tab, text= 'Status: Simulation Running | {} Results Collected'.format(
+                        len(self.current_simulation.results)))
+            tmp.place(x=6, y=4)
+            if self.status_label:
+                self.status_label.destroy()
+            self.status_label = tmp
         
         
-    def disp_time_remaining(self, status_update):
+    def disp_time_remaining(self):
         if self.start_time and self.sims_completed.value != self.last_update:
-            if not status_update:
-                status_update = ''
             self.last_update = self.sims_completed.value
             elapsed_time = time() - self.start_time
             if self.sims_completed.value > 0:
                 remaining_time = ((elapsed_time / self.sims_completed.value) * (self.tot_sim_num - self.sims_completed.value))//60
                 hours, minutes = divmod(remaining_time, 60)
-                tmp = Label(self.display_tab, text=status_update + ' | ' + 'Time Remaining: {} Hours, {} Minutes    '.format(int(hours), int(minutes)))
+                tmp = Label(self.display_tab, text='Time Remaining: {} Hours, {} Minutes    '.format(int(hours), int(minutes)))
             else:
-                tmp = Label(self.display_tab, text=status_update + ' | ' +'Time Remaining: N/A')
-            tmp.place(x=6, y=4)
+                tmp = Label(self.display_tab, text='Time Remaining: N/A')
+            tmp.place(x=self.win_lim_x//2, y=4)
             if self.time_rem_label:
                 self.time_rem_label.destroy()
             self.time_rem_label = tmp
-            
             
             
     def plot_on_GUI(self):
@@ -708,8 +675,8 @@ class MainApp(Tk):
             
             row_num = 0
             frame_width = self.win_lim_x - 30
-            num_graphs_per_row = frame_width//250
-            frame_height = 60+(230*((len(inputs_fig_list) + len(results_fig_list)+1)//num_graphs_per_row + 1))  
+            num_graphs_per_row = frame_width//270
+            frame_height = 80+(230*((len(inputs_fig_list) + len(results_fig_list)+1)//num_graphs_per_row + 1))  
             window_height = self.win_lim_y - 30
             
             frame_canvas = Frame(self.display_tab)
@@ -794,12 +761,9 @@ class MainApp(Tk):
                     self.plots_dictionary[output_var].hist(
                             results_filtered[output_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
                     self.plots_dictionary[output_var].set_title(output_var)
-                    self.plots_dictionary[output_var].ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
             for var, values in self.simulation_dist.items():
-                _, bins, _ = self.plots_dictionary[var].hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
-                self.plots_dictionary[var].hist(results_unfiltered[var], bins=bins, facecolor='blue', edgecolor='black', alpha=1.0)
+                self.plots_dictionary[var].hist(results_unfiltered[var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
                 self.plots_dictionary[var].set_title(var)
-                self.plots_dictionary[var].ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
 
 
             for fig in self.graphs_displayed:
@@ -843,23 +807,21 @@ class MainApp(Tk):
             fig_list = []                
             for var, values in self.simulation_dist.items():
                 self.plots_dictionary[var] = {}
-                fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255])
+                fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
                 a = fig.add_subplot(111)
                 _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
                 #a.hist(results_unfiltered[var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
                 a.set_title(var)
-                a.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
                 fig_list.append(fig)
                 self.plots_dictionary[var][var] = a
                 self.num_toggled = 0
                 for output_var, toggled in self.graph_toggles.items():
                     if toggled.get():
                         self.num_toggled += 1
-                        fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255])
+                        fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
                         ax = fig.add_subplot(111)
                         ax.hist(results_filtered[output_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
                         ax.set_title(output_var)
-                        ax.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
                         fig_list.append(fig)
                         self.plots_dictionary[var][output_var] = ax
                 
@@ -867,8 +829,8 @@ class MainApp(Tk):
             row_num = 0
             frame_width = self.win_lim_x - 30
             num_graphs_per_row = self.num_toggled + 1
-            graphs_frame_width = 30 + 250*(num_graphs_per_row)
-            frame_height = 30+(230*((len(fig_list)+1)//num_graphs_per_row + 1))
+            graphs_frame_width = 30 + 210*(num_graphs_per_row)
+            frame_height = 30+(220*((len(fig_list)+1)//num_graphs_per_row + 1))
             window_height = self.win_lim_y - 60
             
             
@@ -901,10 +863,10 @@ class MainApp(Tk):
             for figs in fig_list:
                 figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
                 self.graphs_displayed.append(figure_canvas)
-                x = 10 + 250*(count % num_graphs_per_row)
-                figure_canvas.get_tk_widget().place(x = x, y= y, width = 240, height =220)
+                x = 10 + 210*(count % num_graphs_per_row)
+                figure_canvas.get_tk_widget().place(x = x, y= y, width = 200, height =200)
                 if (count+1) % num_graphs_per_row==0:
-                    y += 230
+                    y += 220
                 count += 1
                 
             frame_canvas.config(width=frame_width, height=window_height)
@@ -925,19 +887,20 @@ class MainApp(Tk):
             num_bins = 15
             for output_var, toggled in self.graph_toggles.items():
                 if toggled.get():
-                    if len(self.current_simulation.weights) > 0:
-                        weights = self.current_simulation.weights[0:len(results_filtered)]
+                    if current_var in self.lin_dist_parameters:
+                        mean, std = self.lin_dist_parameters[current_var]
+                        weights = []
+                        for v in results_filtered[current_var]:
+                            weights.append(norm(mean,std).pdf(v))
                         self.plots_dictionary[current_var][output_var].hist(
                             results_filtered[output_var], num_bins, weights=weights, facecolor='blue', edgecolor='black', alpha=1.0)
                     else:
                         self.plots_dictionary[current_var][output_var].hist(
                                 results_filtered[output_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
                     self.plots_dictionary[current_var][output_var].set_title(output_var)
-                    self.plots_dictionary[current_var][output_var].ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
-            _, bins, _ = self.plots_dictionary[current_var][current_var].hist(self.simulation_dist[current_var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
-            self.plots_dictionary[current_var][current_var].hist(results_unfiltered[current_var], bins=bins, facecolor='blue', edgecolor='black', alpha=1.0)
+                    
+            self.plots_dictionary[current_var][current_var].hist(results_unfiltered[current_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
             self.plots_dictionary[current_var][current_var].set_title(current_var)
-            self.plots_dictionary[current_var][current_var].ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
 
 
             for fig in self.graphs_displayed:
@@ -959,12 +922,11 @@ class MainApp(Tk):
 #        self.notebook.add(self.display_tab,text = "Results (Graphed)")
         fig_list =[]
         for var, values in self.simulation_dist.items():
-            fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255])
+            fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=True)
             a = fig.add_subplot(111)
             num_bins = 15
             a.hist(values, num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
             a.set_title(var)
-            a.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
             fig_list.append(fig)
             
         if self.univar_row_num != 0:
@@ -973,8 +935,8 @@ class MainApp(Tk):
             row_num = 10
         
         frame_width = self.win_lim_x - 30
-        num_graphs_per_row = frame_width//250
-        frame_height = 30+(230*((len(fig_list)-1)//num_graphs_per_row + 1))  
+        num_graphs_per_row = frame_width//210
+        frame_height = 30+(220*((len(fig_list)-1)//num_graphs_per_row + 1))  
         window_height = self.win_lim_y - 160
         
         frame_canvas = Frame(self.current_tab)
@@ -1003,10 +965,10 @@ class MainApp(Tk):
         y = 30
         for figs in fig_list:
             figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
-            x = 10 + 250*(count % num_graphs_per_row)
-            figure_canvas.get_tk_widget().place(x = x, y= y, width = 240, height =220)
+            x = 10 + 210*(count % num_graphs_per_row)
+            figure_canvas.get_tk_widget().place(x = x, y= y, width = 200, height =200)
             if (count+1) % num_graphs_per_row==0:
-                y += 230
+                y += 220
             count += 1
         figure_frame.update_idletasks()
         frame_canvas.config(width=frame_width, height=window_height)
@@ -1016,14 +978,16 @@ class MainApp(Tk):
         
     def univar_gui_update(self):
         self.plot_univ_on_GUI()
-        self.disp_time_remaining(self.disp_status_update())
+        self.disp_status_update()
+        self.disp_time_remaining()
         
         self.after(10000, self.univar_gui_update)
         
         
     def multivar_gui_update(self):
         self.plot_on_GUI()
-        self.disp_time_remaining(self.disp_status_update())
+        self.disp_status_update()
+        self.disp_time_remaining()
         self.after(10000, self.multivar_gui_update)
         
     
@@ -1063,6 +1027,7 @@ class MainApp(Tk):
         self.disp_output_vars.grid(row = 3,column = 1, columnspan = 2, pady = 10, padx = 10, sticky = E )
         count = 1
         self.graph_toggles = {}
+        print(self.output_vars[:-1])
         for i,v in enumerate(self.output_vars[:-1]):
             self.graph_toggles[v] = IntVar()
             cb = Checkbutton(self.disp_output_vars, text = v, variable = self.graph_toggles[v])
@@ -1089,7 +1054,7 @@ class MainApp(Tk):
                 self.current_simulation.lock_to_signal_finish.release()
             except:
                 pass
-            save_data(self.current_simulation.output_file, self.current_simulation.results, self.current_simulation.directory, self.current_simulation.weights)
+            save_data(self.current_simulation.output_file, self.current_simulation.results, self.current_simulation.directory)
         except:
             self.after(1000, self.cleanup_processes_and_COMS)
             
@@ -1110,7 +1075,7 @@ class MainApp(Tk):
 class Simulation(object):
     def __init__(self, sims_completed, tot_sim, simulation_vars, output_file, directory, 
                  aspen_file, excel_solver_file,abort, vars_to_change, output_value_cells,
-                 output_columns, weights, save_freq=10, num_processes=1):
+                 output_columns, save_freq=10, num_processes=1):
         self.manager = Manager()
         self.num_processes = min(num_processes, tot_sim)
         self.tot_sim = tot_sim
@@ -1123,7 +1088,6 @@ class Simulation(object):
         self.aspen_file = self.manager.Value('s', aspen_file)
         self.excel_solver_file = self.manager.Value('s', excel_solver_file)
         self.output_value_cells = self.manager.Value('s',output_value_cells)
-        self.weights = self.manager.list(weights)
         
         self.results = self.manager.list()
         self.trial_counter = Value('i',0)
@@ -1157,7 +1121,7 @@ class Simulation(object):
         self.terminate_processes()
         self.wait()
             
-        save_data(self.output_file, self.results, self.directory, self.weights)
+        save_data(self.output_file, self.results, self.directory)
         self.abort.value = False    
         
         
@@ -1187,7 +1151,7 @@ class Simulation(object):
                                                                 self.trial_counter, self.save_freq, 
                                                                 self.output_file, self.vars_to_change, 
                                                                 self.output_columns, self.simulation_vars, self.sims_completed, 
-                                                                self.lock_to_signal_finish, self.tot_sim, self.weights)))
+                                                                self.lock_to_signal_finish, self.tot_sim)))
         for p in self.processes:
             p.start()
         for i in range(self.num_processes):
@@ -1229,11 +1193,9 @@ def open_excelCOMS(excelfilename):
     return excel,book  
    
     
-def save_data(outputfilename, results, directory, weights):
-    if results: 
+def save_data(outputfilename, results, directory):
+    if results:
         collected_data = concat(results).sort_index()
-        if len(weights) > 0:
-            collected_data['Probability'] = weights[:len(collected_data)]
         writer = ExcelWriter(directory.value + '/' + outputfilename.value + '.xlsx')
         collected_data.to_excel(writer, sheet_name ='Sheet1')
         stats = collected_data.describe()
@@ -1243,7 +1205,7 @@ def save_data(outputfilename, results, directory, weights):
 
 def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilename, 
            excelfilename, task_queue, abort, results_lock, results, directory, output_value_cells,
-           sim_counter, save_freq, outputfilename, vars_to_change, columns, simulation_vars, sims_completed, lock_to_signal_finish, tot_sim, weights):
+           sim_counter, save_freq, outputfilename, vars_to_change, columns, simulation_vars, sims_completed, lock_to_signal_finish, tot_sim):
     
     local_pids_to_ignore = {}
     local_pids = {}
@@ -1282,7 +1244,7 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
         results.append(result) 
         sim_counter.value = len(results)
         if sim_counter.value % save_freq.value == 0:
-            save_data(outputfilename, results, directory, weights)
+            save_data(outputfilename, results, directory)
         sims_completed.value += 1
         results_lock.release()
         
