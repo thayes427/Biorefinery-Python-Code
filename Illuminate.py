@@ -102,7 +102,6 @@ class MainApp(Tk):
         self.select_version = StringVar()
         row = 7
         column = 0
-        self.aspen_versions = {'V10.0':'3', "V9":'55', 'V12':'6'}
         aspen_versions = []
         for key,value in self.aspen_versions.items():
             aspen_versions.append(key)
@@ -563,9 +562,10 @@ class MainApp(Tk):
         if len(self.simulation_vars) == 0:
             self.get_distributions()
         for (aspen_variable, aspen_call, fortran_index), values in self.simulation_vars.items():
+            weights = self.mapping_pdfs.get(aspen_variable, [])
             self.create_simulation_object({(aspen_variable, aspen_call, 
                                             fortran_index): values}, [aspen_variable], 
-        self.output_file+'_'+aspen_variable, len(values))
+        self.output_file+'_'+aspen_variable, len(values), weights)
         self.run_simulations()
     
     
@@ -630,12 +630,12 @@ class MainApp(Tk):
                 p.terminate()
             
         
-    def create_simulation_object(self, simulation_vars, vars_to_change, output_file, num_trial):
+    def create_simulation_object(self, simulation_vars, vars_to_change, output_file, num_trial, weights=[]):
         self.output_columns = vars_to_change + self.output_vars
         
         new_sim = Simulation(self.sims_completed, num_trial, simulation_vars, output_file, path.dirname(str(self.input_csv_entry.get())),
                              self.aspen_file, self.excel_solver_file, self.abort, vars_to_change, self.output_value_cells,
-                             self.output_columns, self.select_version.get(), save_freq=5, num_processes=self.num_processes)
+                             self.output_columns, self.select_version.get(), weights, save_freq=5, num_processes=self.num_processes)
         self.simulations.append(new_sim)
         self.tot_sim_num += num_trial
         
@@ -1138,7 +1138,7 @@ class MainApp(Tk):
                 self.current_simulation.lock_to_signal_finish.release()
             except:
                 pass
-            save_data(self.current_simulation.output_file, self.current_simulation.results, self.current_simulation.directory)
+            save_data(self.current_simulation.output_file, self.current_simulation.results, self.current_simulation.directory, self.current_simulation.weights)
         except:
             self.after(1000, self.cleanup_processes_and_COMS)
             
@@ -1159,7 +1159,7 @@ class MainApp(Tk):
 class Simulation(object):
     def __init__(self, sims_completed, tot_sim, simulation_vars, output_file, directory, 
                  aspen_file, excel_solver_file,abort, vars_to_change, output_value_cells,
-                 output_columns, dispatch, save_freq=10, num_processes=1):
+                 output_columns, dispatch, weights, save_freq=10, num_processes=1):
         self.manager = Manager()
         self.num_processes = min(num_processes, tot_sim)
         self.tot_sim = tot_sim
@@ -1185,6 +1185,7 @@ class Simulation(object):
         self.aspenlock = Lock()
         self.excellock = Lock()
         self.lock_to_signal_finish = Lock()
+        self.weights = self.manager.list(weights)
           
     
     def init_sims(self):
@@ -1205,7 +1206,7 @@ class Simulation(object):
         self.terminate_processes()
         self.wait()
             
-        save_data(self.output_file, self.results, self.directory)
+        save_data(self.output_file, self.results, self.directory, self.weights)
         self.abort.value = False    
         
         
@@ -1235,7 +1236,7 @@ class Simulation(object):
                                                                 self.trial_counter, self.save_freq, 
                                                                 self.output_file, self.vars_to_change, 
                                                                 self.output_columns, self.simulation_vars, self.sims_completed, 
-                                                                self.lock_to_signal_finish, self.tot_sim, self.dispatch)))
+                                                                self.lock_to_signal_finish, self.tot_sim, self.dispatch, self.weights)))
         for p in self.processes:
             p.start()
         for i in range(self.num_processes):
@@ -1292,7 +1293,7 @@ def save_data(outputfilename, results, directory, weights):
 
 def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilename, 
            excelfilename, task_queue, abort, results_lock, results, directory, output_value_cells,
-           sim_counter, save_freq, outputfilename, vars_to_change, columns, simulation_vars, sims_completed, lock_to_signal_finish, tot_sim,dispatch):
+           sim_counter, save_freq, outputfilename, vars_to_change, columns, simulation_vars, sims_completed, lock_to_signal_finish, tot_sim,dispatch, weights):
     
     local_pids_to_ignore = {}
     local_pids = {}
@@ -1331,7 +1332,7 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
         results.append(result) 
         sim_counter.value = len(results)
         if sim_counter.value % save_freq.value == 0:
-            save_data(outputfilename, results, directory)
+            save_data(outputfilename, results, directory, weights)
         sims_completed.value += 1
         results_lock.release()
         
