@@ -6,7 +6,7 @@ Created on Sat Dec 15 19:58:47 2018
 """
 
 from tkinter import Tk,Button,Label,Entry,StringVar,E,W,OptionMenu,Canvas,END,Checkbutton, IntVar
-from tkinter.ttk import Frame, Labelframe, Scrollbar, Notebook
+from tkinter.ttk import Frame, Labelframe, Scrollbar, Notebook, Radiobutton
 from tkinter.filedialog import askopenfilename
 from threading import Thread
 from pandas import ExcelWriter, DataFrame, concat, isna
@@ -22,6 +22,8 @@ from multiprocessing import freeze_support
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from scipy.stats import norm
+from winreg import EnumKey, CreateKey, EnumValue, HKEY_CLASSES_ROOT
+from re import search
  
 
 class MainApp(Tk):
@@ -61,6 +63,7 @@ class MainApp(Tk):
 
 
     def construct_home_tab(self):
+        self.load_aspen_versions()
         self.home_tab = Frame(self.notebook)
         self.notebook.add(self.home_tab, text = 'File Upload Tab')
         Button(self.home_tab, text='Upload Excel Data',
@@ -93,7 +96,21 @@ class MainApp(Tk):
         
         OptionMenu(self.home_tab, self.analysis_type,"Single Point Analysis","Univariate Sensitivity", 
                 "Multivariate Sensitivity").grid(row = 5,sticky = E,column = 2,padx =5, pady = 5)
-        
+                        
+        select_aspen = Labelframe(self.home_tab, text='Aspen Version:')
+        select_aspen.grid(row = 6,column = 2,sticky = W,pady = 10,padx = 10)
+
+        self.select_version = StringVar()
+        row = 7
+        column = 0
+        for key,value in self.aspen_versions.items():
+            Radiobutton(select_aspen, text= key, variable=self.select_version, value = value).grid(row=row,column= column, sticky=W)
+            column += 1
+            if column == 2:
+                column = 0
+                row += 1
+
+            
         #Label(self.home_tab, text='CPU Core Count :').grid(row=3, column=1, sticky=E)
         #self.num_processes_entry = Entry(self.home_tab)
         #self.num_processes_entry.grid(row=3, column=2, pady=5, padx=5)
@@ -115,7 +132,7 @@ class MainApp(Tk):
             self.save_as_entry= Entry(self.current_tab)
             self.save_as_entry.grid(row=4, column=2,pady = 5,padx = 5)
             
-            Label(self.current_tab,text = ".csv").grid(row = 4, column = 3, sticky = W)
+            Label(self.current_tab,text = ".xlsx").grid(row = 4, column = 3, sticky = W)
             
             Label(self.current_tab, text='CPU Core Count :').grid(row=5, column=1, sticky=E)
             self.num_processes_entry = Entry(self.current_tab)
@@ -165,7 +182,7 @@ class MainApp(Tk):
                   text="Save As :").grid(row=3, column= 1, sticky = E, pady = 5, padx = 5)
             self.save_as_entry = Entry(self.current_tab)
             self.save_as_entry.grid(row=3, column=2,pady = 5,padx = 5)
-            Label(self.current_tab,text = ".csv").grid(row = 3, column = 3, sticky = W)
+            Label(self.current_tab,text = ".xlsx").grid(row = 3, column = 3, sticky = W)
             Label(self.current_tab, 
                   text="Number of Simulations :").grid(row=4, column= 1, sticky = E, pady = 5, padx = 5)
             self.num_sim_entry = Entry(self.current_tab)
@@ -187,6 +204,31 @@ class MainApp(Tk):
             
         self.load_variables_into_GUI()
         self.notebook.select(self.current_tab)
+
+    def load_aspen_versions(self):
+        
+        key = CreateKey(HKEY_CLASSES_ROOT, '')
+        stop = False
+        i=0
+        versions = dict()
+        while not stop:
+            try: 
+                if search(r"Apwn.Document", (EnumKey(key,i))):
+                    subkey = CreateKey(key, EnumKey(key, i))
+                    try:
+                        subbkey = CreateKey(subkey, 'DefaultIcon')
+                    except:
+                        i += 1
+                        continue
+                    default_icon = EnumValue(subbkey, 0)
+                    version = search(r"V\d\d.\d", default_icon[1])
+                    clsid_key = CreateKey(subkey, 'CLSID')
+                    CLSID = EnumValue(clsid_key, 0)[1]
+                    if version:
+                        versions[version.group()] = CLSID
+            except: stop = True
+            i += 1
+        self.aspen_versions = versions
         
     def load_variables_into_GUI(self):
         sens_vars = str(self.input_csv_entry.get())
@@ -554,7 +596,7 @@ class MainApp(Tk):
         
         new_sim = Simulation(self.sims_completed, num_trial, simulation_vars, output_file, path.dirname(str(self.input_csv_entry.get())),
                              self.aspen_file, self.excel_solver_file, self.abort, vars_to_change, self.output_value_cells,
-                             self.output_columns, save_freq=5, num_processes=self.num_processes)
+                             self.output_columns, self.select_version.get(), save_freq=5, num_processes=self.num_processes)
         self.simulations.append(new_sim)
         self.tot_sim_num += num_trial
         
@@ -1075,7 +1117,7 @@ class MainApp(Tk):
 class Simulation(object):
     def __init__(self, sims_completed, tot_sim, simulation_vars, output_file, directory, 
                  aspen_file, excel_solver_file,abort, vars_to_change, output_value_cells,
-                 output_columns, save_freq=10, num_processes=1):
+                 output_columns, dispatch, save_freq=10, num_processes=1):
         self.manager = Manager()
         self.num_processes = min(num_processes, tot_sim)
         self.tot_sim = tot_sim
@@ -1088,7 +1130,7 @@ class Simulation(object):
         self.aspen_file = self.manager.Value('s', aspen_file)
         self.excel_solver_file = self.manager.Value('s', excel_solver_file)
         self.output_value_cells = self.manager.Value('s',output_value_cells)
-        
+        self.dispatch = dispatch
         self.results = self.manager.list()
         self.trial_counter = Value('i',0)
         self.results_lock = Lock()
@@ -1151,7 +1193,7 @@ class Simulation(object):
                                                                 self.trial_counter, self.save_freq, 
                                                                 self.output_file, self.vars_to_change, 
                                                                 self.output_columns, self.simulation_vars, self.sims_completed, 
-                                                                self.lock_to_signal_finish, self.tot_sim)))
+                                                                self.lock_to_signal_finish, self.tot_sim, self.dispatch)))
         for p in self.processes:
             p.start()
         for i in range(self.num_processes):
@@ -1179,8 +1221,9 @@ class Simulation(object):
         
 ############ GLOBAL FUNCTIONS ################
                 
-def open_aspenCOMS(aspenfilename):
-    aspencom = Dispatch('{FEC42B31-AA6F-4739-A071-FBF6D9DFE10B}')
+def open_aspenCOMS(aspenfilename,dispatch):
+    print(dispatch)
+    aspencom = Dispatch(str(dispatch))
     aspencom.InitFromArchive(path.abspath(aspenfilename))
     obj = aspencom.Tree     
     return aspencom,obj
@@ -1205,7 +1248,7 @@ def save_data(outputfilename, results, directory):
 
 def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilename, 
            excelfilename, task_queue, abort, results_lock, results, directory, output_value_cells,
-           sim_counter, save_freq, outputfilename, vars_to_change, columns, simulation_vars, sims_completed, lock_to_signal_finish, tot_sim):
+           sim_counter, save_freq, outputfilename, vars_to_change, columns, simulation_vars, sims_completed, lock_to_signal_finish, tot_sim,dispatch):
     
     local_pids_to_ignore = {}
     local_pids = {}
@@ -1215,7 +1258,7 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
         if 'aspen' in p.name().lower():
             local_pids_to_ignore[p.pid] = 1
     if not abort.value:
-        aspencom,obj = open_aspenCOMS(aspenfilename.value)
+        aspencom,obj = open_aspenCOMS(aspenfilename.value, dispatch)
     for p in process_iter():
         if 'aspen' in p.name().lower() and p.pid not in local_pids_to_ignore:
             local_pids[p.pid] = 1
@@ -1262,7 +1305,7 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
                 if 'aspen' in p.name().lower():
                     local_pids_to_ignore[p.pid] = 1
             if not abort.value:
-                aspencom,obj = open_aspenCOMS(aspenfilename.value)
+                aspencom,obj = open_aspenCOMS(aspenfilename.value,dispatch)
             
             for p in process_iter(): #register the pids of COMS objects
                 if 'aspen' in p.name().lower() and p.pid not in local_pids_to_ignore:
@@ -1379,30 +1422,6 @@ if __name__ == "__main__":
         
         
     
-#from winreg EnumKey, CreateKey, EnumValue
-#from re import search
-#
-#key = winreg.CreateKey(winreg.HKEY_CLASSES_ROOT, '')
-#stop = False
-#i=0
-#versions = dict()
-#while not stop:
-#    try: 
-#        if search(r"Apwn.Document", (EnumKey(key,i))):
-#            subkey = CreateKey(key, EnumKey(key, i))
-#            try:
-#                subbkey = CreateKey(subkey, 'DefaultIcon')
-#            except:
-#                i += 1
-#                continue
-#            default_icon = EnumValue(subbkey, 0)
-#            version = search(r"V\d\d.\d", default_icon[1])
-#            clsid_key = CreateKey(subkey, 'CLSID')
-#            CLSID = EnumValue(clsid_key, 0)[1]
-#            if version:
-#                versions[version.group()] = CLSID
-#    except: stop = True
-#    i += 1
-#print(versions)
+
     
 
