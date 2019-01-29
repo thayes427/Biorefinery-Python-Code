@@ -417,26 +417,34 @@ class MainApp(Tk):
                         distribution = linspace(lb_dist, ub_dist, num_trials)
                         if 'normal' in dist_type or 'gaussian' in dist_type:
                             mean, std_dev = float(dist_vars[0].strip()), float(dist_vars[1].strip())
-                            pdf_approx = self.sample_gauss(mean, std_dev, lb_dist, ub_dist, 10000)
+                            if self.analysis_type.get() != "Univariate Sensitivity":
+                                distribution = self.sample_gauss(mean, std_dev, lb, ub, ntrials)
+                            else:
+                                pdf_approx = self.sample_gauss(mean, std_dev, lb_dist, ub_dist, 10000)
 
                         if 'pareto' in dist_type:
                             shape, scale = float(dist_vars[0].strip()), float(dist_vars[1].strip())
-                            pdf_approx = self.sample_pareto(shape, scale, lb_dist, ub_dist, num_trials)
-                            radio
+                            if self.analysis_type.get() != "Univariate Sensitivity":
+                                distribution = self.sample_pareto(shape, scale, lb, ub, ntrials)
+                            else:
+                                pdf_approx = self.sample_pareto(shape, scale, lb_dist, ub_dist, num_trials)
                         if 'poisson' in dist_type:
                             lambda_p = float(dist_vars[0].strip())
-                            pdf_approx =self.sample_poisson(lambda_p, lb_dist, ub_dist, num_trials)
+                            if self.analysis_type.get() != "Univariate Sensitivity":
+                                distribution = self.sample_poisson(lambda_p, lb, ub, ntrials)
+                            else:
+                                pdf_approx =self.sample_poisson(lambda_p, lb_dist, ub_dist, num_trials)
                             
-                           
-                        bin_width = (ub_dist - lb_dist)/num_trials
-                        lb_pdf = lb_dist - 0.5*bin_width
-                        ub_pdf = ub_dist + 0.5*bin_width
-                        pdf, bin_edges = histogram(pdf_approx, bins=linspace(lb_pdf, ub_pdf, num_trials+1), density=True)
-                        tot_dens = sum(pdf)
-                        self.mapping_pdfs[aspen_variable] = [p/tot_dens for p in pdf]
-                        print(pdf)
-                        print(bin_edges)
-                        print(distribution)
+                        if self.analysis_type.get() == "Univariate Sensitivity":
+                            bin_width = (ub_dist - lb_dist)/num_trials
+                            lb_pdf = lb_dist - 0.5*bin_width
+                            ub_pdf = ub_dist + 0.5*bin_width
+                            pdf, bin_edges = histogram(pdf_approx, bins=linspace(lb_pdf, ub_pdf, num_trials+1), density=True)
+                            tot_dens = sum(pdf)
+                            self.mapping_pdfs[aspen_variable] = [p/tot_dens for p in pdf]
+                            print(pdf)
+                            print(bin_edges)
+                            print(distribution)
                     elif 'normal' in dist_type or 'gaussian' in dist_type:
                         dist_variables = row['Distribution Parameters'].split(',')
                         distribution = self.sample_gauss(float(dist_variables[0].strip()),
