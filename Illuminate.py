@@ -65,55 +65,68 @@ class MainApp(Tk):
         self.load_aspen_versions()
         self.home_tab = Frame(self.notebook)
         self.notebook.add(self.home_tab, text = 'File Upload Tab')
+        
+        space= Label(self.home_tab, text=" ",font='Helvetica 2')
+        space.grid(row=0, column= 1, sticky = E, padx = 5, pady =4)
+        space.rowconfigure(0, minsize = 15)
+        
+
         Button(self.home_tab, text='Upload Excel Data',
-        command=self.open_excel_file).grid(row=0,column=1, sticky = E, pady = 5,padx = 5)
+        command=self.open_excel_file).grid(row=1,column=1, sticky = E, pady = 5,padx = 5)
         self.input_csv_entry = Entry(self.home_tab)
-        self.input_csv_entry.grid(row=0, column=2)
+        self.input_csv_entry.grid(row=1, column=2)
         Label(self.home_tab, text=' ')
         
         Button(self.home_tab, 
               text="Upload Aspen Model",
-              command=self.open_aspen_file).grid(row=1, column = 1,sticky = E,
+              command=self.open_aspen_file).grid(row=2, column = 1,sticky = E,
               pady = 5,padx = 5)
         self.aspen_file_entry = Entry(self.home_tab)
-        self.aspen_file_entry.grid(row=1, column=2,pady = 5,padx = 5)
+        self.aspen_file_entry.grid(row=2, column=2,pady = 5,padx = 5)
         
         Button(self.home_tab, 
               text="Upload Excel Model",
-              command=self.open_solver_file).grid(row=2,column = 1,sticky = E,
+              command=self.open_solver_file).grid(row=3,column = 1,sticky = E,
               pady = 5,padx = 5)
         self.excel_solver_entry = Entry(self.home_tab)
-        self.excel_solver_entry.grid(row=2, column=2,pady = 5,padx = 5)
+        self.excel_solver_entry.grid(row=3, column=2,pady = 5,padx = 5)
         
         Button(self.home_tab, 
               text="Load Data",
-              command=self.make_new_tab).grid(row=5,column = 3,sticky = E,
+              command=self.make_new_tab).grid(row=9,column = 3,sticky = E,
               pady = 5,padx = 5)
+        
+        test= Label(self.home_tab, 
+                  text=" ",font='Helvetica 2')
+        test.grid(row=4, column= 1, sticky = E, padx = 5)
+        test.rowconfigure(4, minsize = 4)
         
         self.analysis_type = StringVar(self.home_tab)
         self.analysis_type.set("Choose Analysis Type")
         
         OptionMenu(self.home_tab, self.analysis_type,"Single Point Analysis","Univariate Sensitivity", 
-                "Multivariate Sensitivity").grid(row = 5,sticky = E,column = 2,padx =5, pady = 5)
+                "Multivariate Sensitivity").grid(row = 9,sticky = E,column = 2,padx =5, pady = 5)
                         
-        select_aspen = Labelframe(self.home_tab, text='Aspen Version:')
-        select_aspen.grid(row = 6,column = 2,sticky = W,pady = 10,padx = 10)
+        select_aspen = Labelframe(self.home_tab, text='Select Aspen Version:')
+        select_aspen.grid(row = 5,column = 1, columnspan = 3, sticky = W,pady = 10,padx = 10)
 
         self.select_version = StringVar()
-        row = 7
+        row = 6
         column = 0
         aspen_versions = []
         for key,value in self.aspen_versions.items():
-            aspen_versions.append(key)
-        aspen_versions.sort(key=lambda x: -1*float(x[1:]))
+            aspen_versions.append(key + '      ')
+
+        aspen_versions.sort(key=lambda x: -1*float(x[1:-6]))
+
         for i, version in enumerate(aspen_versions):
-            v = Radiobutton(select_aspen, text= version, variable=self.select_version, value = self.aspen_versions[version])
+            v = Radiobutton(select_aspen, text= version, variable=self.select_version, value = self.aspen_versions[version[:-6]])
             v.grid(row=row,column= column, sticky=W)
             if i == 0:
                 v.invoke()
             
             column += 1
-            if column == 2:
+            if column == 4:
                 column = 0
                 row += 1
 
@@ -211,6 +224,11 @@ class MainApp(Tk):
             
         self.load_variables_into_GUI()
         self.notebook.select(self.current_tab)
+        
+    def conv_title(self, s):
+        if len(s) > 37:
+            return s[:34] + '...'
+        return s
 
     def load_aspen_versions(self):
         
@@ -744,7 +762,7 @@ class MainApp(Tk):
                     fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=False)
                     ax = fig.add_subplot(111)
                     ax.hist(results_filtered[var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-                    ax.set_title(var)
+                    ax.set_title(self.conv_title(var))
                     ax.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
                     self.plots_dictionary[var] = ax
                     results_fig_list.append(fig)
@@ -755,7 +773,7 @@ class MainApp(Tk):
                 a = fig.add_subplot(111)
                 _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
                 a.hist(results_unfiltered[var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
-                a.set_title(var)
+                a.set_title(self.conv_title(var))
                 a.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
                # a.get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter(set_powerlimits((n,m))
                 self.plots_dictionary[var] = a
@@ -848,12 +866,12 @@ class MainApp(Tk):
                 if toggled.get():
                     self.plots_dictionary[output_var].hist(
                             results_filtered[output_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-                    self.plots_dictionary[output_var].set_title(output_var)
+                    self.plots_dictionary[output_var].set_title(self.conv_title(output_var))
                     self.plots_dictionary[output_var].ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
             for var, values in self.simulation_dist.items():
                 _, bins, _ = self.plots_dictionary[var].hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
                 self.plots_dictionary[var].hist(results_unfiltered[var], bins=bins, facecolor='blue', edgecolor='black', alpha=1.0)
-                self.plots_dictionary[var].set_title(var)
+                self.plots_dictionary[var].set_title(self.conv_title(var))
                 self.plots_dictionary[var].ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
 
 
@@ -902,7 +920,7 @@ class MainApp(Tk):
                 a = fig.add_subplot(111)
                 _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
                 #a.hist(results_unfiltered[var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
-                a.set_title(var)
+                a.set_title(self.conv_title(var))
                 a.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
                 fig_list.append(fig)
                 self.plots_dictionary[var][var] = a
@@ -913,7 +931,7 @@ class MainApp(Tk):
                         fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255])
                         ax = fig.add_subplot(111)
                         ax.hist(results_filtered[output_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-                        ax.set_title(output_var)
+                        ax.set_title(self.conv_title(output_var))
                         ax.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
                         fig_list.append(fig)
                         self.plots_dictionary[var][output_var] = ax
@@ -987,11 +1005,11 @@ class MainApp(Tk):
                     else:
                         self.plots_dictionary[current_var][output_var].hist(
                                 results_filtered[output_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-                    self.plots_dictionary[current_var][output_var].set_title(output_var)
+                    self.plots_dictionary[current_var][output_var].set_title(self.conv_title(output_var))
                     self.plots_dictionary[current_var][output_var].ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
             _, bins, _ = self.plots_dictionary[current_var][current_var].hist(self.simulation_dist[current_var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
             self.plots_dictionary[current_var][current_var].hist(results_unfiltered[current_var], bins=bins, facecolor='blue', edgecolor='black', alpha=1.0)
-            self.plots_dictionary[current_var][current_var].set_title(current_var)
+            self.plots_dictionary[current_var][current_var].set_title(self.conv_title(current_var))
             self.plots_dictionary[current_var][current_var].ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
 
 
@@ -1018,7 +1036,7 @@ class MainApp(Tk):
             a = fig.add_subplot(111)
             num_bins = 15
             a.hist(values, num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-            a.set_title(var)
+            a.set_title(self.conv_title(var))
             a.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
             fig_list.append(fig)
             
@@ -1110,23 +1128,61 @@ class MainApp(Tk):
         plot_output_disp_thread = Thread(target=self.graph_toggle)
         plot_output_disp_thread.start()
         self.wait= Label(self.home_tab, text="Wait While Output Variables Are Loading ...")
-        self.wait.grid(row=3, column= 1, columnspan = 2, sticky = E,pady = 5,padx = 5)
+        self.wait.grid(row=6, column= 1, columnspan = 2, sticky = E,pady = 5,padx = 5)
        
     def graph_toggle(self):
         self.parse_output_vars()
-    
-        self.disp_output_vars= Labelframe(self.home_tab, text='Output Variables to Graph:')
-        self.disp_output_vars.grid(row = 3,column = 1, columnspan = 2, pady = 10, padx = 10, sticky = E )
-        count = 1
         self.graph_toggles = {}
-        print(self.output_vars[:-1])
-        for i,v in enumerate(self.output_vars[:-1]):
-            self.graph_toggles[v] = IntVar()
-            cb = Checkbutton(self.disp_output_vars, text = v, variable = self.graph_toggles[v])
-            cb.grid(row=count,columnspan = 1, column = 2, sticky=W)
-            cb.select()
-            count += 1
-        self.wait.destroy()
+        if len(self.output_vars) < 10:
+            self.disp_output_vars= Labelframe(self.home_tab, text='Output Variables to Graph:')
+            self.disp_output_vars.grid(row = 3,column = 1, columnspan = 2, pady = 10, padx = 10, sticky = E )
+            count = 1
+
+            for i,v in enumerate(self.output_vars[:-1]):
+                self.graph_toggles[v] = IntVar()
+                cb = Checkbutton(self.disp_output_vars, text = v, variable = self.graph_toggles[v])
+                cb.grid(row=count,columnspan = 1, column = 2, sticky=W)
+                cb.select()
+                count += 1
+            self.wait.destroy()
+        else:
+            row_num= 6
+            frame_width = self.win_lim_x/3
+            frame_height = len(self.output_vars)*30
+            window_height = 300
+            
+            frame_canvas = Labelframe(self.home_tab,text='Output Variables to Graph:')
+            frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
+            frame_canvas.grid_rowconfigure(0, weight=1)
+            frame_canvas.grid_columnconfigure(0, weight=1)
+            frame_canvas.config(height = window_height, width=frame_width)
+            
+            main_canvas = Canvas(frame_canvas)
+            main_canvas.grid(row=0, column=0, sticky="news")
+            main_canvas.config(height = window_height, width=frame_width)
+            
+            vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
+            vsb.grid(row=0, column=1 ,sticky = 'ns')
+            main_canvas.configure(yscrollcommand=vsb.set)
+            
+            figure_frame = Frame(main_canvas)
+            main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
+            figure_frame.config(height = frame_height, width=frame_width)
+
+        
+            x , y = 50, 10
+            self.graphs_displayed = []
+            for i,v in enumerate(self.output_vars[:-1]):
+                self.graph_toggles[v] = IntVar()
+                cb = Checkbutton(figure_frame, text = v, variable = self.graph_toggles[v])
+                cb.place(x = x, y = y)
+                cb.select()
+                y+=25
+                
+            figure_frame.update_idletasks()
+            frame_canvas.config(width=frame_width, height=window_height)
+            main_canvas.config(scrollregion=(0,0,x,frame_height))
+        
        
         
     def abort_sim(self):
