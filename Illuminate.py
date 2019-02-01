@@ -105,7 +105,7 @@ class MainApp(Tk):
         aspen_versions = []
         for key,value in self.aspen_versions.items():
             aspen_versions.append(key)
-        aspen_versions.sort(key=lambda x: float(x[1:]))
+        aspen_versions.sort(key=lambda x: -1*float(x[1:]))
         for i, version in enumerate(aspen_versions):
             v = Radiobutton(select_aspen, text= version, variable=self.select_version, value = self.aspen_versions[version])
             v.grid(row=row,column= column, sticky=W)
