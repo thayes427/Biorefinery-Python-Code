@@ -58,6 +58,7 @@ class MainApp(Tk):
         self.worker_thread = None
         self.display_tab = None
         self.mapping_pdfs = {}
+        self.simulation_dist, self.simulation_vars = {}, {}
       
 
 
@@ -71,7 +72,7 @@ class MainApp(Tk):
         space.rowconfigure(0, minsize = 15)
         
 
-        Button(self.home_tab, text='Upload Excel Data',
+        Button(self.home_tab, text='Upload Simulation Parameters',
         command=self.open_excel_file).grid(row=1,column=1, sticky = E, pady = 5,padx = 5)
         self.input_csv_entry = Entry(self.home_tab)
         self.input_csv_entry.grid(row=1, column=2)
@@ -462,7 +463,7 @@ class MainApp(Tk):
                 elif 'normal' in dist_type or 'gaussian' in dist_type:
                     dist_variables = row['Distribution Parameters'].split(',')
                     distribution = self.sample_gauss(float(dist_variables[0].strip()),
-                              float(dist_variables[1].strip()), lb, ub, ntrials)        
+                              float(dist_variables[1].strip()), lb, ub, ntrials)  
             
                 elif 'linspace' in dist_type:
                     if self.analysis_type.get() == 'Multivariate Sensitivity':
@@ -491,6 +492,10 @@ class MainApp(Tk):
                     lb_ub = row['Distribution Parameters'].split(',')
                     lb_uniform, ub_uniform = float(lb_ub[0].strip()), float(lb_ub[1].strip())
                     distribution = self.sample_uniform(lb_uniform, ub_uniform, lb, ub, ntrials)
+                if not distribution:
+                    Label(self.current_tab, text= 'ERROR: Distribution Parameters for ' + aspen_variable + ' are NOT valid', fg='red').grid(row=10, column=1, columnspan=3)
+                    Label(self.current_tab, text='Please Adjust Distribution Parameters in Input File and Restart Illuminate', fg='red').grid(row=11,column=1,columnspan=3)
+                    return {}, {}
                 simulation_dist[aspen_variable] = distribution[:]
                 fortran_index = (0,0)
                 if row['Fortran Call'] != 'nan':
@@ -511,8 +516,16 @@ class MainApp(Tk):
         d = []
         for i in range(ntrials):
             rand_sample = random.normal(mean,std)
+            st = time()
+            stop = False
             while(rand_sample < lb or rand_sample > ub):
+                if time() - st > 3:
+                    print('hiii')
+                    stop = True
+                    break
                 rand_sample = random.normal(mean,std)
+            if stop:
+                return None
             d.append(rand_sample)
         return d
     
@@ -520,8 +533,15 @@ class MainApp(Tk):
         d = []
         for i in range(ntrials):
             rand_sample = random.uniform(lb_uniform, ub_uniform)
+            st = time()
+            stop = False
             while(rand_sample < lb or rand_sample > ub):
+                if time() - st > 3:
+                    stop = True
+                    break
                 rand_sample = random.uniform(lb_uniform, ub_uniform)
+            if stop:
+                return None
             d.append(rand_sample)
         return d
     
@@ -530,17 +550,33 @@ class MainApp(Tk):
         d = []
         for i in range(ntrials):
             rand_sample = random.poisson(10000*lambda_p)/10000
+            st = time()
+            stop = False
             while(rand_sample < lb or rand_sample > ub):
+                if time() - st > 3:
+                    stop = True
+                    break
+                
                 rand_sample = random.poisson(10000*lambda_p)/10000
+            if stop:
+                return None
             d.append(rand_sample)
         return d
     
     def sample_pareto(self, shape, scale, lb, ub, ntrials):
         d = []
         for i in range(ntrials):
+            st = time()
+            stop = False
+            
             rand_sample = (random.pareto(shape) + 1) * scale
             while(rand_sample < lb or rand_sample > ub):
+                if time() - st > 3:
+                    stop = True
+                    break
                 rand_sample = (random.pareto(shape) + 1) * scale
+            if stop:
+                return None
             d.append(rand_sample)
         return d
     
@@ -567,6 +603,8 @@ class MainApp(Tk):
     def single_point_analysis(self):
         self.store_user_inputs()
         self.get_distributions()
+        if not self.simulation_vars:
+            return
         # update simulation variable values based on user input in GUI
         for (aspen_variable, aspen_call, fortran_index), values in self.simulation_vars.items():
             self.simulation_vars[(aspen_variable, aspen_call, fortran_index)] = [float(
@@ -579,6 +617,8 @@ class MainApp(Tk):
         self.store_user_inputs()
         if len(self.simulation_vars) == 0:
             self.get_distributions()
+        if not self.simulation_vars:
+            return
         self.create_simulation_object(self.simulation_vars, self.vars_to_change, self.output_file, self.num_trial)
         self.run_simulations()
         
@@ -587,6 +627,8 @@ class MainApp(Tk):
         self.store_user_inputs()
         if len(self.simulation_vars) == 0:
             self.get_distributions()
+        if not self.simulation_vars:
+            return
         for (aspen_variable, aspen_call, fortran_index), values in self.simulation_vars.items():
             weights = self.mapping_pdfs.get(aspen_variable, [])
             self.create_simulation_object({(aspen_variable, aspen_call, 
@@ -731,6 +773,8 @@ class MainApp(Tk):
             
     def plot_on_GUI(self):
         status_label = None
+        if not self.simulation_dist:
+            return
         if not self.display_tab:
             self.display_tab = Frame(self.notebook)
             self.notebook.add(self.display_tab,text = "Simulation Status")
@@ -888,6 +932,8 @@ class MainApp(Tk):
             
     def plot_univ_on_GUI(self):
         status_label = None
+        if not self.simulation_dist:
+            return
         
         if not self.display_tab:
             self.display_tab = Frame(self.notebook)
@@ -1037,7 +1083,10 @@ class MainApp(Tk):
 
 #        if self.display_tab:
 #                self.notebook.forget(self.display_tab)
-        self.get_distributions()   
+        self.get_distributions()  
+        if not self.simulation_dist:
+            return
+        
 #        self.display_tab = Frame(self.notebook)
 #        self.notebook.add(self.display_tab,text = "Results (Graphed)")
         fig_list =[]
