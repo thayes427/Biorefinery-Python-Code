@@ -9,19 +9,18 @@ from tkinter import Tk,Button,Label,Entry,StringVar,E,W,OptionMenu,Canvas,END,Ch
 from tkinter.ttk import Frame, Labelframe, Scrollbar, Notebook, Radiobutton
 from tkinter.filedialog import askopenfilename
 from threading import Thread
-from pandas import ExcelWriter, DataFrame, concat, isna
+from pandas import ExcelWriter, DataFrame, concat, isna, read_excel
 from multiprocessing import Value, Manager, Lock, Queue, Process, cpu_count
 from time import time, sleep
-from numpy import linspace, random
+from numpy import linspace, random, histogram
 from psutil import process_iter, virtual_memory
 from win32com.client import Dispatch, DispatchEx
-import pythoncom ### I DONT THINK YOU NEED THIS
+import pythoncom 
 from os import path
 from csv import DictReader
 from multiprocessing import freeze_support
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
-from scipy.stats import norm
 from winreg import EnumKey, CreateKey, EnumValue, HKEY_CLASSES_ROOT
 from re import search
  
@@ -58,7 +57,7 @@ class MainApp(Tk):
         self.geometry(str(self.win_lim_x) + 'x' + str(self.win_lim_y) + '+0+0')
         self.worker_thread = None
         self.display_tab = None
-        self.lin_dist_parameters = {}
+        self.mapping_pdfs = {}
       
 
 
@@ -236,18 +235,18 @@ class MainApp(Tk):
         univariate_vars = []
         multivariate_vars = []
         type_of_analysis = self.analysis_type.get()
-        with open(sens_vars) as f:
-            reader = DictReader(f)# Skip the header row
-            for row in reader:
-                if row['Toggle'].lower().strip() == 'true':          
-                    if type_of_analysis =='Single Point Analysis':
-                        single_pt_vars.append((row["Variable Name"], float(row["Distribution Parameters"].split(',')[0].strip())))
-                    elif type_of_analysis == 'Multivariate Analysis':
-                        multivariate_vars.append(row["Variable Name"])
-                    else:
-                        univariate_vars.append((
-                                row["Variable Name"], row["Distribution Type"].strip().lower(
-                                        ), row['Distribution Parameters'].split(',')))
+        col_types = {'Variable Name': str, 'Variable Aspen Call': str, 'Distribution Parameters': str, 'Bounds': str, 'Fortran Call':str, 'Fortran Value to Change': str, 'Distribution Type': str, 'Toggle': bool}
+        df = read_excel(open(sens_vars,'rb'), dtype=col_types)
+        for index, row in df.iterrows():
+            if row['Toggle']:          
+                if type_of_analysis =='Single Point Analysis':
+                    single_pt_vars.append((row["Variable Name"], float(row["Distribution Parameters"].split(',')[0].strip())))
+                elif type_of_analysis == 'Multivariate Analysis':
+                    multivariate_vars.append(row["Variable Name"])
+                else:
+                    univariate_vars.append((
+                            row["Variable Name"], row["Distribution Type"].strip().lower(
+                                    ), row['Distribution Parameters'].split(',')))
                         
         #now populate the gui with the appropriate tab and variables stored above
         if type_of_analysis == 'Single Point Analysis':
@@ -391,87 +390,91 @@ class MainApp(Tk):
         '''
         
         gui_excel_input = str(self.input_csv_entry.get())
-        with open(gui_excel_input) as f:
-            reader = DictReader(f)# Skip the header row
-            simulation_vars = {}
-            simulation_dist = {}
-            for row in reader:
-                if row['Toggle'].lower().strip() == 'true':
-                    dist_type = row['Distribution Type'].lower()
-                    aspen_variable = row['Variable Name']
-                    aspen_call = row['Variable Aspen Call']
-                    bounds = row['Bounds'].split(',')
-                    lb = float(bounds[0].strip())
-                    ub = float(bounds[1].strip())
-                    if 'mapping' in dist_type:
-                        dist_vars = row['Distribution Parameters'].split(',')
-                        lb_dist, ub_dist = float(dist_vars[-3].strip()), float(dist_vars[-2].strip())
-                        num_trials = int(dist_vars[-1].strip())
-                        distribution = linspace(lb_dist, ub_dist, num_trials)
-                        if 'normal' in dist_type or 'gaussian' in dist_type:
-                            mean, std_dev = float(dist_vars[0].strip()), float(dist_vars[1].strip())
-                            pdf_approx = self.sample_gauss(mean, std_dev, lb_dist, ub_dist, 10000)
+        col_types = {'Variable Name': str, 'Variable Aspen Call': str, 'Distribution Parameters': str, 'Bounds': str, 'Fortran Call':str, 'Fortran Value to Change': str, 'Distribution Type': str, 'Toggle': bool}
+        df = read_excel(open(gui_excel_input,'rb'), dtype=col_types)
+        simulation_vars = {}
+        simulation_dist = {}
+        for index, row in df.iterrows():
+            if row['Toggle']:
+                dist_type = row['Distribution Type'].lower()
+                aspen_variable = row['Variable Name']
+                aspen_call = row['Variable Aspen Call']
+                bounds = row['Bounds'].split(',')
+                lb = float(bounds[0].strip())
+                ub = float(bounds[1].strip())
+                if 'mapping' in dist_type:
+                    dist_vars = row['Distribution Parameters'].split(',')
+                    lb_dist, ub_dist = float(dist_vars[-3].strip()), float(dist_vars[-2].strip())
+                    num_trials = int(dist_vars[-1].strip())
+                    distribution = linspace(lb_dist, ub_dist, num_trials)
+                    if 'normal' in dist_type or 'gaussian' in dist_type:
+                        mean, std_dev = float(dist_vars[0].strip()), float(dist_vars[1].strip())
+                        pdf_approx = self.sample_gauss(mean, std_dev, lb_dist, ub_dist, 10000)
 
-                        if 'pareto' in dist_type:
-                            shape, scale = float(dist_vars[0].strip()), float(dist_vars[1].strip())
-                            pdf_approx = self.sample_pareto(shape, scale, lb_dist, ub_dist, num_trials)
-                            
-                        if 'poisson' in dist_type:
-                            lambda_p = float(dist_vars[0].strip())
-                            pdf_approx =self.sample_poisson(lambda_p, lb_dist, ub_dist, num_trials)
-                            
-                           
-                        bin_width = (ub_dist - lb_dist)/num_trials
-                        lb_pdf = lb_dist - 0.5*bin_width
-                        ub_pdf = ub_dist + 0.5*bin_width
-                        pdf, bin_edges = histogram(pdf_approx, bins=linspace(lb_pdf, ub_pdf, num_trials+1), density=True)
-                        tot_dens = sum(pdf)
-                        self.mapping_pdfs[aspen_variable] = [p/tot_dens for p in pdf]
-                        print(pdf)
-                        print(bin_edges)
-                        print(distribution)
-                    elif 'normal' in dist_type or 'gaussian' in dist_type:
-                        dist_variables = row['Distribution Parameters'].split(',')
-                        distribution = self.sample_gauss(float(dist_variables[0].strip()),
-                                  float(dist_variables[1].strip()), lb, ub, ntrials)        
-                    elif 'linspace distribution' in dist_type:
-                        dist_vars= row['Distribution Parameters'].split(',')
-                        distribution = linspace(float(dist_vars[2].strip()),float(dist_vars[3].strip()),int(dist_vars[4].strip()))
-                        self.lin_dist_parameters[aspen_variable] = (float(dist_vars[0].strip()),float(dist_vars[1].strip()))
-                    elif 'linspace' in dist_type:
-                        linspace_vars = row['Distribution Parameters'].split(',')
-                        distribution = linspace(float(linspace_vars[0].strip()), 
-                                                   float(linspace_vars[1].strip()),
-                                                   int(linspace_vars[2].strip()))
-                    elif 'poisson' in dist_type:
-                        lambda_p = float(row['Distribution Parameters'].strip())
-                        distribution = self.sample_poisson(lambda_p, lb, ub, ntrials)
-                    elif 'pareto' in dist_type:
-                        pareto_vals = row['Distribution Parameters'].split(',')
-                        shape = float(pareto_vals[0].strip())
-                        scale = float(pareto_vals[1].strip())
-                        distribution = self.sample_pareto(shape, scale, lb, ub, ntrials)
-                    elif 'list' in dist_type:
-                        lst = row['Distribution Parameters'].split(',')
-                        distribution = []
-                        for l in lst:
-                            distribution.append(float(l.strip()))                
-                    elif 'uniform' in dist_type:
-                        lb_ub = row['Distribution Parameters'].split(',')
-                        lb_uniform, ub_uniform = float(lb_ub[0].strip()), float(lb_ub[1].strip())
-                        distribution = self.sample_uniform(lb_uniform, ub_uniform, lb, ub, ntrials)
-                    simulation_dist[aspen_variable] = distribution[:]
-                    fortran_index = (0,0)
-                    if row['Fortran Call'].strip() != "":
-                        fortran_call = row['Fortran Call']
-                        value_to_change = row['Fortran Value to Change'].strip()
-                        len_val = len(value_to_change)
-                        for i in range(len(fortran_call)):
-                            if fortran_call[i:i+len_val] == value_to_change:
-                                fortran_index = (i, i+len_val) #NOT INCLUSIVE
-                        for i, v in enumerate(distribution):
-                            distribution[i] = self.make_fortran(fortran_call, fortran_index, v)
-                    simulation_vars[(aspen_variable, aspen_call, fortran_index)] = distribution
+                    if 'pareto' in dist_type:
+                        shape, scale = float(dist_vars[0].strip()), float(dist_vars[1].strip())
+                        pdf_approx = self.sample_pareto(shape, scale, lb_dist, ub_dist, num_trials)
+                        
+                    if 'poisson' in dist_type:
+                        lambda_p = float(dist_vars[0].strip())
+                        pdf_approx =self.sample_poisson(lambda_p, lb_dist, ub_dist, num_trials)
+                        
+                       
+                    bin_width = (ub_dist - lb_dist)/num_trials
+                    lb_pdf = lb_dist - 0.5*bin_width
+                    ub_pdf = ub_dist + 0.5*bin_width
+                    pdf, bin_edges = histogram(pdf_approx, bins=linspace(lb_pdf, ub_pdf, num_trials+1), density=True)
+                    tot_dens = sum(pdf)
+                    self.mapping_pdfs[aspen_variable] = [p/tot_dens for p in pdf]
+                    print(pdf)
+                    print(bin_edges)
+                    print(distribution)
+                elif 'normal' in dist_type or 'gaussian' in dist_type:
+                    dist_variables = row['Distribution Parameters'].split(',')
+                    distribution = self.sample_gauss(float(dist_variables[0].strip()),
+                              float(dist_variables[1].strip()), lb, ub, ntrials)        
+                elif 'linspace distribution' in dist_type:
+                    dist_vars= row['Distribution Parameters'].split(',')
+                    distribution = linspace(float(dist_vars[2].strip()),float(dist_vars[3].strip()),int(dist_vars[4].strip()))
+                    self.lin_dist_parameters[aspen_variable] = (float(dist_vars[0].strip()),float(dist_vars[1].strip()))
+                elif 'linspace' in dist_type:
+                    linspace_vars = row['Distribution Parameters'].split(',')
+                    distribution = linspace(float(linspace_vars[0].strip()), 
+                                               float(linspace_vars[1].strip()),
+                                               int(linspace_vars[2].strip()))
+                elif 'poisson' in dist_type:
+                    lambda_p = float(row['Distribution Parameters'].strip())
+                    distribution = self.sample_poisson(lambda_p, lb, ub, ntrials)
+                elif 'pareto' in dist_type:
+                    pareto_vals = row['Distribution Parameters'].split(',')
+                    shape = float(pareto_vals[0].strip())
+                    scale = float(pareto_vals[1].strip())
+                    distribution = self.sample_pareto(shape, scale, lb, ub, ntrials)
+                elif 'list' in dist_type:
+                    lst = row['Distribution Parameters'].split(',')
+                    distribution = []
+                    for l in lst:
+                        distribution.append(float(l.strip()))                
+                elif 'uniform' in dist_type:
+                    lb_ub = row['Distribution Parameters'].split(',')
+                    lb_uniform, ub_uniform = float(lb_ub[0].strip()), float(lb_ub[1].strip())
+                    distribution = self.sample_uniform(lb_uniform, ub_uniform, lb, ub, ntrials)
+                simulation_dist[aspen_variable] = distribution[:]
+                fortran_index = (0,0)
+                print(row['Fortran Call'], type(row['Fortran Call']))
+                print(row['Fortran Call' == 'nan'])
+                if row['Fortran Call'] != 'nan':
+                    fortran_call = row['Fortran Call']
+                    print(fortran_call)
+                    value_to_change = row['Fortran Value to Change'].strip()
+                    len_val = len(value_to_change)
+                    for i in range(len(fortran_call)):
+                        if fortran_call[i:i+len_val] == value_to_change:
+                            fortran_index = (i, i+len_val) #NOT INCLUSIVE
+                    for i, v in enumerate(distribution):
+                        distribution[i] = self.make_fortran(fortran_call, fortran_index, v)
+                print('checkkkk')
+                simulation_vars[(aspen_variable, aspen_call, fortran_index)] = distribution
         return simulation_vars, simulation_dist
     
     def sample_gauss(self,mean, std, lb, ub, ntrials):
@@ -575,12 +578,12 @@ class MainApp(Tk):
         self.output_file = str(self.save_as_entry.get())
         self.input_csv = str(self.input_csv_entry.get())
         
-        self.vars_to_change = []
-        with open(self.input_csv) as f:
-            reader = DictReader(f)# Skip the header row
-            for row in reader:
-                if row['Toggle'].lower().strip() == 'true':
-                    self.vars_to_change.append(row["Variable Name"])
+        gui_excel_input = str(self.input_csv_entry.get())
+        col_types = {'Variable Name': str, 'Variable Aspen Call': str, 'Distribution Parameters': str, 'Bounds': str, 'Fortran Call':str, 'Fortran Value to Change': str, 'Distribution Type': str, 'Toggle': bool}
+        df = read_excel(open(gui_excel_input,'rb'), dtype=col_types)
+        for index, row in df.iterrows():
+            if row['Toggle']:
+                self.vars_to_change.append(row["Variable Name"])
         
         
     def run_simulations(self):
@@ -1103,7 +1106,6 @@ class MainApp(Tk):
         self.disp_output_vars.grid(row = 3,column = 1, columnspan = 2, pady = 10, padx = 10, sticky = E )
         count = 1
         self.graph_toggles = {}
-        print(self.output_vars[:-1])
         for i,v in enumerate(self.output_vars[:-1]):
             self.graph_toggles[v] = IntVar()
             cb = Checkbutton(self.disp_output_vars, text = v, variable = self.graph_toggles[v])
