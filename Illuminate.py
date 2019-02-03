@@ -30,7 +30,7 @@ class MainApp(Tk):
     def __init__(self):
         Tk.__init__(self)
         self.notebook = Notebook(self)
-        self.wm_title("Sensitivity Analysis Tool")
+        self.wm_title("Illuminate")
         self.notebook.grid()
         self.construct_home_tab()
         
