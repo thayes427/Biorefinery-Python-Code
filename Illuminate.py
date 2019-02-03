@@ -115,11 +115,12 @@ class MainApp(Tk):
         column = 0
         aspen_versions = []
         for key,value in self.aspen_versions.items():
-            aspen_versions.append(key)
-#        aspen_versions.sort(key=lambda x: float(x[1:]))
+            aspen_versions.append(key + '      ')
+
+        aspen_versions.sort(key=lambda x: -1*float(x[1:-6]))
 
         for i, version in enumerate(aspen_versions):
-            v = Radiobutton(select_aspen, text= version, variable=self.select_version, value = self.aspen_versions[version])
+            v = Radiobutton(select_aspen, text= version, variable=self.select_version, value = self.aspen_versions[version[:-6]])
             v.grid(row=row,column= column, sticky=W)
             if i == 0:
                 v.invoke()
@@ -223,6 +224,11 @@ class MainApp(Tk):
             
         self.load_variables_into_GUI()
         self.notebook.select(self.current_tab)
+        
+    def conv_title(self, s):
+        if len(s) > 37:
+            return s[:34] + '...'
+        return s
 
     def load_aspen_versions(self):
         
@@ -756,7 +762,7 @@ class MainApp(Tk):
                     fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=False)
                     ax = fig.add_subplot(111)
                     ax.hist(results_filtered[var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-                    ax.set_title(var)
+                    ax.set_title(self.conv_title(var))
                     ax.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
                     self.plots_dictionary[var] = ax
                     results_fig_list.append(fig)
@@ -767,7 +773,7 @@ class MainApp(Tk):
                 a = fig.add_subplot(111)
                 _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
                 a.hist(results_unfiltered[var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
-                a.set_title(var)
+                a.set_title(self.conv_title(var))
                 a.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
                # a.get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter(set_powerlimits((n,m))
                 self.plots_dictionary[var] = a
@@ -860,12 +866,12 @@ class MainApp(Tk):
                 if toggled.get():
                     self.plots_dictionary[output_var].hist(
                             results_filtered[output_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-                    self.plots_dictionary[output_var].set_title(output_var)
+                    self.plots_dictionary[output_var].set_title(self.conv_title(output_var))
                     self.plots_dictionary[output_var].ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
             for var, values in self.simulation_dist.items():
                 _, bins, _ = self.plots_dictionary[var].hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
                 self.plots_dictionary[var].hist(results_unfiltered[var], bins=bins, facecolor='blue', edgecolor='black', alpha=1.0)
-                self.plots_dictionary[var].set_title(var)
+                self.plots_dictionary[var].set_title(self.conv_title(var))
                 self.plots_dictionary[var].ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
 
 
@@ -914,7 +920,7 @@ class MainApp(Tk):
                 a = fig.add_subplot(111)
                 _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
                 #a.hist(results_unfiltered[var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
-                a.set_title(var)
+                a.set_title(self.conv_title(var))
                 a.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
                 fig_list.append(fig)
                 self.plots_dictionary[var][var] = a
@@ -925,7 +931,7 @@ class MainApp(Tk):
                         fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255])
                         ax = fig.add_subplot(111)
                         ax.hist(results_filtered[output_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-                        ax.set_title(output_var)
+                        ax.set_title(self.conv_title(output_var))
                         ax.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
                         fig_list.append(fig)
                         self.plots_dictionary[var][output_var] = ax
@@ -999,11 +1005,11 @@ class MainApp(Tk):
                     else:
                         self.plots_dictionary[current_var][output_var].hist(
                                 results_filtered[output_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-                    self.plots_dictionary[current_var][output_var].set_title(output_var)
+                    self.plots_dictionary[current_var][output_var].set_title(self.conv_title(output_var))
                     self.plots_dictionary[current_var][output_var].ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
             _, bins, _ = self.plots_dictionary[current_var][current_var].hist(self.simulation_dist[current_var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
             self.plots_dictionary[current_var][current_var].hist(results_unfiltered[current_var], bins=bins, facecolor='blue', edgecolor='black', alpha=1.0)
-            self.plots_dictionary[current_var][current_var].set_title(current_var)
+            self.plots_dictionary[current_var][current_var].set_title(self.conv_title(current_var))
             self.plots_dictionary[current_var][current_var].ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
 
 
@@ -1030,7 +1036,7 @@ class MainApp(Tk):
             a = fig.add_subplot(111)
             num_bins = 15
             a.hist(values, num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-            a.set_title(var)
+            a.set_title(self.conv_title(var))
             a.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
             fig_list.append(fig)
             
@@ -1140,7 +1146,6 @@ class MainApp(Tk):
                 count += 1
             self.wait.destroy()
         else:
-            print('hellooo')
             row_num= 6
             frame_width = self.win_lim_x/3
             frame_height = len(self.output_vars)*30
