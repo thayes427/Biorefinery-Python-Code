@@ -30,7 +30,7 @@ class MainApp(Tk):
     def __init__(self):
         Tk.__init__(self)
         self.notebook = Notebook(self)
-        self.wm_title("Sensitivity Analysis Tool")
+        self.wm_title("Illuminate")
         self.notebook.grid()
         self.construct_home_tab()
         
@@ -107,14 +107,12 @@ class MainApp(Tk):
         OptionMenu(self.home_tab, self.analysis_type,"Single Point Analysis","Univariate Sensitivity", 
                 "Multivariate Sensitivity").grid(row = 9,sticky = E,column = 2,padx =5, pady = 5)
                         
-        select_aspen = Labelframe(self.home_tab, text='Aspen Version:')
+        select_aspen = Labelframe(self.home_tab, text='Select Aspen Version:')
         select_aspen.grid(row = 5,column = 1, columnspan = 3, sticky = W,pady = 10,padx = 10)
 
         self.select_version = StringVar()
         row = 6
         column = 0
-        for i in range(15):
-            self.aspen_versions['V10.00' + str(i) +'       ']=i
         aspen_versions = []
         for key,value in self.aspen_versions.items():
             aspen_versions.append(key)
