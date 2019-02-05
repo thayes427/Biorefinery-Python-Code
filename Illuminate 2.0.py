@@ -5,9 +5,8 @@ Created on Sat Dec 15 19:58:47 2018
 @author: MENGstudents
 """
 
-from tkinter import Tk, StringVar,E,W,OptionMenu,Canvas,END, IntVar, Checkbutton, Label
-from tkinter.ttk import Entry, Button, Menubutton, Radiobutton, OptionMenu, Labelframe, Scrollbar, Notebook, Frame
-from tkinter import ttk
+from tkinter import Tk,Button,Label,Entry,StringVar,E,W,OptionMenu,Canvas,END,Checkbutton, IntVar
+from tkinter.ttk import Frame, Labelframe, Scrollbar, Notebook, Radiobutton
 from tkinter.filedialog import askopenfilename
 from threading import Thread
 from pandas import ExcelWriter, DataFrame, concat, isna, read_excel
@@ -16,7 +15,7 @@ from time import time, sleep
 from numpy import linspace, random, histogram
 from psutil import process_iter, virtual_memory
 from win32com.client import Dispatch, DispatchEx
-import pythoncom
+import pythoncom ### I DONT THINK YOU NEED THIS
 from os import path
 from csv import DictReader
 from multiprocessing import freeze_support
@@ -26,14 +25,10 @@ from winreg import EnumKey, CreateKey, EnumValue, HKEY_CLASSES_ROOT
 from re import search
  
 
-
-
-
 class MainApp(Tk):
 
     def __init__(self):
         Tk.__init__(self)
-        #self.iconbitmap('01_128x128.ico')
         self.notebook = Notebook(self)
         self.wm_title("Illuminate")
         self.notebook.grid()
@@ -64,63 +59,24 @@ class MainApp(Tk):
         self.display_tab = None
         self.mapping_pdfs = {}
         self.simulation_dist, self.simulation_vars = {}, {}
-        
-#        style = ttk.Style()
-#        style.configure('Kim.TButton', foreground='blue', bg='blue', activebackground='red', relief='raised')
-#        style.configure('label.TLabel', background='red',foreground='blue')
-#        style.configure('TabStyle.TNotebook.Tab', background='green')
-#        style.configure('frame.TFrame', background='blue')
-#        
-#        style.configure('Wild.TButton', background='black', foreground='white', font=('Helvetica', 12, 'bold'))
-#        style.map('Wild.TButton',
-#              foreground=[('disabled', 'yellow'),
-#                    ('pressed', 'red'),
-#                    ('active', 'blue')],
-#                          background=[('disabled', 'magenta'),
-#                    ('pressed', '!focus', 'cyan'),
-#                    ('active', 'green')],
-#                    highlightcolor=[('focus', 'green'),
-#                        ('!focus', 'red')],
-#                                    relief=[('pressed', 'groove'),
-#                ('!pressed', 'ridge')])
-#
-#        style.theme_create("st_app", parent='alt', settings={
-#        "TButton":     {"configure": {'foreground':'maroon', 'relief': 'raised'}}})
-        #style.theme_use("st_app")
-
-#              "TNotebook.Tab": {
-#            "configure": {"padding": [5, 1], "background": mygreen },
-#            "map":       {"background": [("selected", myred)],
-#                          "expand": [("selected", [1, 1, 1, 0])] } } 
+      
 
 
     def construct_home_tab(self):
         self.load_aspen_versions()
         self.home_tab = Frame(self.notebook)
         self.notebook.add(self.home_tab, text = 'File Upload Tab')
-
-        
-        Label(self.home_tab, text='                       ').grid(row=100,column=5,columnspan=1)
-        Label(self.home_tab, text='                 ').grid(row=100,column=6,columnspan=1)
-        Label(self.home_tab, text='                      ').grid(row=100,column=7,columnspan=1)
-        Label(self.home_tab, text='                      ').grid(row=100,column=8,columnspan=1)
-        Label(self.home_tab, text='              ').grid(row=100,column=9,columnspan=1)
-        Label(self.home_tab, text='                 ').grid(row=100,column=5,columnspan=1)
-        Label(self.home_tab, text=' ').grid(row=105,column=0,columnspan=1)
-        for i in range(106,160):
-            Label(self.home_tab, text=' ').grid(row=i,column=0,columnspan=1)
-
-        
         
         space= Label(self.home_tab, text=" ",font='Helvetica 2')
         space.grid(row=0, column= 1, sticky = E, padx = 5, pady =4)
         space.rowconfigure(0, minsize = 15)
         
 
-        Button(self.home_tab, text='Upload Simulation Inputs',
+        Button(self.home_tab, text='Upload Simulation Parameters',
         command=self.open_excel_file).grid(row=1,column=1, sticky = E, pady = 5,padx = 5)
         self.input_csv_entry = Entry(self.home_tab)
         self.input_csv_entry.grid(row=1, column=2)
+        Label(self.home_tab, text=' ')
         
         Button(self.home_tab, 
               text="Upload Aspen Model",
@@ -129,14 +85,14 @@ class MainApp(Tk):
         self.aspen_file_entry = Entry(self.home_tab)
         self.aspen_file_entry.grid(row=2, column=2,pady = 5,padx = 5)
         
-        Button(self.home_tab,
+        Button(self.home_tab, 
               text="Upload Excel Model",
               command=self.open_solver_file).grid(row=3,column = 1,sticky = E,
               pady = 5,padx = 5)
         self.excel_solver_entry = Entry(self.home_tab)
         self.excel_solver_entry.grid(row=3, column=2,pady = 5,padx = 5)
         
-        Button(self.home_tab,
+        Button(self.home_tab, 
               text="Load Data",
               command=self.make_new_tab).grid(row=9,column = 3,sticky = E,
               pady = 5,padx = 5)
@@ -149,7 +105,7 @@ class MainApp(Tk):
         self.analysis_type = StringVar(self.home_tab)
         self.analysis_type.set("Choose Analysis Type")
         
-        OptionMenu(self.home_tab, self.analysis_type,"Choose Analysis Type", "Single Point Analysis","Univariate Sensitivity", 
+        OptionMenu(self.home_tab, self.analysis_type,"Single Point Analysis","Univariate Sensitivity", 
                 "Multivariate Sensitivity").grid(row = 9,sticky = E,column = 2,padx =5, pady = 5)
                         
         select_aspen = Labelframe(self.home_tab, text='Select Aspen Version:')
@@ -270,11 +226,9 @@ class MainApp(Tk):
         self.load_variables_into_GUI()
         self.notebook.select(self.current_tab)
         
-    def conv_title(self, s, pad=False):
+    def conv_title(self, s):
         if len(s) > 37:
             return s[:34] + '...'
-        elif pad:
-            return s.ljust(37)    
         return s
 
     def load_aspen_versions(self):
@@ -293,7 +247,7 @@ class MainApp(Tk):
                         i += 1
                         continue
                     default_icon = EnumValue(subbkey, 0)
-                    version = search(r"V(\d)+.\d+", default_icon[1])
+                    version = search(r"V\d\d.\d", default_icon[1])
                     clsid_key = CreateKey(subkey, 'CLSID')
                     CLSID = EnumValue(clsid_key, 0)[1]
                     if version:
@@ -323,7 +277,7 @@ class MainApp(Tk):
                         
         #now populate the gui with the appropriate tab and variables stored above
         if type_of_analysis == 'Single Point Analysis':
-            self.current_tab.config(width = '10c', height = '5c')
+            self.current_tab.config(width = '5c', height = '5c')
             self.sp_value_entries = {}
             
             # Create a frame for the canvas with non-zero row&column weights
@@ -331,28 +285,28 @@ class MainApp(Tk):
             frame_canvas.grid(row=2, column=0, pady=(5, 0), columnspan =3)
             frame_canvas.grid_rowconfigure(0, weight=1)
             frame_canvas.grid_columnconfigure(0, weight=1)
-            frame_canvas.config(height = '5c', width='10c')
+            frame_canvas.config(height = '5c')
             
             # Add a canvas in the canvas frame
             canvas = Canvas(frame_canvas)
             canvas.grid(row=0, column=0, sticky="news")
-            canvas.config(height = '5c', width='10c')
+            canvas.config(height = '5c')
             # Link a scrollbar to the canvas
-            vsb = Scrollbar(frame_canvas, orient="vertical", command=canvas.yview, style='scroll.Vertical.TScrollbar')
+            vsb = Scrollbar(frame_canvas, orient="vertical", command=canvas.yview)
             vsb.grid(row=0, column=1,sticky = 'ns')
             canvas.configure(yscrollcommand=vsb.set)
             
             # Create a frame to contain the variables
             frame_vars = Frame(canvas)
             canvas.create_window((0, 0), window=frame_vars, anchor='nw')
-            frame_vars.config(height = '5c', width='10c')
+            frame_vars.config(height = '5c')
             
             self.sp_row_num = 0
             for name,value in single_pt_vars:
                 self.sp_row_num += 1
                 key = str(self.sp_row_num)
                 Label(frame_vars, 
-                text= self.conv_title(name,pad=True)).grid(row=self.sp_row_num, column= 1, sticky = E,pady = 5,padx = 5)
+                text= name).grid(row=self.sp_row_num, column= 1, sticky = E,pady = 5,padx = 5)
                 key=Entry(frame_vars)
                 key.grid(row=self.sp_row_num, column=2,pady = 5,padx = 5)
                 key.delete(first=0,last=END)
@@ -361,7 +315,7 @@ class MainApp(Tk):
                 
             # Determine the size of the Canvas
             frame_vars.update_idletasks()
-            frame_canvas.config(width='10c', height='5c')
+            frame_canvas.config(width='5c', height='10c')
             # Set the canvas scrolling region
             canvas.config(scrollregion=canvas.bbox("all"))
     
@@ -374,33 +328,31 @@ class MainApp(Tk):
             Label(self.current_tab, 
                 text= '# of Trials').grid(row=8, column= 3,pady = 5,padx = 5)
             # Create a frame for the canvas with non-zero row&column weights
-            #label_frame = Labelframe(self.current_tab)
-            #label_frame.grid(row=9, column=1, columnspan=3)
             frame_canvas1 = Frame(self.current_tab)
             frame_canvas1.grid(row=9, column=1, columnspan =3, pady=(5, 0))
             frame_canvas1.grid_rowconfigure(0, weight=1)
             frame_canvas1.grid_columnconfigure(0, weight=1)
-            frame_canvas1.config(height = '3c', width='13c')
+            frame_canvas1.config(height = '3c')
             
             # Add a canvas in the canvas frame
             canvas1 = Canvas(frame_canvas1)
             canvas1.grid(row=0, column=0, sticky="news")
-            canvas1.config(height = '3c', width='13c')
+            canvas1.config(height = '3c')
             
             # Link a scrollbar to the canvas
-            vsb = Scrollbar(frame_canvas1, orient="vertical", command=canvas1.yview, style='scroll.Vertical.TScrollbar')
+            vsb = Scrollbar(frame_canvas1, orient="vertical", command=canvas1.yview)
             vsb.grid(row=0, column=1,sticky = 'ns')
             canvas1.configure(yscrollcommand=vsb.set)
             
             # Create a frame to contain the variables
             frame_vars1 = Frame(canvas1)
-            frame_vars1.config(height = '3c', width='13c')
+            frame_vars1.config(height = '3c')
             canvas1.create_window((0, 0), window=frame_vars1, anchor='nw')
             for name, format_of_data, vals in univariate_vars:
                 Label(frame_vars1, 
-                text= self.conv_title(name, True)).grid(row=self.univar_row_num, column= 1,pady = 5,padx = 5)
+                text= name).grid(row=self.univar_row_num, column= 1,pady = 5,padx = 5)
                 Label(frame_vars1, 
-                text= self.conv_title(format_of_data)).grid(row=self.univar_row_num, column= 2,pady = 5,padx = 5)
+                text= format_of_data).grid(row=self.univar_row_num, column= 2,pady = 5,padx = 5)
                 
                 if not(format_of_data == 'linspace' or format_of_data == 'list' or 'mapping' in format_of_data):
                     key2=Entry(frame_vars1)
@@ -409,19 +361,19 @@ class MainApp(Tk):
                     self.univar_ntrials_entries[name]= key2
                 else:
                     if "mapping" in format_of_data:
-                        Label(frame_vars1,text= self.conv_title(vals[-1].strip())).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5)
+                        Label(frame_vars1,text= vals[-1].strip()).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5)
                     elif format_of_data == 'linspace':
                         
-                        Label(frame_vars1,text= self.conv_title(str(vals[2]).strip())).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5)
+                        Label(frame_vars1,text= str(vals[2]).strip()).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5)
                     else:
-                        Label(frame_vars1,text= self.conv_title(str(len(vals)))).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5)
+                        Label(frame_vars1,text= str(len(vals))).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5)
                 self.univar_row_num += 1
                 
             # Update vars frames idle tasks to let tkinter calculate variable sizes
             frame_vars1.update_idletasks()
             # Determine the size of the Canvas
             
-            frame_canvas1.config(width='13c', height='3c')
+            frame_canvas1.config(width='5c', height='5c')
             
             # Set the canvas scrolling region
             canvas1.config(scrollregion=canvas1.bbox("all"))
@@ -446,7 +398,7 @@ class MainApp(Tk):
                     except:
                         num_trials_per_var = 1
                     self.simulation_vars[(aspen_variable, aspen_call, fortran_index)] = dist[:num_trials_per_var]
-                    self.simulation_dist[aspen_variable] = self.simulation_dist[aspen_variable][:num_trials_per_var]                
+                    self.simulation_dist[aspen_variable] = dist[:num_trials_per_var]                
         else:
             try: 
                 ntrials = int(self.num_sim_entry.get())
@@ -540,8 +492,7 @@ class MainApp(Tk):
                     lb_ub = row['Distribution Parameters'].split(',')
                     lb_uniform, ub_uniform = float(lb_ub[0].strip()), float(lb_ub[1].strip())
                     distribution = self.sample_uniform(lb_uniform, ub_uniform, lb, ub, ntrials)
-  
-                if distribution is None:
+                if not distribution:
                     Label(self.current_tab, text= 'ERROR: Distribution Parameters for ' + aspen_variable + ' are NOT valid', fg='red').grid(row=10, column=1, columnspan=3)
                     Label(self.current_tab, text='Please Adjust Distribution Parameters in Input File and Restart Illuminate', fg='red').grid(row=11,column=1,columnspan=3)
                     return {}, {}
@@ -556,9 +507,8 @@ class MainApp(Tk):
                     for i in range(len(fortran_call)):
                         if fortran_call[i:i+len_val] == value_to_change:
                             fortran_index = (i, i+len_val) #NOT INCLUSIVE
-                    distribution = list()
                     for i, v in enumerate(distribution):
-                        distribution.append(self.make_fortran(fortran_call, fortran_index, float(v)))
+                        distribution[i] = self.make_fortran(fortran_call, fortran_index, v)
                 simulation_vars[(aspen_variable, aspen_call, fortran_index)] = distribution
         return simulation_vars, simulation_dist
     
@@ -570,6 +520,7 @@ class MainApp(Tk):
             stop = False
             while(rand_sample < lb or rand_sample > ub):
                 if time() - st > 3:
+                    print('hiii')
                     stop = True
                     break
                 rand_sample = random.normal(mean,std)
@@ -894,7 +845,7 @@ class MainApp(Tk):
             main_canvas.grid(row=0, column=0, sticky="news")
             main_canvas.config(height = window_height, width=frame_width)
             
-            vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview, style='scroll.Vertical.TScrollbar')
+            vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
             vsb.grid(row=0, column=1,sticky = 'ns')
             main_canvas.configure(yscrollcommand=vsb.set)
             
@@ -1060,11 +1011,11 @@ class MainApp(Tk):
             main_canvas.grid(row=0, column=0, sticky="news")
             main_canvas.config(height = window_height, width=frame_width)
             
-            hsb = Scrollbar(frame_canvas, orient="horizontal", command=main_canvas.xview, style='scroll.Vertical.TScrollbar')
+            hsb = Scrollbar(frame_canvas, orient="horizontal", command=main_canvas.xview)
             hsb.grid(row=1, column=0,sticky = 'we')
             main_canvas.configure(xscrollcommand=hsb.set)
             
-            vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview, style='scroll.Vertical.TScrollbar')
+            vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
             vsb.grid(row=0, column=1,sticky = 'ns')
             main_canvas.configure(yscrollcommand=vsb.set)
             
@@ -1169,7 +1120,7 @@ class MainApp(Tk):
         main_canvas.config(height = window_height, width=frame_width)
         
         
-        vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview, style='scroll.Vertical.TScrollbar')
+        vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
         vsb.grid(row=0, column=1,sticky = 'ns')
         main_canvas.configure(yscrollcommand=vsb.set)
         
@@ -1233,11 +1184,10 @@ class MainApp(Tk):
         filename = askopenfilename(title = "Select file", filetypes = ((".xlsm Files","*.xlsm"),))
         self.excel_solver_entry.delete(0, END)
         self.excel_solver_entry.insert(0, filename)
-        if filename:
-            plot_output_disp_thread = Thread(target=self.graph_toggle)
-            plot_output_disp_thread.start()
-            self.wait= Label(self.home_tab, text="Wait While Output Variables Are Loading ...")
-            self.wait.grid(row=6, column= 1, columnspan = 2, sticky = E,pady = 5,padx = 5)
+        plot_output_disp_thread = Thread(target=self.graph_toggle)
+        plot_output_disp_thread.start()
+        self.wait= Label(self.home_tab, text="Wait While Output Variables Are Loading ...")
+        self.wait.grid(row=6, column= 1, columnspan = 2, sticky = E,pady = 5,padx = 5)
        
     def graph_toggle(self):
         self.parse_output_vars()
@@ -1257,7 +1207,7 @@ class MainApp(Tk):
         else:
             row_num= 6
             frame_width = self.win_lim_x/3
-            frame_height = len(self.output_vars)*25 + 10
+            frame_height = len(self.output_vars)*30
             window_height = 300
             
             frame_canvas = Labelframe(self.home_tab,text='Output Variables to Graph:')
@@ -1270,7 +1220,7 @@ class MainApp(Tk):
             main_canvas.grid(row=0, column=0, sticky="news")
             main_canvas.config(height = window_height, width=frame_width)
             
-            vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview, style='scroll.Vertical.TScrollbar')
+            vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview)
             vsb.grid(row=0, column=1 ,sticky = 'ns')
             main_canvas.configure(yscrollcommand=vsb.set)
             
@@ -1279,7 +1229,7 @@ class MainApp(Tk):
             figure_frame.config(height = frame_height, width=frame_width)
 
         
-            x , y = 10, 10
+            x , y = 50, 10
             self.graphs_displayed = []
             for i,v in enumerate(self.output_vars[:-1]):
                 self.graph_toggles[v] = IntVar()
@@ -1287,6 +1237,7 @@ class MainApp(Tk):
                 cb.place(x = x, y = y)
                 cb.select()
                 y+=25
+                
             figure_frame.update_idletasks()
             frame_canvas.config(width=frame_width, height=window_height)
             main_canvas.config(scrollregion=(0,0,x,frame_height))
