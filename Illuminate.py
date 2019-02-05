@@ -270,9 +270,11 @@ class MainApp(Tk):
         self.load_variables_into_GUI()
         self.notebook.select(self.current_tab)
         
-    def conv_title(self, s):
+    def conv_title(self, s, pad=False):
         if len(s) > 37:
             return s[:34] + '...'
+        elif pad:
+            return s.ljust(37)    
         return s
 
     def load_aspen_versions(self):
@@ -350,7 +352,7 @@ class MainApp(Tk):
                 self.sp_row_num += 1
                 key = str(self.sp_row_num)
                 Label(frame_vars, 
-                text= self.conv_title(name)).grid(row=self.sp_row_num, column= 1, sticky = E,pady = 5,padx = 5)
+                text= self.conv_title(name,pad=True)).grid(row=self.sp_row_num, column= 1, sticky = E,pady = 5,padx = 5)
                 key=Entry(frame_vars)
                 key.grid(row=self.sp_row_num, column=2,pady = 5,padx = 5)
                 key.delete(first=0,last=END)
@@ -372,18 +374,18 @@ class MainApp(Tk):
             Label(self.current_tab, 
                 text= '# of Trials').grid(row=8, column= 3,pady = 5,padx = 5)
             # Create a frame for the canvas with non-zero row&column weights
-            label_frame = Labelframe(self.current_tab)
-            label_frame.grid(row=9, column=1, columnspan=3)
-            frame_canvas1 = Frame(label_frame)
+            #label_frame = Labelframe(self.current_tab)
+            #label_frame.grid(row=9, column=1, columnspan=3)
+            frame_canvas1 = Frame(self.current_tab)
             frame_canvas1.grid(row=9, column=1, columnspan =3, pady=(5, 0))
             frame_canvas1.grid_rowconfigure(0, weight=1)
             frame_canvas1.grid_columnconfigure(0, weight=1)
-            frame_canvas1.config(height = '6c', width='13c')
+            frame_canvas1.config(height = '3c', width='13c')
             
             # Add a canvas in the canvas frame
             canvas1 = Canvas(frame_canvas1)
             canvas1.grid(row=0, column=0, sticky="news")
-            canvas1.config(height = '6c', width='13c')
+            canvas1.config(height = '3c', width='13c')
             
             # Link a scrollbar to the canvas
             vsb = Scrollbar(frame_canvas1, orient="vertical", command=canvas1.yview, style='scroll.Vertical.TScrollbar')
@@ -392,11 +394,11 @@ class MainApp(Tk):
             
             # Create a frame to contain the variables
             frame_vars1 = Frame(canvas1)
-            frame_vars1.config(height = '6c', width='13c')
+            frame_vars1.config(height = '3c', width='13c')
             canvas1.create_window((0, 0), window=frame_vars1, anchor='nw')
             for name, format_of_data, vals in univariate_vars:
                 Label(frame_vars1, 
-                text= self.conv_title(name)).grid(row=self.univar_row_num, column= 1,pady = 5,padx = 5)
+                text= self.conv_title(name, True)).grid(row=self.univar_row_num, column= 1,pady = 5,padx = 5)
                 Label(frame_vars1, 
                 text= self.conv_title(format_of_data)).grid(row=self.univar_row_num, column= 2,pady = 5,padx = 5)
                 
@@ -419,7 +421,7 @@ class MainApp(Tk):
             frame_vars1.update_idletasks()
             # Determine the size of the Canvas
             
-            frame_canvas1.config(width='13c', height='6c')
+            frame_canvas1.config(width='13c', height='3c')
             
             # Set the canvas scrolling region
             canvas1.config(scrollregion=canvas1.bbox("all"))
