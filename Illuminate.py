@@ -1155,8 +1155,12 @@ class MainApp(Tk):
         
         frame_width = self.win_lim_x - 30
         num_graphs_per_row = frame_width//250
-        frame_height = 30+(230*((len(fig_list)-1)//num_graphs_per_row + 1))  
-        window_height = self.win_lim_y - 160
+        frame_height = 30+(230*((len(fig_list)-1)//num_graphs_per_row + 1)) 
+        if self.univar_row_num != 0:
+            
+            window_height = self.win_lim_y - 330
+        else:
+            window_height = self.win_lim_y - 160
         
         frame_canvas = Frame(self.current_tab)
         frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
