@@ -28,6 +28,7 @@ from random import choices
 
 
 
+
 class MainApp(Tk):
 
     def __init__(self):
@@ -69,7 +70,7 @@ class MainApp(Tk):
 #        style.configure('label.TLabel', background='red',foreground='blue')
 #        style.configure('TabStyle.TNotebook.Tab', background='green')
 #        style.configure('frame.TFrame', background='blue')
-#        
+
 #        style.configure('Wild.TButton', background='black', foreground='white', font=('Helvetica', 12, 'bold'))
 #        style.map('Wild.TButton',
 #              foreground=[('disabled', 'yellow'),
@@ -93,19 +94,14 @@ class MainApp(Tk):
 #                          "expand": [("selected", [1, 1, 1, 0])] } } 
 
 
+
     def construct_home_tab(self):
         self.load_aspen_versions()
-        self.home_tab = Frame(self.notebook)
+        self.home_tab = Frame(self.notebook, style= 'frame.TFrame')
         self.notebook.add(self.home_tab, text = 'File Upload Tab')
 
-        
-        Label(self.home_tab, text='                       ').grid(row=100,column=5,columnspan=1)
-        Label(self.home_tab, text='                 ').grid(row=100,column=6,columnspan=1)
-        Label(self.home_tab, text='                      ').grid(row=100,column=7,columnspan=1)
-        Label(self.home_tab, text='                      ').grid(row=100,column=8,columnspan=1)
-        Label(self.home_tab, text='              ').grid(row=100,column=9,columnspan=1)
-        Label(self.home_tab, text='                 ').grid(row=100,column=5,columnspan=1)
-        Label(self.home_tab, text=' ').grid(row=105,column=0,columnspan=1)
+        for i in range (5,20):
+            Label(self.home_tab, text='                       ').grid(row=100,column=i,columnspan=1)
         for i in range(106,160):
             Label(self.home_tab, text=' ').grid(row=i,column=0,columnspan=1)
 
@@ -149,7 +145,7 @@ class MainApp(Tk):
         self.analysis_type.set("Choose Analysis Type")
         
         OptionMenu(self.home_tab, self.analysis_type,"Choose Analysis Type", "Single Point Analysis","Univariate Sensitivity", 
-                "Multivariate Sensitivity").grid(row = 9,sticky = E,column = 2,padx =5, pady = 5)
+                "Multivariate Sensitivity", style = 'raised.TMenubutton').grid(row = 9,sticky = E,column = 2,padx =5, pady = 5)
                         
         select_aspen = Labelframe(self.home_tab, text='Select Aspen Version:')
         select_aspen.grid(row = 5,column = 1, columnspan = 3, sticky = W,pady = 10,padx = 10)
