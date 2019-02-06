@@ -5,8 +5,8 @@ Created on Sat Dec 15 19:58:47 2018
 @author: MENGstudents
 """
 
-from tkinter import Tk, StringVar,E,W,OptionMenu,Canvas,END, IntVar, Checkbutton
-from tkinter.ttk import Entry, Button, Label, Menubutton, Radiobutton, OptionMenu, Labelframe, Scrollbar, Notebook, Frame
+from tkinter import Tk, StringVar,E,W,OptionMenu,END, IntVar, Canvas
+from tkinter.ttk import Entry, Button, Label, Menubutton, Radiobutton, OptionMenu, Labelframe, Scrollbar, Notebook, Frame, Checkbutton
 from tkinter import ttk
 from tkinter.filedialog import askopenfilename
 from threading import Thread
@@ -29,11 +29,16 @@ from re import search
 
 
 
+
 class MainApp(Tk):
 
     def __init__(self):
         Tk.__init__(self)
-        self.iconbitmap('01_128x128.ico')
+#        self.iconbitmap('01_128x128.ico')
+        style = ttk.Style(self)
+        style.theme_use('clam')
+        style.configure('raised.TMenubutton', borderwidth=1)
+        style.configure('TabStyle.TNotebook.Tab', foreground='red', bg='red', activebackground='red')
         self.notebook = Notebook(self)
         self.wm_title("Illuminate")
         self.notebook.grid()
@@ -64,49 +69,43 @@ class MainApp(Tk):
         self.display_tab = None
         self.mapping_pdfs = {}
         self.simulation_dist, self.simulation_vars = {}, {}
-        
-        style = ttk.Style()
-        style.configure('Kim.TButton', foreground='blue', bg='blue', activebackground='red', relief='raised')
-        style.configure('label.TLabel', background='red',foreground='blue')
-        style.configure('TabStyle.TNotebook.Tab', background='green')
-        style.configure('frame.TFrame', background='blue')
-        
-        style.configure('Wild.TButton', background='black', foreground='white', font=('Helvetica', 12, 'bold'))
-        style.map('Wild.TButton',
-              foreground=[('disabled', 'yellow'),
-                    ('pressed', 'red'),
-                    ('active', 'blue')],
-                          background=[('disabled', 'magenta'),
-                    ('pressed', '!focus', 'cyan'),
-                    ('active', 'green')],
-                    highlightcolor=[('focus', 'green'),
-                        ('!focus', 'red')],
-                                    relief=[('pressed', 'groove'),
-                ('!pressed', 'ridge')])
-
-        style.theme_create("st_app", parent='alt', settings={
-        "TButton":     {"configure": {'foreground':'maroon', 'relief': 'raised'}}})
-        #style.theme_use("st_app")
-
-#              "TNotebook.Tab": {
-#            "configure": {"padding": [5, 1], "background": mygreen },
-#            "map":       {"background": [("selected", myred)],
-#                          "expand": [("selected", [1, 1, 1, 0])] } } 
+#        
+#        style = ttk.Style()
+#        style.configure('Kim.TButton', foreground='blue', bg='blue', activebackground='red', relief='raised')
+#        style.configure('label.TLabel', background='red',foreground='blue')
+#        
+#        style.configure('frame.TFrame', background='slate gray')
+#        
+#        style.configure('Wild.TButton', background='black', foreground='white', font=('Helvetica', 12, 'bold'))
+#        style.map('Wild.TButton',
+#              foreground=[('disabled', 'yellow'),
+#                    ('pressed', 'red'),
+#                    ('active', 'blue')],
+#                          background=[('disabled', 'magenta'),
+#                    ('pressed', '!focus', 'cyan'),
+#                    ('active', 'green')],
+#                    highlightcolor=[('focus', 'green'),
+#                        ('!focus', 'red')],
+#                                    relief=[('pressed', 'groove'),
+#                ('!pressed', 'ridge')])
+#
+#        style.theme_create("st_app", parent='clam')
+##        "TButton":     {"configure": {'foreground':'maroon', 'relief': 'raised'}}})
+#        style.theme_use("st_app")
+#
+##              "TNotebook.Tab": {
+##            "configure": {"padding": [5, 1], "background": mygreen },
+##            "map":       {"background": [("selected", myred)],
+##                          "expand": [("selected", [1, 1, 1, 0])] } } 
 
 
     def construct_home_tab(self):
         self.load_aspen_versions()
-        self.home_tab = Frame(self.notebook)
+        self.home_tab = Frame(self.notebook, style= 'frame.TFrame')
         self.notebook.add(self.home_tab, text = 'File Upload Tab')
 
-        
-        Label(self.home_tab, text='                       ').grid(row=100,column=5,columnspan=1)
-        Label(self.home_tab, text='                 ').grid(row=100,column=6,columnspan=1)
-        Label(self.home_tab, text='                      ').grid(row=100,column=7,columnspan=1)
-        Label(self.home_tab, text='                      ').grid(row=100,column=8,columnspan=1)
-        Label(self.home_tab, text='              ').grid(row=100,column=9,columnspan=1)
-        Label(self.home_tab, text='                 ').grid(row=100,column=5,columnspan=1)
-        Label(self.home_tab, text=' ').grid(row=105,column=0,columnspan=1)
+        for i in range (5,20):
+            Label(self.home_tab, text='                       ').grid(row=100,column=i,columnspan=1)
         for i in range(106,160):
             Label(self.home_tab, text=' ').grid(row=i,column=0,columnspan=1)
 
@@ -150,7 +149,7 @@ class MainApp(Tk):
         self.analysis_type.set("Choose Analysis Type")
         
         OptionMenu(self.home_tab, self.analysis_type,"Choose Analysis Type", "Single Point Analysis","Univariate Sensitivity", 
-                "Multivariate Sensitivity").grid(row = 9,sticky = E,column = 2,padx =5, pady = 5)
+                "Multivariate Sensitivity", style = 'raised.TMenubutton').grid(row = 9,sticky = E,column = 2,padx =5, pady = 5)
                         
         select_aspen = Labelframe(self.home_tab, text='Select Aspen Version:')
         select_aspen.grid(row = 5,column = 1, columnspan = 3, sticky = W,pady = 10,padx = 10)
