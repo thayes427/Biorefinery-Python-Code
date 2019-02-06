@@ -5,9 +5,8 @@ Created on Sat Dec 15 19:58:47 2018
 @author: MENGstudents
 """
 
-from tkinter import Tk, StringVar,E,W,OptionMenu,Canvas,END, IntVar, Checkbutton, Label
-from tkinter.ttk import Entry, Button, Menubutton, Radiobutton, OptionMenu, Labelframe, Scrollbar, Notebook, Frame
-from tkinter import ttk
+from tkinter import Tk, StringVar,E,W,Canvas,END, IntVar, Checkbutton, Label
+from tkinter.ttk import Entry, Button, Radiobutton, OptionMenu, Labelframe, Scrollbar, Notebook, Frame
 from tkinter.filedialog import askopenfilename
 from threading import Thread
 from pandas import ExcelWriter, DataFrame, concat, isna, read_excel
@@ -18,12 +17,12 @@ from psutil import process_iter, virtual_memory
 from win32com.client import Dispatch, DispatchEx
 import pythoncom
 from os import path
-from csv import DictReader
 from multiprocessing import freeze_support
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from winreg import EnumKey, CreateKey, EnumValue, HKEY_CLASSES_ROOT
 from re import search
+from random import choices
  
 
 
@@ -535,7 +534,10 @@ class MainApp(Tk):
                     lst = row['Distribution Parameters'].split(',')
                     distribution = []
                     for l in lst:
-                        distribution.append(float(l.strip()))                
+                        distribution.append(float(l.strip()))  
+                    if self.analysis_type.get() == 'Multivariate Sensitivity':
+                        distribution2 = choices(distribution, k=ntrials)
+                        distribution = distribution2
                 elif 'uniform' in dist_type:
                     lb_ub = row['Distribution Parameters'].split(',')
                     lb_uniform, ub_uniform = float(lb_ub[0].strip()), float(lb_ub[1].strip())
