@@ -188,18 +188,20 @@ class MainApp(Tk):
             ##############Tab 2 LABELS##################
             
             Label(self.current_tab, 
-                  text="Save As :").grid(row=4, column= 1, sticky = E,pady = 5,padx = 5)
+                  text="Save As :").place(x=149,y=6)
             self.save_as_entry= Entry(self.current_tab)
-            self.save_as_entry.grid(row=4, column=2,pady = 5,padx = 5)
+            self.save_as_entry.grid(row=4, column=2, sticky=E, pady=6)
+            self.save_as_entry.config(width =18)
             
             Label(self.current_tab,text = ".xlsx").grid(row = 4, column = 3, sticky = W)
             
-            Label(self.current_tab, text='CPU Core Count :').grid(row=5, column=1, sticky=E)
+            Label(self.current_tab, text='CPU Core Count :').place(x=104,y=39)
             self.num_processes_entry = Entry(self.current_tab)
-            self.num_processes_entry.grid(row=5, column=2, pady=5, padx=5)
+            self.num_processes_entry.grid(row=5, column=2, sticky=E, pady=6)
+            self.num_processes_entry.config(width=18)
             
             rec_core = int(cpu_count()//2)
-            Label(self.current_tab, text = 'Recommend Proccesors: ' + str(rec_core)).grid(row = 5, column = 3, sticky = W)
+            Label(self.current_tab, text = 'Recommended Count: ' + str(rec_core)).grid(row = 5, column = 3, sticky = W)
             
             Label(self.current_tab, text ='').grid(row= 13, column =1)
             Button(self.current_tab,
