@@ -510,16 +510,14 @@ class MainApp(Tk):
                     distribution = self.sample_gauss(float(dist_variables[0].strip()),
                               float(dist_variables[1].strip()), lb, ub, ntrials)  
             
-                elif 'linspace' in dist_type:
+                elif 'linspace' in dist_type: 
+                    linspace_vars = row['Distribution Parameters'].split(',')
+                    distribution = linspace(float(linspace_vars[0].strip()), 
+                                               float(linspace_vars[1].strip()),
+                                               int(linspace_vars[2].strip()))
                     if self.analysis_type.get() == 'Multivariate Sensitivity':
-                        lb_ub = row['Distribution Parameters'].split(',')
-                        lb_uniform, ub_uniform = float(lb_ub[0].strip()), float(lb_ub[1].strip())
-                        distribution = self.sample_uniform(lb_uniform, ub_uniform, lb, ub, ntrials)
-                    else:   
-                        linspace_vars = row['Distribution Parameters'].split(',')
-                        distribution = linspace(float(linspace_vars[0].strip()), 
-                                                   float(linspace_vars[1].strip()),
-                                                   int(linspace_vars[2].strip()))
+                        distribution2 = choices(distribution, k=ntrials)
+                        distribution = distribution2
                 elif 'poisson' in dist_type:
                     lambda_p = float(row['Distribution Parameters'].strip())
                     distribution = self.sample_poisson(lambda_p, lb, ub, ntrials)
@@ -562,6 +560,7 @@ class MainApp(Tk):
                 simulation_vars[(aspen_variable, aspen_call, fortran_index)] = distribution
         return simulation_vars, simulation_dist
     
+    
     def sample_gauss(self,mean, std, lb, ub, ntrials):
         d = []
         for i in range(ntrials):
@@ -577,6 +576,7 @@ class MainApp(Tk):
                 return None
             d.append(rand_sample)
         return d
+    
     
     def sample_uniform(self,lb_uniform, ub_uniform, lb, ub, ntrials):
         d = []
@@ -1536,6 +1536,7 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
         
                     
         aspencom.Engine.ConnectionDialog()
+
     try:
         lock_to_signal_finish.release()
     except:
@@ -1587,10 +1588,22 @@ def mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_
     excel.Calculate()
     excel.Run('SOLVE_DCFROR')
 
-    
+     
     dfstreams = DataFrame(columns=columns)
     dfstreams.loc[trial_num+1] = case_values + [x.Value for x in book.Sheets('Output').Evaluate(output_value_cells.value)] + ["; ".join(errors)]
     return dfstreams
+    
+    
+    
+#    excel.Run('sub_ClearSumData_ASPEN')
+#    excel.Run('sub_GetSumData_ASPEN')
+#    excel.Calculate()
+##    excel.Run('SolveProductCost')
+#    excel.Run('solvedcfror')
+#      
+#    dfstreams = DataFrame(columns=columns)
+#    dfstreams.loc[trial_num+1] = case_values + [x.Value for x in book.Sheets('Output').Evaluate(output_value_cells.value)] + ["; ".join(errors)]
+#    return dfstreams
 
 
 def FindErrors(aspencom):
