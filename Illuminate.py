@@ -231,6 +231,7 @@ class MainApp(Tk):
                   text="Save As :").grid(row=0, column= 0, sticky = E, pady = 5, padx = 5)
             self.save_as_entry = Entry(self.current_tab)
             self.save_as_entry.grid(row=0, column=1, pady = 5)
+            Label(self.current_tab,text = ".xlsx").place(x = 295, y= 5)
             
             Button(self.current_tab, text='Run Analysis',
             command=self.initialize_single_point).grid(row=3,
