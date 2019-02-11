@@ -231,6 +231,7 @@ class MainApp(Tk):
                   text="Save As :").grid(row=0, column= 0, sticky = E, pady = 5, padx = 5)
             self.save_as_entry = Entry(self.current_tab)
             self.save_as_entry.grid(row=0, column=1, pady = 5)
+            Label(self.current_tab,text = ".xlsx").place(x = 295, y= 6)
             
             Button(self.current_tab, text='Run Analysis',
             command=self.initialize_single_point).grid(row=3,
@@ -641,10 +642,10 @@ class MainApp(Tk):
             for output_var, toggled in self.graph_toggles.items():
                 if toggled.get():
                     output_val = self.current_simulation.results[0].at[1, output_var]
-                    output_val = "{:,}".format(float("%.2f" % output_val))
                     if isna(output_val):
-                        Label(self.current_tab, text= 'Aspen Failed to Converge').grid(row=row, column = 1)
+                        Label(self.current_tab, text= 'Aspen Failed to Converge', font='Helvetica 10 bold',fg='red').grid(row=row, column = 1)
                         break
+                    output_val = "{:,}".format(float("%.2f" % output_val))
                     Label(self.current_tab, text=str(output_var) + '= ' + output_val).grid(
                     row=row, column = 1)
                     row += 1
@@ -1065,7 +1066,7 @@ class MainApp(Tk):
             main_canvas.grid(row=0, column=0, sticky="news")
             main_canvas.config(height = window_height, width=frame_width)
             
-            hsb = Scrollbar(frame_canvas, orient="horizontal", command=main_canvas.xview, style='scroll.Vertical.TScrollbar')
+            hsb = Scrollbar(frame_canvas, orient="horizontal", command=main_canvas.xview, style='scroll.Horizontal.TScrollbar')
             hsb.grid(row=1, column=0,sticky = 'we')
             main_canvas.configure(xscrollcommand=hsb.set)
             
@@ -1100,7 +1101,7 @@ class MainApp(Tk):
     
             Button(self.display_tab, text = "Next Variable", command=self.abort_sim).place(x=self.win_lim_x - 110, y=3)
             
-            Button(self.display_tab, text = "Abort", command=self.abort_univar_overall_fun).place(x=self.win_lim_x-160, y=3)
+            Button(self.display_tab, text = "Abort", command=self.abort_univar_overall_fun).place(x=self.win_lim_x-190, y=3)
         else:
             for f in self.plots_dictionary[current_var].values():
                 f.cla()
