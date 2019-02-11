@@ -518,6 +518,7 @@ class MainApp(Tk):
                     if self.analysis_type.get() == 'Multivariate Sensitivity':
                         distribution2 = choices(distribution, k=ntrials)
                         distribution = distribution2
+                        print(distribution)
                 elif 'poisson' in dist_type:
                     lambda_p = float(row['Distribution Parameters'].strip())
                     distribution = self.sample_poisson(lambda_p, lb, ub, ntrials)
@@ -543,6 +544,7 @@ class MainApp(Tk):
                     Label(self.current_tab, text= 'ERROR: Distribution Parameters for ' + aspen_variable + ' are NOT valid', fg='red').grid(row=10, column=1, columnspan=3)
                     Label(self.current_tab, text='Please Adjust Distribution Parameters in Input File and Restart Illuminate', fg='red').grid(row=11,column=1,columnspan=3)
                     return {}, {}
+                print(distribution)
                 simulation_dist[aspen_variable] = distribution[:]
                 fortran_index = (0,0)
                 if row['Fortran Call'] != 'nan':
@@ -554,9 +556,10 @@ class MainApp(Tk):
                     for i in range(len(fortran_call)):
                         if fortran_call[i:i+len_val] == value_to_change:
                             fortran_index = (i, i+len_val) #NOT INCLUSIVE
-                    distribution = list()
+                    distribution2 = list()
                     for i, v in enumerate(distribution):
-                        distribution.append(self.make_fortran(fortran_call, fortran_index, float(v)))
+                        distribution2.append(self.make_fortran(fortran_call, fortran_index, float(v)))
+                    distribution = distribution2
                 simulation_vars[(aspen_variable, aspen_call, fortran_index)] = distribution
         return simulation_vars, simulation_dist
     
@@ -749,6 +752,8 @@ class MainApp(Tk):
             
         
     def create_simulation_object(self, simulation_vars, vars_to_change, output_file, num_trial, weights=[]):
+        print(simulation_vars)
+        print(vars_to_change)
         self.output_columns = vars_to_change + self.output_vars
         
         new_sim = Simulation(self.sims_completed, num_trial, simulation_vars, output_file, path.dirname(str(self.input_csv_entry.get())),
@@ -1365,6 +1370,17 @@ class Simulation(object):
           
     
     def init_sims(self):
+        
+        df = DataFrame(columns=['trial'] + list(self.vars_to_change))
+        print(self.vars_to_change)
+        for key, value in self.simulation_vars.items():
+            df[key[0]] = value
+            ntrials = len(value)
+        df['trial'] = range(1, ntrials+1)
+        df.to_csv('trials_for_'+self.output_file.value + '.csv',index=False)
+        
+        
+        
         TASKS = [trial for trial in range(0, self.tot_sim)]
         self.lock_to_signal_finish.acquire()
         if not self.abort.value:
