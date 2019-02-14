@@ -1428,6 +1428,7 @@ class Simulation(object):
         for task in tasks:
             task_queue.put(task)
 
+        print(self.output_file, self.results, self.directory, self.weights, self.output_columns)
         for i in range(self.num_processes):
             self.processes.append(Process(target=worker, args=(self.current_COMS_pids, self.pids_to_ignore, 
                                                                 self.aspenlock, self.excellock, self.aspen_file, 
@@ -1495,14 +1496,10 @@ def save_graphs(outputfilename, results, directory, weights, output_columns):
     if results:
         results = concat(results).sort_index()
         num_bins = 15
-        for index, var in enumerate(output_columns[:-1]):
+        for var in results.columns[:-1]:
             fig = plt.figure()
             ax = fig.subplot(111)
-            if len(weights) > 0:
-                 plotweight = weights
-                 ax.hist(results[var], num_bins, weights=plotweight, facecolor='blue', edgecolor='black', alpha=1.0)
-            else:
-                 ax.hist(results[var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
+            ax.hist(results[var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
             ax.set_xlabel(var)
             ax.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
             plt.savefig(directory.value + '/' + outputfilename.value + '_' + var + '.png', format='png')
