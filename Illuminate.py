@@ -203,6 +203,13 @@ class MainApp(Tk):
             rec_core = int(cpu_count()//2)
             Label(self.current_tab, text = 'Recommended Count: ' + str(rec_core)).grid(row = 5, column = 3, sticky = W)
             
+            Label(self.current_tab, text = 'Graphing Frequency:').place(x=104, y=80)
+            self.num_processes_entry = Entry(self.current_tab)
+            self.num_processes_entry.grid(row=6, column=2, sticky=E, pady=6)
+            self.num_processes_entry.config(width=18)
+            
+            
+            
             Label(self.current_tab, text ='').grid(row= 13, column =1)
             Button(self.current_tab,
                    text='Run Univariate Sensitivity Analysis',
@@ -1254,7 +1261,7 @@ class MainApp(Tk):
         self.graph_toggles = {}
         if len(self.output_vars) < 10:
             self.disp_output_vars= Labelframe(self.home_tab, text='Output Variables to Graph:')
-            self.disp_output_vars.grid(row = 3,column = 1, columnspan = 2, pady = 10, padx = 10, sticky = E )
+            self.disp_output_vars.grid(row = 6,column = 1, columnspan = 2, pady = 10, padx = 10, sticky = E )
             count = 1
 
             for i,v in enumerate(self.output_vars[:-1]):
