@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from winreg import EnumKey, CreateKey, EnumValue, HKEY_CLASSES_ROOT
-from re import search
+from re import search, findall
 from random import choices
  
 
@@ -759,6 +759,7 @@ class MainApp(Tk):
 #        print(simulation_vars)
 #        print(vars_to_change)
         self.output_columns = vars_to_change + self.output_vars
+        print(self.output_columns)
         output_directory = path.join(path.dirname(str(self.input_csv_entry.get())),'Output/',datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
         makedirs(output_directory)
         copyfile(path.abspath(str(self.input_csv_entry.get())), path.join(output_directory,'Input_variables.xlsx'))
@@ -959,7 +960,7 @@ class MainApp(Tk):
                 figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
                 x = 10 + 250*(count % num_graphs_per_row)
                 figure_canvas.get_tk_widget().place(x = x, y= y, width = 240, height =220)
-                if (count+1) % num_graphs_per_row==0 and count != len(inputs_fig_list) - 1:
+                if (count+1) % num_graphs_per_row==0:
                     y += 230
                 count += 1
     
@@ -1359,7 +1360,6 @@ class Simulation(object):
 #        self.output_directory = path.join(directory,'/Output/',datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
         self.aspen_file = self.manager.Value('s', aspen_file)
         self.excel_solver_file = self.manager.Value('s', excel_solver_file)
-        self.output_columns = output_columns
         self.output_value_cells = self.manager.Value('s',output_value_cells)
         self.dispatch = dispatch
         self.results = self.manager.list()
@@ -1428,7 +1428,6 @@ class Simulation(object):
         for task in tasks:
             task_queue.put(task)
 
-        print(self.output_file, self.results, self.directory, self.weights, self.output_columns)
         for i in range(self.num_processes):
             self.processes.append(Process(target=worker, args=(self.current_COMS_pids, self.pids_to_ignore, 
                                                                 self.aspenlock, self.excellock, self.aspen_file, 
@@ -1491,21 +1490,28 @@ def save_data(outputfilename, results, directory, weights):
         writer.save()
     
     
-def save_graphs(outputfilename, results, directory, weights, output_columns):
-    
+def save_graphs(outputfilename, results, directory, weights):
     if results:
-        concat_results = concat(results).sort_index()
-        num_bins = 15
-        for index, var in enumerate(output_columns[:-1]):
+        collected_data = concat(results).sort_index()
+        for index, var in enumerate(collected_data.columns[:-1]):
             fig = plt.figure()
-            ax = fig.subplot(111)
-            try:
-                ax.hist(concat_results[var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-            #ax.set_xlabel(var)
-            #ax.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
-                plt.savefig(directory.value + '/' + outputfilename.value + '_' + var + '.png', format='png')
-            except: 
-                pass
+            fig.set_size_inches(6,6)
+            ax = fig.add_axes([0.12, 0.12, 0.85, 0.85])
+            if len(weights) > 0:
+                 plotweight = weights[:len(collected_data)]
+                 num_bins = len(collected_data)
+                 plt.hist(collected_data[var], num_bins, weights=plotweight, facecolor='blue', edgecolor='black', alpha=1.0)
+            else:
+                num_bins = 20
+                plt.hist(collected_data[var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
+            ax.set_xlabel(var, Fontsize=14)
+            ax.set_ylabel('Count', Fontsize=14)
+            ax.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3), Fontsize=12)
+            ax.ticklabel_format(axis= 'y', Fontsize=12)
+            char_omit = findall(r"([^\\\/\:\?\*\"\<\>\|]*)[\\\/\:\?\*\"\<\>\|]([^\\\/\:\?\*\"\<\>\|]*)",var)
+            if char_omit:
+                var = "".join([s[0]+s[1] for s in char_omit])
+            plt.savefig(directory.value + '/' + outputfilename.value + '_' + var + '.png', format='png')
     
 
 def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilename, 
@@ -1549,7 +1555,7 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
         sim_counter.value = len(results)
         if sim_counter.value % save_freq.value == 0:
             save_data(outputfilename, results, directory, weights)
-            #save_graphs(outputfilename, results, directory, weights, output_columns)
+            save_graphs(outputfilename, results, directory, weights)
         sims_completed.value += 1
         results_lock.release()
         
