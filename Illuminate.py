@@ -44,6 +44,7 @@ class MainApp(Tk):
         
         self.simulations = []
         self.current_simulation = None
+        self.sp_error = None
         self.current_tab = None
         self.abort = Value('b', False)
         self.abort_univar_overall = Value('b', False)
@@ -496,6 +497,7 @@ class MainApp(Tk):
         df = read_excel(open(gui_excel_input,'rb'), dtype=col_types)
         simulation_vars = {}
         simulation_dist = {}
+        self.var_bounds = {}
         for index, row in df.iterrows():
             if row['Toggle']:
                 if row['Variable Name'] in simulation_dist:
@@ -506,6 +508,7 @@ class MainApp(Tk):
                 bounds = row['Bounds'].split(',')
                 lb = float(bounds[0].strip())
                 ub = float(bounds[1].strip())
+                self.var_bounds[aspen_variable] = (lb, ub)
                 if 'mapping' in dist_type:
                     dist_vars = row['Distribution Parameters'].split(',')
                     lb_dist, ub_dist = float(dist_vars[-3].strip()), float(dist_vars[-2].strip())
@@ -686,14 +689,21 @@ class MainApp(Tk):
 
     
     def single_point_analysis(self):
+        if self.sp_error:
+            self.sp_error.destroy()
         self.store_user_inputs()
         self.get_distributions()
         if not self.simulation_vars:
             return
         # update simulation variable values based on user input in GUI
         for (aspen_variable, aspen_call, fortran_index), values in self.simulation_vars.items():
-            self.simulation_vars[(aspen_variable, aspen_call, fortran_index)] = [float(
-                    self.sp_value_entries[aspen_variable].get())]
+            value = float(self.sp_value_entries[aspen_variable].get())
+            if value < self.var_bounds[aspen_variable][0] or value > self.var_bounds[aspen_variable][1]:
+                self.sp_error = Label(self.current_tab, text='Error: Value Specified for ' + aspen_variable + ' is Outside Bounds', fg='red')
+                self.sp_error.grid(row=6, column=1, columnspan=2)
+                return
+            self.simulation_vars[(aspen_variable, aspen_call, fortran_index)] = [value]
+            
         self.create_simulation_object(self.simulation_vars, self.vars_to_change, self.output_file, self.num_trial)
         self.sp_status = Label(self.current_tab,text='Status: Simulation Running')
         self.sp_status.grid(row=3,column=0, columnspan=2, sticky=W)
