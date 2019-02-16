@@ -215,10 +215,10 @@ class MainApp(Tk):
             rec_core = int(cpu_count()//2)
             Label(self.current_tab, text = 'Recommended Count: ' + str(rec_core)).grid(row = 5, column = 3, sticky = W)
             
-            Label(self.current_tab, text = 'Graphing Frequency:').place(x=104, y=80)
-            self.num_processes_entry = Entry(self.current_tab)
-            self.num_processes_entry.grid(row=6, column=2, sticky=E, pady=6)
-            self.num_processes_entry.config(width=18)
+            #Label(self.current_tab, text = 'Graphing Frequency:').place(x=104, y=80)
+#            self.num_processes_entry = Entry(self.current_tab)
+#            self.num_processes_entry.grid(row=6, column=2, sticky=E, pady=6)
+#            self.num_processes_entry.config(width=18)
             
             
             
@@ -739,7 +739,6 @@ class MainApp(Tk):
         self.input_csv = str(self.input_csv_entry.get())
         
         self.vars_to_change = []
-        
         gui_excel_input = str(self.input_csv_entry.get())
         col_types = {'Variable Name': str, 'Variable Aspen Call': str, 'Distribution Parameters': str, 'Bounds': str, 'Fortran Call':str, 'Fortran Value to Change': str, 'Distribution Type': str, 'Toggle': bool}
         df = read_excel(open(gui_excel_input,'rb'), dtype=col_types)
@@ -751,9 +750,10 @@ class MainApp(Tk):
         
         
     def run_simulations(self):
-        
         for sim in self.simulations:
             self.start_time = time()
+            self.sims_completed.value = 0
+            self.tot_sim_num = sim.tot_sim
             self.current_simulation = sim
             self.current_simulation.init_sims()
             
@@ -762,6 +762,18 @@ class MainApp(Tk):
             self.univar_plot_counter += 1
             self.last_update = None
         self.simulations = []
+        self.abort_univar_overall.value = False
+        self.abort.value=False
+        self.current_simulation = None
+        self.tot_sim_num = 0
+        self.sims_completed.value=0
+        self.start_time = None
+        self.univar_plot_counter = 1
+        self.finished_figures = []
+        self.last_results_plotted = None
+        self.last_update = None
+        self.worker_thread = None
+        self.mapping_pdfs = {}
     
     def parse_output_vars(self):
         self.excel_solver_file= str(self.excel_solver_entry.get())
@@ -804,7 +816,7 @@ class MainApp(Tk):
                              self.aspen_file, self.excel_solver_file, self.abort, vars_to_change, self.output_value_cells,
                              self.output_columns, self.select_version.get(), weights, save_freq=2, num_processes=self.num_processes)
         self.simulations.append(new_sim)
-        self.tot_sim_num += num_trial
+        #self.tot_sim_num += num_trial
         
         
     def initialize_single_point(self):
@@ -825,7 +837,7 @@ class MainApp(Tk):
         self.worker_thread.start()
         self.status_label = None
         self.time_rem_label = None
-        self.after(5000, self.univar_gui_update)
+        self.univar_gui_update()
 
     
     def initialize_multivar_analysis(self):
@@ -875,18 +887,24 @@ class MainApp(Tk):
         if not self.display_tab:
             self.display_tab = Frame(self.notebook)
             self.notebook.add(self.display_tab,text = "Simulation Status")
-            self.notebook.select(self.display_tab)
+            
             status_label = Label(self.display_tab, text='Setting Up Simulation...')
             status_label.place(x=6, y=4)
             self.init_plots_constructed = False
             self.plots_dictionary = {}
-            
+            self.notebook.select(self.display_tab)
+        if not self.simulations:
+            self.notebook.select(self.display_tab)
+        if self.graphing_frequency == 0:
+            return
         if not self.current_simulation:
             return
         if len(self.current_simulation.results) == self.last_results_plotted:
             return
         self.last_results_plotted = len(self.current_simulation.results)
-        
+
+        if len(self.current_simulation.results) % self.graphing_frequency != 0:
+            return
         if self.current_simulation.results:
             results_to_plot = list(filter(lambda x: not isna(x[self.current_simulation.output_columns[len(
                     self.current_simulation.vars_to_change)]].values[0]), self.current_simulation.results))
@@ -1031,17 +1049,19 @@ class MainApp(Tk):
         status_label = None
         if not self.simulation_dist:
             return
-        
         if not self.display_tab:
             self.display_tab = Frame(self.notebook)
             self.notebook.add(self.display_tab,text = "Simulation Status")
-            self.notebook.select(self.display_tab)
+            
             status_label = Label(self.display_tab, text='Setting Up Simulation...')
             status_label.place(x=6, y=4)
             self.init_plots_constructed = False
             self.plots_dictionary = {}
-
-            
+            self.notebook.select(self.display_tab)
+        if not self.simulations:
+            self.notebook.select(self.display_tab)
+        if self.graphing_frequency == 0:
+            return
         if not self.current_simulation:
             return
         if len(self.current_simulation.results) == self.last_results_plotted:
@@ -1050,6 +1070,8 @@ class MainApp(Tk):
         self.last_results_plotted = len(self.current_simulation.results)
         
         
+        if len(self.current_simulation.results) % self.graphing_frequency != 0:
+            return
         current_var = self.current_simulation.vars_to_change[0]
         if self.current_simulation.results:
             results_to_plot = list(filter(lambda x: not isna(x[self.current_simulation.output_columns[len(
@@ -1251,13 +1273,15 @@ class MainApp(Tk):
         self.plot_univ_on_GUI()
         self.disp_time_remaining(self.disp_status_update())
         
-        self.after(10000, self.univar_gui_update)
+        if not self.current_simulation or (self.current_simulation and not self.abort_univar_overall.value):
+            self.after(5000, self.univar_gui_update)
         
         
     def multivar_gui_update(self):
         self.plot_on_GUI()
         self.disp_time_remaining(self.disp_status_update())
-        self.after(10000, self.multivar_gui_update)
+        if not self.current_simulation or (self.current_simulation and not self.current_simulation.abort.value):
+            self.after(5000, self.multivar_gui_update)
         
         
     
@@ -1349,6 +1373,23 @@ class MainApp(Tk):
         self.abort.value = True
         self.cleanup_thread = Thread(target=self.cleanup_processes_and_COMS)
         self.cleanup_thread.start()
+        try:
+            if self.analysis_type.get() == 'Multivariate Sensitivity' or self.abort_univar_overall.value:
+                self.time_rem_label.config(text='Status: Aborting Simulation, Please Wait Before Starting New Simulation')
+            else:
+                self.time_rem_label.config(text='Status: Transitioning to Next Variable')
+
+        except: pass
+        #self.abort_status_label.place(x=350,y=30)
+        Thread(target=self.abort_helper).start()
+
+        
+    def abort_helper(self):
+        self.cleanup_thread.join()
+        try:
+            self.time_rem_label.config(text='Status: Ready for New Simulation')
+        except:
+            pass
         
     def abort_univar_overall_fun(self):
         self.abort_univar_overall.value = True
@@ -1434,7 +1475,7 @@ class Simulation(object):
                 self.lock_to_signal_finish.release()
             except:
                 pass
-        print('Simulation Running, Waiting for Completion Signal')
+        print('Simulation Running\nWaiting for Completion Signal')
         self.lock_to_signal_finish.acquire()
         print('Completion Signal Received')
         self.wait()
@@ -1504,7 +1545,7 @@ def open_aspenCOMS(aspenfilename,dispatch):
     aspencom = Dispatch(str(dispatch))
     aspencom.InitFromArchive2(path.abspath(aspenfilename), host_type=0, node='', username='', password='', working_directory='', failmode=0)
     obj = aspencom.Tree
-    aspencom.SuppressDialogs = False     
+    #aspencom.SuppressDialogs = False     
     return aspencom,obj
 
 
