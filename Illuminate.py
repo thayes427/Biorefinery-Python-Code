@@ -428,23 +428,24 @@ class MainApp(Tk):
             canvas1.create_window((0, 0), window=frame_vars1, anchor='nw')
             for name, format_of_data, vals in univariate_vars:
                 Label(frame_vars1, 
-                text= self.conv_title(name, True)).grid(row=self.univar_row_num, column= 1,pady = 5,padx = 5)
+                text= self.conv_title(name, True)).grid(row=self.univar_row_num, column= 1,pady = 5,padx = 18)
                 Label(frame_vars1, 
-                text= self.conv_title(format_of_data)).grid(row=self.univar_row_num, column= 2,pady = 5,padx = 5)
+                text= self.conv_title(format_of_data, True)).grid(row=self.univar_row_num, column= 2,pady = 5,padx = 18)
                 
                 if not(format_of_data == 'linspace' or format_of_data == 'list' or 'mapping' in format_of_data):
                     key2=Entry(frame_vars1)
                     key2.grid(row=self.univar_row_num, column=3,pady = 5,padx = 5)
                     #key2.insert(0,univariate_sims)
                     self.univar_ntrials_entries[name]= key2
+                    self.univar_ntrials_entries[name].config(width = 8)
                 else:
                     if "mapping" in format_of_data:
-                        Label(frame_vars1,text= self.conv_title(vals[-1].strip())).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5)
+                        Label(frame_vars1,text= self.conv_title(vals[-1].strip())).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5, sticky= W)
                     elif format_of_data == 'linspace':
                         
-                        Label(frame_vars1,text= self.conv_title(str(vals[2]).strip())).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5)
+                        Label(frame_vars1,text= self.conv_title(str(vals[2]).strip())).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5, sticky = W)
                     else:
-                        Label(frame_vars1,text= self.conv_title(str(len(vals)))).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5)
+                        Label(frame_vars1,text= self.conv_title(str(len(vals)))).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5, sticky= W)
                 self.univar_row_num += 1
                 
             # Update vars frames idle tasks to let tkinter calculate variable sizes
