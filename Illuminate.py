@@ -233,7 +233,7 @@ class MainApp(Tk):
                    text='Display Variable Distributions',
                    command=self.plot_init_dist).grid(row=14,
                    column=1, columnspan=2, sticky = W,
-                   pady=4)
+                   pady=4, padx=6)
             Button(self.current_tab,
                    text='Fill  # Trials',
                    command=self.fill_num_trials).grid(row=7, columnspan = 2, sticky =E,
@@ -283,7 +283,7 @@ class MainApp(Tk):
             Button(self.current_tab,
                    text='Display Variable Distributions',
                    command=self.plot_init_dist).grid(row=6,
-                   column=1, columnspan=2, sticky=W, pady=4)
+                   column=1, columnspan=2, sticky=W, pady=4, padx=6)
             
         self.load_variables_into_GUI()
         self.notebook.select(self.current_tab)
@@ -746,6 +746,9 @@ class MainApp(Tk):
         except: 
             self.num_trial = 1
         self.output_file = str(self.save_as_entry.get())
+        if len(self.output_file) == 0:
+            self.output_file = str('Simulation_Results')
+            print(self.output_file, type(self.output_file))
         self.input_csv = str(self.input_csv_entry.get())
         
         self.vars_to_change = []
@@ -771,7 +774,7 @@ class MainApp(Tk):
                 self.abort.value = True
             self.univar_plot_counter += 1
             self.last_update = None
-        self.simulations = []
+        #self.simulations = []
         self.abort_univar_overall.value = False
         self.abort.value=False
         self.current_simulation = None
@@ -817,7 +820,6 @@ class MainApp(Tk):
             
         
     def create_simulation_object(self, simulation_vars, vars_to_change, output_file, num_trial, weights=[]):
-
         self.output_columns = vars_to_change + self.output_vars
         output_directory = path.join(path.dirname(str(self.input_csv_entry.get())),'Output/',datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
         makedirs(output_directory)
@@ -830,6 +832,7 @@ class MainApp(Tk):
         
         
     def initialize_single_point(self):
+        self.simulations = []
         if self.worker_thread and self.worker_thread.isAlive():
             print('Simulation Already Running')
             return
@@ -839,6 +842,7 @@ class MainApp(Tk):
         self.after(5000, self.disp_sp_mfsp)
         
     def initialize_univar_analysis(self):
+        self.simulations = []
         if self.worker_thread and self.worker_thread.isAlive():
             print('Simulation Already Running')
             return
@@ -851,6 +855,7 @@ class MainApp(Tk):
 
     
     def initialize_multivar_analysis(self):
+        self.simulations = []
         if self.worker_thread and self.worker_thread.isAlive():
             print('Simulation Already Running')
             return
@@ -895,6 +900,7 @@ class MainApp(Tk):
         if not self.simulation_dist:
             return
         if not self.display_tab:
+            print('hiii')
             self.display_tab = Frame(self.notebook)
             self.notebook.add(self.display_tab,text = "Simulation Status")
             
