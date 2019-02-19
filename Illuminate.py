@@ -69,6 +69,7 @@ class MainApp(Tk):
         self.mapping_pdfs = {}
         self.simulation_dist, self.simulation_vars = {}, {}
         self.graphing_frequency = None
+        self.analysis_type_error = None
         
 #        style = ttk.Style()
 #        style.configure('Kim.TButton', foreground='blue', bg='blue', activebackground='red', relief='raised')
@@ -185,6 +186,8 @@ class MainApp(Tk):
         #self.num_processes_entry.grid(row=3, column=2, pady=5, padx=5)
 
     def make_new_tab(self):
+        if self.analysis_type_error:
+            self.analysis_type_error.destroy()
         try:
             self.graphing_frequency = int(self.graphing_freq_entry.get())
         except:
@@ -193,7 +196,8 @@ class MainApp(Tk):
             self.notebook.forget(self.current_tab)
             self.current_tab = None
         if self.analysis_type.get() == 'Choose Analysis Type':
-            print("ERROR: Select an Analysis Type")
+            self.analysis_type_error = Label(self.home_tab, text='ERROR: Choose An Analysis Type', fg='red')
+            self.analysis_type_error.grid(row=10,column=2)
  
         elif self.analysis_type.get() == 'Univariate Sensitivity':
             self.current_tab = Frame(self.notebook)
@@ -520,20 +524,23 @@ class MainApp(Tk):
                         if self.analysis_type.get() != "Univariate Sensitivity":
                             distribution = self.sample_gauss(mean, std_dev, lb, ub, ntrials)
                         else:
-                            pdf_approx = self.sample_gauss(mean, std_dev, lb_dist, ub_dist, 10000)
+                            bin_width = (ub_dist - lb_dist)/num_trials
+                            pdf_approx = self.sample_gauss(mean, std_dev, lb_dist-0.5*bin_width, ub_dist+0.5*bin_width, 100000)
 
                     if 'pareto' in dist_type:
                         shape, scale = float(dist_vars[0].strip()), float(dist_vars[1].strip())
                         if self.analysis_type.get() != "Univariate Sensitivity":
                             distribution = self.sample_pareto(shape, scale, lb, ub, ntrials)
                         else:
-                            pdf_approx = self.sample_pareto(shape, scale, lb_dist, ub_dist, num_trials)
+                            bin_width = (ub_dist - lb_dist)/num_trials
+                            pdf_approx = self.sample_pareto(shape, scale, lb_dist-0.5*bin_width, ub_dist+0.5*bin_width, 100000)
                     if 'poisson' in dist_type:
                         lambda_p = float(dist_vars[0].strip())
                         if self.analysis_type.get() != "Univariate Sensitivity":
                             distribution = self.sample_poisson(lambda_p, lb, ub, ntrials)
                         else:
-                            pdf_approx =self.sample_poisson(lambda_p, lb_dist, ub_dist, num_trials)
+                            bin_width = (ub_dist - lb_dist)/num_trials
+                            pdf_approx =self.sample_poisson(lambda_p, lb_dist-0.5*bin_width, ub_dist+0.5*bin_width, 100000)
                         
                     if self.analysis_type.get() == "Univariate Sensitivity":
                         bin_width = (ub_dist - lb_dist)/num_trials
@@ -901,7 +908,6 @@ class MainApp(Tk):
         if not self.simulation_dist:
             return
         if not self.display_tab:
-            print('hiii')
             self.display_tab = Frame(self.notebook)
             self.notebook.add(self.display_tab,text = "Simulation Status")
             
@@ -1230,7 +1236,10 @@ class MainApp(Tk):
             fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255])
             a = fig.add_subplot(111)
             num_bins = 15
-            a.hist(values, num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
+            if var in self.mapping_pdfs:
+                a.hist(values, num_bins, weights=self.mapping_pdfs[var], facecolor='blue', edgecolor='black', alpha=1.0)
+            else:
+                a.hist(values, num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
             a.set_title(self.conv_title(var))
             a.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
             fig_list.append(fig)
