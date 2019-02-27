@@ -124,9 +124,6 @@ class MainApp(Tk):
         self.input_csv_entry = Entry(self.home_tab)
         self.input_csv_entry.grid(row=1, column=2)
         
-        Label(self.home_tab, text='Plotting Frequency (0 for No Plots):').grid(row=4, column=1, sticky=E, pady=5, padx=5)
-        self.graphing_freq_entry = Entry(self.home_tab)
-        self.graphing_freq_entry.grid(row=4, column=2)
         
         Button(self.home_tab, 
               text="Upload Aspen Model",
@@ -235,6 +232,24 @@ class MainApp(Tk):
                    command=self.initialize_univar_analysis).grid(row=14,
                    column=3, columnspan=2,
                    pady=4)
+            
+            save_bkp= Checkbutton(self.current_tab, text = "Save .bkp Files")
+            save_bkp.grid(row = 13, column = 3, columnspan =2, pady=4)
+            
+            live_graphing= Labelframe(self.current_tab, text='Live Graphing:')
+            live_graphing.grid(row=13, column=1, sticky=W)
+            yes_graph= Button(live_graphing, text='Y')
+            yes_graph.grid(row=13, column= 1)
+            yes_graph.configure(width=5)
+            no_graph=Button(live_graphing, text ='N')
+            no_graph.grid(row=13, column=2, sticky=E)
+            no_graph.configure(width=5)
+            
+            
+            self.graphing_freq_entry = Entry(self.current_tab)
+            self.graphing_freq_entry.grid(row=13, column=1, sticky = E, ipady =4)
+            self.graphing_freq_entry.config(width = 6)
+            
             Button(self.current_tab,
                    text='Display Variable Distributions',
                    command=self.plot_init_dist).grid(row=14,
@@ -246,7 +261,7 @@ class MainApp(Tk):
                    column=1,
                    pady=4)
             self.fill_num_sims = Entry(self.current_tab)
-            self.fill_num_sims.grid(row=7,column = 3,sticky =W, pady =2, padx = 2)
+            self.fill_num_sims.grid(row=7,column = 3,sticky =W, pady =2, padx = 2, columnspan=2)
             self.fill_num_sims.config(width = 10)
             
         elif  self.analysis_type.get() == 'Single Point Analysis':
@@ -258,6 +273,9 @@ class MainApp(Tk):
             self.save_as_entry = Entry(self.current_tab)
             self.save_as_entry.grid(row=0, column=1, pady = 5)
             Label(self.current_tab,text = ".xlsx").place(x = 295, y= 6)
+            
+            save_bkp= Checkbutton(self.current_tab, text = "Save .bkp Files")
+            save_bkp.grid(row = 3, column = 2, columnspan =2, pady=4)
             
             Button(self.current_tab, text='Run Analysis',
             command=self.initialize_single_point).grid(row=3,
@@ -286,6 +304,14 @@ class MainApp(Tk):
                    text='Run Multivariate Analysis',
                    command=self.initialize_multivar_analysis).grid(row=6,
                    column=3, columnspan=2, sticky=W, pady=4)
+            
+            save_bkp= Checkbutton(self.current_tab, text = "Save .bkp Files")
+            save_bkp.grid(row = 5, column = 3, columnspan =2, sticky=W, pady=4)
+            
+            Label(self.current_tab, text='Plotting Frequency (0 for No Plots):').grid(row=5, column=1, sticky=E, pady=5, padx=5)
+            self.graphing_freq_entry = Entry(self.home_tab)
+            self.graphing_freq_entry.grid(row=5, column=2)
+            
             Button(self.current_tab,
                    text='Display Variable Distributions',
                    command=self.plot_init_dist).grid(row=6,
@@ -412,7 +438,7 @@ class MainApp(Tk):
             # Create a frame for the canvas with non-zero row&column weights
             #label_frame = Labelframe(self.current_tab)
             #label_frame.grid(row=9, column=1, columnspan=3)
-            frame_canvas1 = Frame(self.current_tab)
+            frame_canvas1 = Labelframe(self.current_tab)
             frame_canvas1.grid(row=9, column=1, columnspan =3, pady=(5, 0))
             frame_canvas1.grid_rowconfigure(0, weight=1)
             frame_canvas1.grid_columnconfigure(0, weight=1)
@@ -1243,7 +1269,29 @@ class MainApp(Tk):
 #                self.notebook.forget(self.display_tab)
         self.get_distributions()  
         if not self.simulation_dist:
+            self.current_tab
             return
+        
+#        row_num = 5
+#        self.resample_vars= Labelframe(self.current_tab, text='Select Variables to Resample:')
+#        self.resample_vars.grid(row = row_num, column = 1)
+#        
+#        count = 0
+#        x, y = 10, 20
+#        for v in self.simulation_dist.keys():
+#            self.v = IntVar()
+#            cb = Checkbutton(self.resample_vars, text = v, variable = self.v)
+#            cb.place(x = x , y = y)
+#            cb.select()
+#            count += 1
+#            x += 30
+#            if count%5 == 0:
+#                y += 50
+#                x = 10
+#        return
+#        x = 10
+#        y += 10
+        
         
 #        self.display_tab = Frame(self.notebook)
 #        self.notebook.add(self.display_tab,text = "Results (Graphed)")
@@ -1264,15 +1312,32 @@ class MainApp(Tk):
             row_num = 17
         else:
             row_num = 10
+
+        self.resample_vars= Labelframe(self.current_tab, text='Select Variables to Resample:')
+        self.resample_vars.grid(row = row_num, column = 1, columnspan = 5)
         
+        count = 0
+        row_track, col_track = 0,0
+        for v in self.simulation_dist.keys():
+            self.v = IntVar()
+            cb = Checkbutton(self.resample_vars, text = v, variable = v)
+            cb.grid(row= row_track, column = col_track)
+            cb.select()
+            col_track += 1
+            if col_track%5 == 0:
+                    row_track +=1
+                    col_track = 0
+            
+
         frame_width = self.win_lim_x - 30
         num_graphs_per_row = frame_width//250
         frame_height = 30+(230*((len(fig_list)-1)//num_graphs_per_row + 1)) 
         if self.univar_row_num != 0:
             
-            window_height = self.win_lim_y - 330
+            window_height = self.win_lim_y - (385 + row_track*45)
         else:
-            window_height = self.win_lim_y - 160
+            window_height = self.win_lim_y - (160 + row_track*45)
+        row_num += 1
         
         frame_canvas = Frame(self.current_tab)
         frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
@@ -1297,7 +1362,8 @@ class MainApp(Tk):
         x, y = 10, 10
         output_dis = Label(figure_frame, text = 'Inputs:', font='Helvetica 10 bold')
         output_dis.place(x = x, y = y)
-        y = 30
+        
+        count =0
         for figs in fig_list:
             figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
             x = 10 + 250*(count % num_graphs_per_row)
@@ -1309,6 +1375,9 @@ class MainApp(Tk):
         frame_canvas.config(width=frame_width, height=window_height)
         main_canvas.config(scrollregion=(0,0,x,frame_height))
         
+    
+    
+
         
         
     def univar_gui_update(self):
