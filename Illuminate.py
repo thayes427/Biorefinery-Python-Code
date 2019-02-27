@@ -1724,38 +1724,40 @@ def aspen_run(aspencom, obj, simulation_vars, trial, vars_to_change):
 
 def mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_num, output_value_cells):
 
-#    column = [x for x in book.Sheets('Aspen_Streams').Evaluate("D1:D100") if x.Value != None] 
-#    
-#    if obj.FindNode(column[0]) == None: # basically, if the massflow out of the system is None, then it failed to converge
-#        dfstreams = DataFrame(columns=columns)
-#        dfstreams.loc[trial_num+1] = case_values + [None]*(len(columns) - 1 - len(case_values)) + ["Aspen Failed to Converge"]
-#        return dfstreams
-#    stream_values = []
-#    for index,stream in enumerate(column):
-#        stream_value = obj.FindNode(stream).Value   
-#        stream_values.append((stream_value,))
-#    cell_string = "C1:C" + str(len(column))
-#    book.Sheets('ASPEN_Streams').Evaluate(cell_string).Value = stream_values
-#    
-#    excel.Calculate()
-#    excel.Run('SOLVE_DCFROR')
-#
-#     
-#    dfstreams = DataFrame(columns=columns)
-#    dfstreams.loc[trial_num+1] = case_values + [x.Value for x in book.Sheets('Output').Evaluate(output_value_cells.value)] + ["; ".join(errors)]
-#    return dfstreams
+    column = [x for x in book.Sheets('Aspen_Streams').Evaluate("D1:D100") if x.Value != None] 
     
+    if obj.FindNode(column[0]) == None: # basically, if the massflow out of the system is None, then it failed to converge
+        dfstreams = DataFrame(columns=columns)
+        dfstreams.loc[trial_num+1] = case_values + [None]*(len(columns) - 1 - len(case_values)) + ["Aspen Failed to Converge"]
+        return dfstreams
+    stream_values = []
+    for index,stream in enumerate(column):
+        stream_value = obj.FindNode(stream).Value   
+        stream_values.append((stream_value,))
+    cell_string = "C1:C" + str(len(column))
+    book.Sheets('ASPEN_Streams').Evaluate(cell_string).Value = stream_values
     
-    excel.Run('sub_ClearSumData_ASPEN')
-    excel.Run('sub_GetSumData_ASPEN')
     excel.Calculate()
-#    excel.Run('SolveProductCost')
-    excel.Run('solvedcfror')
-      
+    excel.Run('SOLVE_DCFROR')
+
+     
     dfstreams = DataFrame(columns=columns)
     dfstreams.loc[trial_num+1] = case_values + [x.Value for x in book.Sheets('Output').Evaluate(output_value_cells.value)] + ["; ".join(errors)]
     return dfstreams
     
+    
+
+
+#    excel.Run('sub_ClearSumData_ASPEN')
+#    excel.Run('sub_GetSumData_ASPEN')
+#    excel.Calculate()
+##    excel.Run('SolveProductCost')
+#    excel.Run('solvedcfror')
+#      
+#    dfstreams = DataFrame(columns=columns)
+#    dfstreams.loc[trial_num+1] = case_values + [x.Value for x in book.Sheets('Output').Evaluate(output_value_cells.value)] + ["; ".join(errors)]
+#    return dfstreams
+#    
     
     
 #    excel.Run('sub_ClearSumData_ASPEN')
