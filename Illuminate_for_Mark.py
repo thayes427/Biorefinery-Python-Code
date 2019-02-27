@@ -29,7 +29,7 @@ from random import choices
  
 
 
-
+#C:/Users/MENGstudents/Desktop/Biorefinery-Design-Project/BC1508F-BC_FY17Target._Final_5ptoC5_updated022618.apw
 
 
 class MainApp(Tk):
@@ -123,7 +123,7 @@ class MainApp(Tk):
         self.input_csv_entry = Entry(self.home_tab)
         self.input_csv_entry.grid(row=1, column=2)
         
-        Label(self.home_tab, text='Plotting Frequency (Put 0 for No Plots):').grid(row=4, column=1, sticky=E, pady=5, padx=5)
+        Label(self.home_tab, text='Plotting Frequency (0 for No Plots):').grid(row=4, column=1, sticky=E, pady=5, padx=5)
         self.graphing_freq_entry = Entry(self.home_tab)
         self.graphing_freq_entry.grid(row=4, column=2)
         
@@ -433,8 +433,10 @@ class MainApp(Tk):
             for name, format_of_data, vals in univariate_vars:
                 Label(frame_vars1, 
                 text= self.conv_title(name, True)).grid(row=self.univar_row_num, column= 1,pady = 5,padx = 18)
+                print(len(self.conv_title(name, True)))
                 Label(frame_vars1, 
                 text= self.conv_title(format_of_data, True)).grid(row=self.univar_row_num, column= 2,pady = 5,padx = 18)
+                print(len(self.conv_title(format_of_data, True)))
                 
                 if not(format_of_data == 'linspace' or format_of_data == 'list' or 'mapping' in format_of_data):
                     key2=Entry(frame_vars1)
@@ -561,7 +563,8 @@ class MainApp(Tk):
                                                float(linspace_vars[1].strip()),
                                                int(linspace_vars[2].strip()))
                     if self.analysis_type.get() == 'Multivariate Sensitivity':
-                        distribution2 = choices(distribution, k=ntrials)
+                        num_concat = ntrials//len(distribution) + 1
+                        distribution2 = (distribution*num_concat)[:ntrials]
                         distribution = distribution2
                 elif 'poisson' in dist_type:
                     lambda_p = float(row['Distribution Parameters'].strip())
@@ -577,7 +580,8 @@ class MainApp(Tk):
                     for l in lst:
                         distribution.append(float(l.strip()))  
                     if self.analysis_type.get() == 'Multivariate Sensitivity':
-                        distribution2 = choices(distribution, k=ntrials)
+                        num_concat = ntrials//len(distribution) + 1
+                        distribution2 = (distribution*num_concat)[:ntrials]
                         distribution = distribution2
                 elif 'uniform' in dist_type:
                     lb_ub = row['Distribution Parameters'].split(',')
@@ -590,12 +594,13 @@ class MainApp(Tk):
                     return {}, {}
                 simulation_dist[aspen_variable] = distribution[:]
                 fortran_index = (0,0)
+                print(distribution)
                 if row['Fortran Call'] != 'nan':
                     
                     fortran_call = row['Fortran Call']
-                    value_to_change = row['Fortran Value to Change'].strip()
+                    value_to_change = row['Fortran Value to Change']
                     len_val = len(value_to_change)
-
+                    print(len_val, value_to_change)
                     for i in range(len(fortran_call)):
                         if fortran_call[i:i+len_val] == value_to_change:
                             fortran_index = (i, i+len_val) #NOT INCLUSIVE
@@ -915,6 +920,7 @@ class MainApp(Tk):
             status_label.place(x=6, y=4)
             self.init_plots_constructed = False
             self.plots_dictionary = {}
+            Button(self.display_tab, text = "Abort", command=self.abort_sim).place(x=(4*self.win_lim_x)//5, y = 5)
             self.notebook.select(self.display_tab)
         if not self.simulations:
             self.notebook.select(self.display_tab)
@@ -943,109 +949,110 @@ class MainApp(Tk):
             results_unfiltered = results_filtered
             
         if not self.init_plots_constructed:
-            if self.graphing_frequency != 0:
-                results_fig_list =[]
-                num_bins = 15
-                for var, toggled in self.graph_toggles.items():
-                    if toggled.get():
-                        fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=False)
-                        ax = fig.add_subplot(111)
-                        ax.hist(results_filtered[var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-                        ax.set_title(self.conv_title(var))
-                        ax.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
-                        self.plots_dictionary[var] = ax
-                        results_fig_list.append(fig)
-                
-                inputs_fig_list = []
-                for var, values in self.simulation_dist.items():
+            results_fig_list =[]
+            num_bins = 15
+            for var, toggled in self.graph_toggles.items():
+                if toggled.get():
                     fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=False)
-                    a = fig.add_subplot(111)
-                    _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
-                    a.hist(results_unfiltered[var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
-                    a.set_title(self.conv_title(var))
-                    a.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
-                   # a.get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter(set_powerlimits((n,m))
-                    self.plots_dictionary[var] = a
-                    inputs_fig_list.append(fig)
-                
-                row_num = 0
-                frame_width = self.win_lim_x - 30
-                num_graphs_per_row = frame_width//250
-                frame_height = 60+(230*((len(inputs_fig_list) + len(results_fig_list)+1)//num_graphs_per_row + 1))  
-                window_height = self.win_lim_y - 30
-                
-                frame_canvas = Frame(self.display_tab)
-                frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
-                frame_canvas.grid_rowconfigure(0, weight=1)
-                frame_canvas.grid_columnconfigure(0, weight=1)
-                frame_canvas.config(height = window_height, width=frame_width)
-                
-                main_canvas = Canvas(frame_canvas)
-                main_canvas.grid(row=0, column=0, sticky="news")
-                main_canvas.config(height = window_height, width=frame_width)
-                
-                vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview, style='scroll.Vertical.TScrollbar')
-                vsb.grid(row=0, column=1,sticky = 'ns')
-                main_canvas.configure(yscrollcommand=vsb.set)
-                
-                figure_frame = Frame(main_canvas)
-                main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
-                figure_frame.config(height = frame_height, width=frame_width)
-                if status_label:
-                    status_label.destroy()
+                    ax = fig.add_subplot(111)
+                    ax.hist(results_filtered[var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
+                    ax.set_title(self.conv_title(var))
+                    ax.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
+                    self.plots_dictionary[var] = ax
+                    results_fig_list.append(fig)
             
-        #        row_num = 0
-        #        column = False
-        #        count = 1
-        #        for figs in results_fig_list + inputs_fig_list:
-        #            figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
-        #            if column:
-        #                col = 4
-        #            else:
-        #                col = 1
-        #            #figure_canvas.draw()
-        #            figure_canvas.get_tk_widget().grid(
-        #                    row=row_num, column=col,columnspan=2, rowspan = 5, pady = 5,padx = 8, sticky=E)
-        #            #figure_canvas._tkcanvas.grid(row=row_num, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
-        #            if column:
-        #                row_num += 5
-        #            column = not column
-        #            count += 1
-                
-                
-                
-                count = 0
-                x, y = 10, 30
-                output_dis = Label(figure_frame, text = 'Outputs:', font='Helvetica 10 bold')
-                output_dis.place(x = x, y = y)
-                y += 20
-                for figs in results_fig_list:
-                    figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
-                    x = 10 + 250*(count % num_graphs_per_row)
-                    figure_canvas.get_tk_widget().place(x = x, y= y, width = 240, height =220)
-                    if (count+1) % num_graphs_per_row==0 and count != len(results_fig_list) - 1:
-                        y += 230
-                    count += 1
-                y += 240
-                line= Label(figure_frame, text = '------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------')
-                line.place(x = 0, y = y-12)
-                input_dis = Label(figure_frame, text = 'Inputs:', font='Helvetica 10 bold')
-                input_dis.place(x = 10, y = y)
-                y += 20
-                x=10
-                count = 0
-                for figs in inputs_fig_list:
-                    figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
-                    x = 10 + 250*(count % num_graphs_per_row)
-                    figure_canvas.get_tk_widget().place(x = x, y= y, width = 240, height =220)
-                    if (count+1) % num_graphs_per_row==0:
-                        y += 230
-                    count += 1
+            inputs_fig_list = []
+            for var, values in self.simulation_dist.items():
+                fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=False)
+                a = fig.add_subplot(111)
+                _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
+                a.hist(results_unfiltered[var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
+                a.set_title(self.conv_title(var))
+                a.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
+               # a.get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter(set_powerlimits((n,m))
+                self.plots_dictionary[var] = a
+                inputs_fig_list.append(fig)
+            
+            row_num = 0
+            frame_width = self.win_lim_x - 30
+            num_graphs_per_row = frame_width//250
+            frame_height = 60+(230*((len(inputs_fig_list) + len(results_fig_list)+1)//num_graphs_per_row + 1))  
+            window_height = self.win_lim_y - 30
+            
+            frame_canvas = Frame(self.display_tab)
+            frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
+            frame_canvas.grid_rowconfigure(0, weight=1)
+            frame_canvas.grid_columnconfigure(0, weight=1)
+            frame_canvas.config(height = window_height, width=frame_width)
+            
+            main_canvas = Canvas(frame_canvas)
+            main_canvas.grid(row=0, column=0, sticky="news")
+            main_canvas.config(height = window_height, width=frame_width)
+            
+            vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview, style='scroll.Vertical.TScrollbar')
+            vsb.grid(row=0, column=1,sticky = 'ns')
+            main_canvas.configure(yscrollcommand=vsb.set)
+            
+            figure_frame = Frame(main_canvas)
+            main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
+            figure_frame.config(height = frame_height, width=frame_width)
+            if status_label:
+                status_label.destroy()
         
-                figure_frame.update_idletasks()
-                frame_canvas.config(width=frame_width, height=window_height)
-                main_canvas.config(scrollregion=(0,0,x,frame_height))
+    #        row_num = 0
+    #        column = False
+    #        count = 1
+    #        for figs in results_fig_list + inputs_fig_list:
+    #            figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
+    #            if column:
+    #                col = 4
+    #            else:
+    #                col = 1
+    #            #figure_canvas.draw()
+    #            figure_canvas.get_tk_widget().grid(
+    #                    row=row_num, column=col,columnspan=2, rowspan = 5, pady = 5,padx = 8, sticky=E)
+    #            #figure_canvas._tkcanvas.grid(row=row_num, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
+    #            if column:
+    #                row_num += 5
+    #            column = not column
+    #            count += 1
+            
+            
+            
+            count = 0
+            x, y = 10, 30
+            output_dis = Label(figure_frame, text = 'Outputs:', font='Helvetica 10 bold')
+            output_dis.place(x = x, y = y)
+            y += 20
+            for figs in results_fig_list:
+                figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
+                x = 10 + 250*(count % num_graphs_per_row)
+                figure_canvas.get_tk_widget().place(x = x, y= y, width = 240, height =220)
+                if (count+1) % num_graphs_per_row==0 and count != len(results_fig_list) - 1:
+                    y += 230
+                count += 1
+            y += 240
+            line= Label(figure_frame, text = '------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------')
+            line.place(x = 0, y = y-12)
+            input_dis = Label(figure_frame, text = 'Inputs:', font='Helvetica 10 bold')
+            input_dis.place(x = 10, y = y)
+            y += 20
+            x=10
+            count = 0
+            for figs in inputs_fig_list:
+                figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
+                x = 10 + 250*(count % num_graphs_per_row)
+                figure_canvas.get_tk_widget().place(x = x, y= y, width = 240, height =220)
+                if (count+1) % num_graphs_per_row==0:
+                    y += 230
+                count += 1
+    
+            figure_frame.update_idletasks()
+            frame_canvas.config(width=frame_width, height=window_height)
+            main_canvas.config(scrollregion=(0,0,x,frame_height))
             Button(self.display_tab, text = "Abort", command=self.abort_sim).place(x=(4*self.win_lim_x)//5, y = 5)
+
+
         else:
             for f in self.plots_dictionary.values():
                 f.cla()
@@ -1081,6 +1088,9 @@ class MainApp(Tk):
             status_label.place(x=6, y=4)
             self.init_plots_constructed = False
             self.plots_dictionary = {}
+            Button(self.display_tab, text = "Next Variable", command=self.abort_sim).place(x=self.win_lim_x - 110, y=3)
+            
+            Button(self.display_tab, text = "Abort", command=self.abort_univar_overall_fun).place(x=self.win_lim_x-190, y=3)
             self.notebook.select(self.display_tab)
         if not self.simulations:
             self.notebook.select(self.display_tab)
@@ -1185,11 +1195,12 @@ class MainApp(Tk):
             figure_frame.update_idletasks()
             # Set the canvas scrolling region
             main_canvas.config(scrollregion=(0,0,graphs_frame_width,frame_height))
-        
-    
             Button(self.display_tab, text = "Next Variable", command=self.abort_sim).place(x=self.win_lim_x - 110, y=3)
             
             Button(self.display_tab, text = "Abort", command=self.abort_univar_overall_fun).place(x=self.win_lim_x-190, y=3)
+        
+    
+
         else:
             for f in self.plots_dictionary[current_var].values():
                 f.cla()
@@ -1491,7 +1502,7 @@ class Simulation(object):
         df['trial'] = range(1, ntrials+1)
         df.to_csv('trials_for_'+self.output_file.value + '.csv',index=False)
         
-        
+        print(self.simulation_vars)
         
         TASKS = [trial for trial in range(0, self.tot_sim)]
         self.lock_to_signal_finish.acquire()
@@ -1618,6 +1629,8 @@ def save_graphs(outputfilename, results, directory, weights):
                 if char_omit:
                     var = "".join([s[0]+s[1] for s in char_omit])
                 plt.savefig(directory.value + '/' + outputfilename.value + '_' + var + '.png', format='png')
+                fig.clf()
+                plt.close('all')
 
 def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilename, 
            excelfilename, task_queue, abort, results_lock, results, directory, output_columns, output_value_cells,
@@ -1725,38 +1738,26 @@ def aspen_run(aspencom, obj, simulation_vars, trial, vars_to_change):
 
 def mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_num, output_value_cells):
 
-#    column = [x for x in book.Sheets('Aspen_Streams').Evaluate("D1:D100") if x.Value != None] 
-#    
-#    if obj.FindNode(column[0]) == None: # basically, if the massflow out of the system is None, then it failed to converge
-#        dfstreams = DataFrame(columns=columns)
-#        dfstreams.loc[trial_num+1] = case_values + [None]*(len(columns) - 1 - len(case_values)) + ["Aspen Failed to Converge"]
-#        return dfstreams
-#    stream_values = []
-#    for index,stream in enumerate(column):
-#        stream_value = obj.FindNode(stream).Value   
-#        stream_values.append((stream_value,))
-#    cell_string = "C1:C" + str(len(column))
-#    book.Sheets('ASPEN_Streams').Evaluate(cell_string).Value = stream_values
-#    
-#    excel.Calculate()
-#    excel.Run('SOLVE_DCFROR')
-#
-#     
-#    dfstreams = DataFrame(columns=columns)
-#    dfstreams.loc[trial_num+1] = case_values + [x.Value for x in book.Sheets('Output').Evaluate(output_value_cells.value)] + ["; ".join(errors)]
-#    return dfstreams
+    column = [x for x in book.Sheets('Aspen_Streams').Evaluate("D1:D100") if x.Value != None] 
     
+    if obj.FindNode(column[0]) == None: # basically, if the massflow out of the system is None, then it failed to converge
+        dfstreams = DataFrame(columns=columns)
+        dfstreams.loc[trial_num+1] = case_values + [None]*(len(columns) - 1 - len(case_values)) + ["Aspen Failed to Converge"]
+        return dfstreams
+    stream_values = []
+    for index,stream in enumerate(column):
+        stream_value = obj.FindNode(stream).Value   
+        stream_values.append((stream_value,))
+    cell_string = "C1:C" + str(len(column))
+    book.Sheets('ASPEN_Streams').Evaluate(cell_string).Value = stream_values
     
-    excel.Run('sub_ClearSumData_ASPEN')
-    excel.Run('sub_GetSumData_ASPEN')
     excel.Calculate()
-#    excel.Run('SolveProductCost')
-    excel.Run('solvedcfror')
-      
+    excel.Run('SOLVE_DCFROR')
+
+     
     dfstreams = DataFrame(columns=columns)
     dfstreams.loc[trial_num+1] = case_values + [x.Value for x in book.Sheets('Output').Evaluate(output_value_cells.value)] + ["; ".join(errors)]
     return dfstreams
-    
     
     
 #    excel.Run('sub_ClearSumData_ASPEN')
@@ -1768,6 +1769,18 @@ def mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_
 #    dfstreams = DataFrame(columns=columns)
 #    dfstreams.loc[trial_num+1] = case_values + [x.Value for x in book.Sheets('Output').Evaluate(output_value_cells.value)] + ["; ".join(errors)]
 #    return dfstreams
+#    
+    
+    
+    excel.Run('sub_ClearSumData_ASPEN')
+    excel.Run('sub_GetSumData_ASPEN')
+    excel.Calculate()
+#    excel.Run('SolveProductCost')
+    excel.Run('solvedcfror')
+      
+    dfstreams = DataFrame(columns=columns)
+    dfstreams.loc[trial_num+1] = case_values + [x.Value for x in book.Sheets('Output').Evaluate(output_value_cells.value)] + ["; ".join(errors)]
+    return dfstreams
 
 
 def FindErrors(aspencom):

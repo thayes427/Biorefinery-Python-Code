@@ -1671,10 +1671,12 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
     excellock.acquire()
     if not abort.value:
         bkp_name = ''.join([choice(string.ascii_letters + string.digits) for n in range(10)]) + '.bkp'
-        aspencom.SaveAs(bkp_name)
-        bkp_files[bkp_name] = 1
+        #full_bkp_name = bkp_name
+        full_bkp_name = path.join(directory.value,bkp_name)
+        aspencom.SaveAs(full_bkp_name)
+        bkp_files[full_bkp_name] = 1
         excel,book = open_excelCOMS(excelfilename.value)
-        excel.Run('ASPEN_tempfile_locate("*.bkp")')
+        book.Sheets('Set-up').Evaluate('B1').Value = full_bkp_name
     excellock.release() 
     
     for p in process_iter(): #register the pids of COMS objects
@@ -1689,7 +1691,7 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
             except:
                 continue
         
-        aspencom, case_values, errors, obj = aspen_run(aspencom, obj, simulation_vars, trial_num, vars_to_change, directory, bkp_name) 
+        aspencom, case_values, errors, obj = aspen_run(aspencom, obj, simulation_vars, trial_num, vars_to_change, directory, full_bkp_name) 
         result = mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_num, output_value_cells, directory)
         
         results_lock.acquire()
