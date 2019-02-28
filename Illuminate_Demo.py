@@ -222,12 +222,14 @@ class MainApp(Tk):
             rec_core = int(cpu_count()//2)
             Label(self.current_tab, text = 'Recommended Count: ' + str(rec_core)).grid(row = 5, column = 3, sticky = W)
             
-            #Label(self.current_tab, text = 'Graphing Frequency:').place(x=104, y=80)
-#            self.num_processes_entry = Entry(self.current_tab)
-#            self.num_processes_entry.grid(row=6, column=2, sticky=E, pady=6)
-#            self.num_processes_entry.config(width=18)
+            Label(self.current_tab, text = 'Graphing Frequency:').place(x=90, y=72)
+            self.num_processes_entry = Entry(self.current_tab)
+            self.num_processes_entry.grid(row=6, column=2, sticky=E, pady=6)
+            self.num_processes_entry.config(width=18)
             
+            Label(self.current_tab, text = '(Input 0 for no Graphs)').grid(row=6,column=3, sticky = W)
             
+            self.resample_cue = True
             
             Label(self.current_tab, text ='').grid(row= 13, column =1)
             Button(self.current_tab,
@@ -239,19 +241,19 @@ class MainApp(Tk):
             save_bkp= Checkbutton(self.current_tab, text = "Save .bkp Files", variable=self.save_bkp)
             save_bkp.grid(row = 13, column = 3, columnspan =2, pady=4)
             
-            live_graphing= Labelframe(self.current_tab, text='Live Graphing:')
-            live_graphing.grid(row=13, column=1, sticky=W)
-            yes_graph= Button(live_graphing, text='Y')
-            yes_graph.grid(row=13, column= 1)
-            yes_graph.configure(width=5)
-            no_graph=Button(live_graphing, text ='N')
-            no_graph.grid(row=13, column=2, sticky=E)
-            no_graph.configure(width=5)
+#            live_graphing= Labelframe(self.current_tab, text='Live Graphing:')
+#            live_graphing.grid(row=13, column=1, sticky=W)
+#            yes_graph= Button(live_graphing, text='Y')
+#            yes_graph.grid(row=13, column= 1)
+#            yes_graph.configure(width=3)
+#            no_graph=Button(live_graphing, text ='N')
+#            no_graph.grid(row=13, column=2, sticky=E)
+#            no_graph.configure(width=3)
             
-            
-            self.graphing_freq_entry = Entry(self.current_tab)
-            self.graphing_freq_entry.grid(row=13, column=1, sticky = E, ipady =4)
-            self.graphing_freq_entry.config(width = 6)
+#            
+#            self.graphing_freq_entry = Entry(self.current_tab)
+#            self.graphing_freq_entry.grid(row=13, column=1, sticky = E, ipady =4)
+#            self.graphing_freq_entry.config(width = 6)
             
             Button(self.current_tab,
                    text='Display Variable Distributions',
@@ -306,20 +308,23 @@ class MainApp(Tk):
                                
             Button(self.current_tab,
                    text='Run Multivariate Analysis',
-                   command=self.initialize_multivar_analysis).grid(row=6,
+                   command=self.initialize_multivar_analysis).grid(row=7,
                    column=3, columnspan=2, sticky=W, pady=4)
             
             self.save_bkp = IntVar()
             save_bkp= Checkbutton(self.current_tab, text = "Save .bkp Files", variable=self.save_bkp)
-            save_bkp.grid(row = 5, column = 3, columnspan =2, sticky=W, pady=4)
+            save_bkp.grid(row = 6, column = 3, columnspan =2, sticky=W, pady=4)
+            self.resample_cue = True
             
-            Label(self.current_tab, text='Plotting Frequency (0 for No Plots):').grid(row=5, column=1, sticky=E, pady=5, padx=5)
-            self.graphing_freq_entry = Entry(self.home_tab)
-            self.graphing_freq_entry.grid(row=5, column=2)
+
+            
+            Label(self.current_tab, text='Plotting Frequency (0 for No Plots):').grid(row=6, column=1, sticky=E, pady=5, padx=5)
+            self.graphing_freq_entry = Entry(self.current_tab)
+            self.graphing_freq_entry.grid(row=6, column=2)
             
             Button(self.current_tab,
                    text='Display Variable Distributions',
-                   command=self.plot_init_dist).grid(row=6,
+                   command=self.plot_init_dist).grid(row=7,
                    column=1, columnspan=2, sticky=W, pady=4, padx=6)
             
         self.load_variables_into_GUI()
@@ -529,16 +534,21 @@ class MainApp(Tk):
         the user wants to change as well as their distributions that should be 
         randomly sampled from. 
         '''
-        
         gui_excel_input = str(self.input_csv_entry.get())
         col_types = {'Variable Name': str, 'Variable Aspen Call': str, 'Distribution Parameters': str, 'Bounds': str, 'Fortran Call':str, 'Fortran Value to Change': str, 'Distribution Type': str, 'Toggle': bool}
         df = read_excel(open(gui_excel_input,'rb'), dtype=col_types)
-        simulation_vars = {}
-        simulation_dist = {}
+        if not self.simulation_dist:
+            simulation_vars = {}
+            simulation_dist = {}
+        else:
+            simulation_vars = self.simulation_vars
+            simulation_dist = self.simulation_dist
         self.var_bounds = {}
         for index, row in df.iterrows():
             if row['Toggle']:
-                if row['Variable Name'] in simulation_dist:
+#                if row['Variable Name'] in simulation_dist:
+#                    continue
+                if self.resample_cue == False and not self.live_graphs[row['Variable Name']].get():
                     continue
                 dist_type = row['Distribution Type'].lower()
                 aspen_variable = row['Variable Name']
@@ -1293,31 +1303,7 @@ class MainApp(Tk):
 
 #        if self.display_tab:
 #                self.notebook.forget(self.display_tab)
-        self.get_distributions()  
-        if not self.simulation_dist:
-            self.current_tab
-            return
-        
-#        row_num = 5
-#        self.resample_vars= Labelframe(self.current_tab, text='Select Variables to Resample:')
-#        self.resample_vars.grid(row = row_num, column = 1)
-#        
-#        count = 0
-#        x, y = 10, 20
-#        for v in self.simulation_dist.keys():
-#            self.v = IntVar()
-#            cb = Checkbutton(self.resample_vars, text = v, variable = self.v)
-#            cb.place(x = x , y = y)
-#            cb.select()
-#            count += 1
-#            x += 30
-#            if count%5 == 0:
-#                y += 50
-#                x = 10
-#        return
-#        x = 10
-#        y += 10
-        
+        self.get_distributions()      
         
 #        self.display_tab = Frame(self.notebook)
 #        self.notebook.add(self.display_tab,text = "Results (Graphed)")
@@ -1344,15 +1330,19 @@ class MainApp(Tk):
         
         count = 0
         row_track, col_track = 0,0
-        for v in self.simulation_dist.keys():
-            self.v = IntVar()
-            cb = Checkbutton(self.resample_vars, text = v, variable = v)
-            cb.grid(row= row_track, column = col_track)
-            cb.select()
-            col_track += 1
-            if col_track%5 == 0:
-                    row_track +=1
-                    col_track = 0
+
+        if self.resample_cue:
+            self.live_graphs ={}
+            self.resample_cue = False
+            for v in self.simulation_dist.keys():
+                self.live_graphs[v] = IntVar()
+                cb = Checkbutton(self.resample_vars, text = v, variable = self.live_graphs[v])
+                cb.grid(row= row_track, column = col_track)
+                col_track += 1
+                if col_track%5 == 0:
+                        row_track +=1
+                        col_track = 0
+        
             
 
         frame_width = self.win_lim_x - 30
@@ -1360,7 +1350,7 @@ class MainApp(Tk):
         frame_height = 30+(230*((len(fig_list)-1)//num_graphs_per_row + 1)) 
         if self.univar_row_num != 0:
             
-            window_height = self.win_lim_y - (385 + row_track*45)
+            window_height = self.win_lim_y - (400 + row_track*45)
         else:
             window_height = self.win_lim_y - (160 + row_track*45)
         row_num += 1

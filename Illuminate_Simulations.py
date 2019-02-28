@@ -54,7 +54,7 @@ class Simulation(object):
             df[key[0]] = value
             ntrials = len(value)
         df['trial'] = range(1, ntrials+1)
-        df.to_csv(path.join(self.directory.value, 'Variable_Distributions.csv'),index=False)
+        df.to_csv(path.join(self.directory.value, 'Sampled_Variable_Distributions.csv'),index=False)
         
         
         
@@ -240,7 +240,7 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
         
         # save bkp file and tell excel calculator to point to correct bkp file
         if save_bkps.value:
-            full_bkp_name = path.join(aspen_temp_dir, 'trial_' + str(trial_num + 1) + '.bkp')
+            full_bkp_name = path.join(aspen_temp_dir, 'Trial_' + str(trial_num + 1) + '.bkp')
         aspencom.SaveAs(full_bkp_name)
         book.Sheets('Set-up').Evaluate('B1').Value = full_bkp_name
         
