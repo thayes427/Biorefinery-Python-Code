@@ -226,7 +226,7 @@ class MainApp(Tk):
             
             Label(self.current_tab, text = '(Input 0 for no Graphs)').grid(row=6,column=3, sticky = W)
             
-            self.cue = True
+            self.resample_cue = True
             
             Label(self.current_tab, text ='').grid(row= 13, column =1)
             Button(self.current_tab,
@@ -304,19 +304,21 @@ class MainApp(Tk):
                                
             Button(self.current_tab,
                    text='Run Multivariate Analysis',
-                   command=self.initialize_multivar_analysis).grid(row=6,
+                   command=self.initialize_multivar_analysis).grid(row=7,
                    column=3, columnspan=2, sticky=W, pady=4)
             
-            save_bkp= Checkbutton(self.current_tab, text = "Save .bkp Files")
-            save_bkp.grid(row = 5, column = 3, columnspan =2, sticky=W, pady=4)
+            self.resample_cue = True
             
-            Label(self.current_tab, text='Plotting Frequency (0 for No Plots):').grid(row=5, column=1, sticky=E, pady=5, padx=5)
-            self.graphing_freq_entry = Entry(self.home_tab)
-            self.graphing_freq_entry.grid(row=5, column=2)
+            save_bkp= Checkbutton(self.current_tab, text = "Save .bkp Files")
+            save_bkp.grid(row = 6, column = 3, columnspan =2, sticky=W, pady=4)
+            
+            Label(self.current_tab, text='Plotting Frequency (0 for No Plots):').grid(row=6, column=1, sticky=E, pady=5, padx=5)
+            self.graphing_freq_entry = Entry(self.current_tab)
+            self.graphing_freq_entry.grid(row=6, column=2)
             
             Button(self.current_tab,
                    text='Display Variable Distributions',
-                   command=self.plot_init_dist).grid(row=6,
+                   command=self.plot_init_dist).grid(row=7,
                    column=1, columnspan=2, sticky=W, pady=4, padx=6)
             
         self.load_variables_into_GUI()
@@ -540,8 +542,7 @@ class MainApp(Tk):
             if row['Toggle']:
 #                if row['Variable Name'] in simulation_dist:
 #                    continue
-                if self.cue == False and not self.live_graphs[row['Variable Name']].get():
-                    print(self.live_graphs[row['Variable Name']].get())
+                if self.resample_cue == False and not self.live_graphs[row['Variable Name']].get():
                     continue
                 dist_type = row['Distribution Type'].lower()
                 aspen_variable = row['Variable Name']
@@ -1303,9 +1304,9 @@ class MainApp(Tk):
         count = 0
         row_track, col_track = 0,0
 
-        if self.cue:
+        if self.resample_cue:
             self.live_graphs ={}
-            self.cue = False
+            self.resample_cue = False
             for v in self.simulation_dist.keys():
                 self.live_graphs[v] = IntVar()
                 cb = Checkbutton(self.resample_vars, text = v, variable = self.live_graphs[v])
