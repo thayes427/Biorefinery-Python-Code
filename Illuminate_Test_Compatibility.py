@@ -29,7 +29,7 @@ def compatibility_test(error_queue, excel_input_file, calculator_file, aspen_fil
     
 
 def test_calculator_file(calculator_file, aspen_file, error_queue):
-    
+    print(calculator_file)
     excel, book = simulations.open_excelCOMS(calculator_file)
     
     ########### Make sure that the output tab exists  ###################
@@ -60,18 +60,12 @@ def test_calculator_file(calculator_file, aspen_file, error_queue):
     try:
         filename, file_extension = path.splitext(book.Sheets('Set-up').Evaluate('B1').Value)
         if not (file_extension=='.bkp' or file_extension == '.apw'):
-<<<<<<< HEAD
-            error_statements.append('')
-    except:
-        pass
-=======
             error_queue.put((True,'In the "Set-up" tab, the name of the .apw or .bkp should be in cell B1. If the location of this \
                                     reference needs to be changed, make sure that you also change it in the "sub_GetSumData" macro'))
     except:
         error_queue.put((True,'In the "Set-up" tab, the name of the .apw or .bkp should be in cell B1. If the location of this \
                                     reference needs to be changed, make sure that you also change it in the "sub_GetSumData" macro'))
     
->>>>>>> cb38d4622a48f9d4238881d65230c532f707d600
         
     
         
