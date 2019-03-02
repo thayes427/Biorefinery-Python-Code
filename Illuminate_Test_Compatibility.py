@@ -24,13 +24,13 @@ import Illuminate_Simulations as simulations
 
 calculator_file_name = "C:/Users/MENGstudents/Desktop/Biorefinery-Design-Project/BC1707A_sugars_V10_mod-2.xlsm"
 
-def test_output_tab(calculator_file_name, error_statements):
+def test_calculator_file(calculator_file_name, error_statements):
     
     excel, book = simulations.open_excelCOMS(calculator_file_name)
-    return book
+    return excel, book
     
     
-    # a) make sure that the output tab exists
+    ########### Make sure that the output tab exists  ###################
     output_tab_exists = False
     try:
         book.Sheets('Output')
@@ -38,14 +38,29 @@ def test_output_tab(calculator_file_name, error_statements):
     except:
         error_statements.append('"Output" tab missing from Excel calculator .xlsm file. Please add this tab')
         
-    # b) Make sure output tab is set up as it is supposed to be    
+        
+        
+    ########## Make sure output tab is set up as it is supposed to be  ######## 
     if output_tab_exists:
         if any(str(v) != "Variable Name" for v in book.Sheets('Output').Evaluate('B2')):
             error_statements.append('Output tab is not configured properly. The column header for "Variable Name" \
                                     should be in B3 so that the first variable name is in B4')
+        elif any(str(v) != "Variable Value" for v in book.Sheets('Output').Evaluate('C2')):
+            error_statements.append('Output tab is not configured properly. The column header for "Variable Value" \
+                                    should be in C3 so that the first variable value is in C4')
         
         
-        
+    ############  Test all important macros ###################
+    try:
+        excel.Run('sub_ClearSumData_ASPEN')
+    except:
+        error_statements.append('Macro with name "sub_ClearSumData_ASPEN" does not exist in the Excel calculator .xlsm file')
+    
+    
+   # [str(v)=='None' for v in book.Sheets('aspen').Evaluate('C8:C20')]
+    
+    excel.Run('sub_GetSumData_ASPEN')
+    excel.Run('solvedcfror')
         
     
         
