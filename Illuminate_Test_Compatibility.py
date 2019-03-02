@@ -20,9 +20,15 @@ make sure that the fortran value to change is in the fortran value
 """
 
 import Illuminate_Simulations as simulations
+from os import path
 
 
 calculator_file_name = "C:/Users/MENGstudents/Desktop/Biorefinery-Design-Project/BC1707A_sugars_V10_mod-2.xlsm"
+
+
+
+def compatibility_test(excel_input_file, calculator_file, aspen_file):
+    return
 
 def test_calculator_file(calculator_file_name, error_statements):
     
@@ -48,6 +54,18 @@ def test_calculator_file(calculator_file_name, error_statements):
         elif any(str(v) != "Variable Value" for v in book.Sheets('Output').Evaluate('C2')):
             error_statements.append('Output tab is not configured properly. The column header for "Variable Value" \
                                     should be in C3 so that the first variable value is in C4')
+            
+            
+    ######### Make sure the bkp file reference is where it should be #########
+    try:
+        book.Sheets('Set-up')
+    except:
+        error_statements.append('"Set-up" tab missing from Excel calculator .xlsm file.')
+    try:
+        filename, file_extension = path.splitext(book.Sheets('Set-up').Evaluate('B1').Value)
+        if not (file_extension=='.bkp' or file_extension == '.apw'):
+            error_statements.append(')
+    
         
         
     ############  Test all important macros ###################
@@ -56,13 +74,21 @@ def test_calculator_file(calculator_file_name, error_statements):
     except:
         error_statements.append('Macro with name "sub_ClearSumData_ASPEN" does not exist in the Excel calculator .xlsm file')
     
+    try:
+        if not all(str(v)=='None' for v in book.Sheets('aspen').Evaluate('C8:C20')):
+            error_statements.append('Excel macro sub_ClearSumData_ASPEN does not appear to be working. Values in column C of sheet "aspen" are not being cleared.')
+    except:
+        pass
     
-   # [str(v)=='None' for v in book.Sheets('aspen').Evaluate('C8:C20')]
+    
+    try:
+        excel.Run('sub_GetSumData_ASPEN')
+    except:
+        error_statements.append('Macro with name "sub_GetSumData_ASPEN" does not exist in the Excel calculator .xlsm file or calls another function that does not exist')
     
     excel.Run('sub_GetSumData_ASPEN')
     excel.Run('solvedcfror')
         
-    
         
     return error_statements
         
