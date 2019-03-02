@@ -23,18 +23,14 @@ import Illuminate_Simulations as simulations
 from os import path
 
 
-calculator_file_name = "C:/Users/MENGstudents/Desktop/Biorefinery-Design-Project/BC1707A_sugars_V10_mod-2.xlsm"
 
-
-
-def compatibility_test(excel_input_file, calculator_file, aspen_file):
-    return
-
-def test_calculator_file(calculator_file_name, error_statements):
+def compatibility_test(error_queue, excel_input_file, calculator_file, aspen_file):
+    test_calculator_file(calculator_file, aspen_file, error_queue)
     
-    excel, book = simulations.open_excelCOMS(calculator_file_name)
-    return excel, book
+
+def test_calculator_file(calculator_file, aspen_file, error_queue):
     
+    excel, book = simulations.open_excelCOMS(calculator_file)
     
     ########### Make sure that the output tab exists  ###################
     output_tab_exists = False
@@ -42,56 +38,69 @@ def test_calculator_file(calculator_file_name, error_statements):
         book.Sheets('Output')
         output_tab_exists = True
     except:
-        error_statements.append('"Output" tab missing from Excel calculator .xlsm file. Please add this tab')
+        error_queue.put((True, '"Output" tab missing from Excel calculator .xlsm file. Please add this tab'))
         
         
         
     ########## Make sure output tab is set up as it is supposed to be  ######## 
     if output_tab_exists:
         if any(str(v) != "Variable Name" for v in book.Sheets('Output').Evaluate('B2')):
-            error_statements.append('Output tab is not configured properly. The column header for "Variable Name" \
-                                    should be in B3 so that the first variable name is in B4')
+            error_queue.put((True,'Output tab is not configured properly. The column header for "Variable Name" \
+                                    should be in B3 so that the first variable name is in B4'))
         elif any(str(v) != "Variable Value" for v in book.Sheets('Output').Evaluate('C2')):
-            error_statements.append('Output tab is not configured properly. The column header for "Variable Value" \
-                                    should be in C3 so that the first variable value is in C4')
+            error_queue.put((True,'Output tab is not configured properly. The column header for "Variable Value" \
+                                    should be in C3 so that the first variable value is in C4'))
             
             
     ######### Make sure the bkp file reference is where it should be #########
     try:
         book.Sheets('Set-up')
     except:
-        error_statements.append('"Set-up" tab missing from Excel calculator .xlsm file.')
+        error_queue.put((True,'"Set-up" tab missing from Excel calculator .xlsm file. Please rename this tab.'))
     try:
         filename, file_extension = path.splitext(book.Sheets('Set-up').Evaluate('B1').Value)
         if not (file_extension=='.bkp' or file_extension == '.apw'):
+<<<<<<< HEAD
             error_statements.append('')
     except:
         pass
+=======
+            error_queue.put((True,'In the "Set-up" tab, the name of the .apw or .bkp should be in cell B1. If the location of this \
+                                    reference needs to be changed, make sure that you also change it in the "sub_GetSumData" macro'))
+    except:
+        error_queue.put((True,'In the "Set-up" tab, the name of the .apw or .bkp should be in cell B1. If the location of this \
+                                    reference needs to be changed, make sure that you also change it in the "sub_GetSumData" macro'))
+    
+>>>>>>> cb38d4622a48f9d4238881d65230c532f707d600
         
+    
         
-    ############  Test all important macros ###################
+    ####################  Test all important macros ########################
     try:
+        book.Sheets('Set-up').Evaluate('B1').Value = aspen_file
         excel.Run('sub_ClearSumData_ASPEN')
     except:
-        error_statements.append('Macro with name "sub_ClearSumData_ASPEN" does not exist in the Excel calculator .xlsm file')
+        error_queue.put((True,'Macro with name "sub_ClearSumData_ASPEN" does not exist in the Excel calculator .xlsm file'))
     
     try:
-        if not all(str(v)=='None' for v in book.Sheets('aspen').Evaluate('C8:C20')):
-            error_statements.append('Excel macro sub_ClearSumData_ASPEN does not appear to be working. Values in column C of sheet "aspen" are not being cleared.')
+        if not all(str(v)=='None' for v in book.Sheets('aspen').Evaluate('C7:C20')):
+            error_queue.put((True,'Excel macro sub_ClearSumData_ASPEN does not appear to be working. Values in column C of sheet "aspen" are not being cleared.'))
     except:
         pass
     
     
     try:
         excel.Run('sub_GetSumData_ASPEN')
+        if not all(str(v)!='None' for v in book.Sheets('aspen').Evaluate('C8')):
+            error_queue.put((True,'"sub_GetSumData_ASPEN" does not appear to be working. Values should be populated in column C of sheet "aspen"'))
+            
     except:
-        error_statements.append('Macro with name "sub_GetSumData_ASPEN" does not exist in the Excel calculator .xlsm file or calls another function that does not exist')
+        error_queue.put((True,'Macro with name "sub_GetSumData_ASPEN" does not exist in the Excel calculator .xlsm file or calls another function that does not exist'))
     
-    excel.Run('sub_GetSumData_ASPEN')
-    excel.Run('solvedcfror')
+    
+    #excel.Run('solvedcfror')
         
         
-    return error_statements
         
     
     # 
