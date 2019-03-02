@@ -24,6 +24,7 @@ from winreg import EnumKey, CreateKey, EnumValue, HKEY_CLASSES_ROOT
 from re import search
 from random import choices
 import Illuminate_Simulations as simulations
+from Illuminate_Test_Compatability import compatability_test
  
 
 
@@ -139,6 +140,9 @@ class MainApp(Tk):
               text="Load Data",
               command=self.make_new_tab).grid(row=9,column = 3,sticky = E,
               pady = 5,padx = 5)
+        
+        compat_button = Button(self.home_tab, text = 'Test Compatability of Input Files', command = lambda x: compatability_test(str(self.input_csv_entry.get()),str(self.excel_solver_entry.get()), str(self.aspen_file_entry)))
+        compat_button.grid(row=3, column = 4, sticky = E)
         
 #        test= Label(self.home_tab, 
 #                  text=" ",font='Helvetica 2')
