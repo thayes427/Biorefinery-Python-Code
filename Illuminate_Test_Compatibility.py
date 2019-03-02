@@ -64,8 +64,9 @@ def test_calculator_file(calculator_file_name, error_statements):
     try:
         filename, file_extension = path.splitext(book.Sheets('Set-up').Evaluate('B1').Value)
         if not (file_extension=='.bkp' or file_extension == '.apw'):
-            error_statements.append(')
-    
+            error_statements.append('')
+    except:
+        pass
         
         
     ############  Test all important macros ###################

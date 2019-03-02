@@ -21,10 +21,11 @@ from multiprocessing import freeze_support
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from winreg import EnumKey, CreateKey, EnumValue, HKEY_CLASSES_ROOT
+from queue import Queue
 from re import search
 from random import choices
 import Illuminate_Simulations as simulations
-from Illuminate_Test_Compatability import compatability_test
+from Illuminate_Test_Compatibility import compatibility_test
  
 
 
@@ -37,6 +38,8 @@ class MainApp(Tk):
         self.notebook = Notebook(self)
         self.wm_title("Illuminate")
         self.notebook.grid()
+        self.win_lim_x = self.winfo_screenwidth()//2
+        self.win_lim_y = int(self.winfo_screenheight()*0.9)
         self.construct_home_tab()
         
         self.simulations = []
@@ -58,8 +61,6 @@ class MainApp(Tk):
         self.univar_row_num=0
         self.last_results_plotted = None
         self.last_update = None
-        self.win_lim_x = self.winfo_screenwidth()//2
-        self.win_lim_y = int(self.winfo_screenheight()*0.9)
         self.geometry(str(self.win_lim_x) + 'x' + str(self.win_lim_y) + '+0+0')
         self.worker_thread = None
         self.display_tab = None
@@ -68,6 +69,7 @@ class MainApp(Tk):
         self.graphing_frequency = None
         self.analysis_type_error = None
         self.temp_directory = None
+        
         
 #        style = ttk.Style()
 #        style.configure('Kim.TButton', foreground='blue', bg='blue', activebackground='red', relief='raised')
@@ -141,8 +143,8 @@ class MainApp(Tk):
               command=self.make_new_tab).grid(row=9,column = 3,sticky = E,
               pady = 5,padx = 5)
         
-        compat_button = Button(self.home_tab, text = 'Test Compatability of Input Files', command = lambda x: compatability_test(str(self.input_csv_entry.get()),str(self.excel_solver_entry.get()), str(self.aspen_file_entry)))
-        compat_button.grid(row=3, column = 4, sticky = E)
+        compat_button = Button(self.home_tab, text = 'Test Compatibility of Input Files', command = self.test_compatibility)
+        compat_button.place(x = self.win_lim_x *.59, y = self.win_lim_y*.025)
         
 #        test= Label(self.home_tab, 
 #                  text=" ",font='Helvetica 2')
@@ -183,7 +185,30 @@ class MainApp(Tk):
         #Label(self.home_tab, text='CPU Core Count :').grid(row=3, column=1, sticky=E)
         #self.num_processes_entry = Entry(self.home_tab)
         #self.num_processes_entry.grid(row=3, column=2, pady=5, padx=5)
-    
+        
+    def find_compability_errors(self):
+        while not self.error_queue.isempty():
+            is_error, text = self.error_queue.get()
+            if is_error:
+                Label(self.home_tab, text= text, font='Helvetica 10 bold',fg='red').place(x= self.compat_x_pos, y= self.compat_y_pos)
+                self.compat_y_pos = self.compat_y_pos+20
+            else:
+                Label(self.home_tab, text= text).place(x= self.compat_x_pos, y= self.compat_y_pos)
+                self.compat_y_pos = self.compat_y_pos+20
+            # print out errors to the GUI
+        if self.compat_test_thread.isAlive() or not self.error_queue.isempty():
+            self.after(500, self.find_compatibility_errors)
+            
+        
+        
+    def test_compatibility(self):
+        
+        self.error_queue = Queue()
+        self.compat_y_pos= self.win_lim_y *.03
+        self.compat_x_pos= self.win_lim_x *.59
+        self.compat_test_thread = Thread(target=lambda: compatibility_test(self.error_queue, str(self.input_csv_entry.get()),str(self.excel_solver_entry.get()), str(self.aspen_file_entry.get())))
+        self.compat_test_thread.start()
+        self.after(500, self.find_compatibility_errors)        
 
     def make_new_tab(self):
         if self.analysis_type_error:
