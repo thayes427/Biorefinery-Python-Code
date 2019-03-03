@@ -5,7 +5,7 @@ Created on Sat Dec 15 19:58:47 2018
 @author: MENGstudents
 """
 
-from tkinter import Tk, StringVar,E,W,Canvas,END, IntVar, Checkbutton, Label
+from tkinter import Tk, StringVar,E,W,Canvas,END, LEFT,IntVar, Checkbutton, Label
 from tkinter.ttk import Entry, Button, Radiobutton, OptionMenu, Labelframe, Scrollbar, Notebook, Frame
 from tkinter.filedialog import askopenfilename
 from threading import Thread
@@ -13,7 +13,7 @@ from pandas import DataFrame, concat, isna, read_excel
 from multiprocessing import Value, cpu_count
 from time import time
 from datetime import datetime
-from numpy import linspace, random, histogram
+from numpy import linspace, random, histogram, subtract, percentile
 from psutil import process_iter
 from os import path, makedirs, rmdir
 from shutil import copyfile, rmtree
@@ -26,6 +26,7 @@ from re import search
 from random import choices
 import Illuminate_Simulations as simulations
 from Illuminate_Test_Compatibility import compatibility_test
+from math import ceil
  
 
 
@@ -69,36 +70,9 @@ class MainApp(Tk):
         self.graphing_frequency = None
         self.analysis_type_error = None
         self.temp_directory = None
+        self.warning_keywords = set()
         
         
-#        style = ttk.Style()
-#        style.configure('Kim.TButton', foreground='blue', bg='blue', activebackground='red', relief='raised')
-#        style.configure('label.TLabel', background='red',foreground='blue')
-#        style.configure('TabStyle.TNotebook.Tab', background='green')
-#        style.configure('frame.TFrame', background='blue')
-
-#        style.configure('Wild.TButton', background='black', foreground='white', font=('Helvetica', 12, 'bold'))
-#        style.map('Wild.TButton',
-#              foreground=[('disabled', 'yellow'),
-#                    ('pressed', 'red'),
-#                    ('active', 'blue')],
-#                          background=[('disabled', 'magenta'),
-#                    ('pressed', '!focus', 'cyan'),
-#                    ('active', 'green')],
-#                    highlightcolor=[('focus', 'green'),
-#                        ('!focus', 'red')],
-#                                    relief=[('pressed', 'groove'),
-#                ('!pressed', 'ridge')])
-#
-#        style.theme_create("st_app", parent='alt', settings={
-#        "TButton":     {"configure": {'foreground':'maroon', 'relief': 'raised'}}})
-        #style.theme_use("st_app")
-
-#              "TNotebook.Tab": {
-#            "configure": {"padding": [5, 1], "background": mygreen },
-#            "map":       {"background": [("selected", myred)],
-#                          "expand": [("selected", [1, 1, 1, 0])] } } 
-
 
 
     def construct_home_tab(self):
@@ -186,17 +160,17 @@ class MainApp(Tk):
         #self.num_processes_entry = Entry(self.home_tab)
         #self.num_processes_entry.grid(row=3, column=2, pady=5, padx=5)
         
-    def find_compability_errors(self):
-        while not self.error_queue.isempty():
-            is_error, text = self.error_queue.get()
+    def find_compatibility_errors(self):
+        while not self.error_queue.empty():
+            is_error, row_num, text = self.error_queue.get()
             if is_error:
-                Label(self.home_tab, text= text, font='Helvetica 10 bold',fg='red').place(x= self.compat_x_pos, y= self.compat_y_pos)
-                self.compat_y_pos = self.compat_y_pos+20
+                Label(self.home_tab, text= 'ERROR: ' + text, font='Helvetica 10 bold',fg='red', justify=LEFT).place(x= self.compat_x_pos, y= self.compat_y_pos)
+                self.compat_y_pos = self.compat_y_pos+20*row_num
             else:
                 Label(self.home_tab, text= text).place(x= self.compat_x_pos, y= self.compat_y_pos)
-                self.compat_y_pos = self.compat_y_pos+20
+                self.compat_y_pos = self.compat_y_pos+20*row_num
             # print out errors to the GUI
-        if self.compat_test_thread.isAlive() or not self.error_queue.isempty():
+        if self.compat_test_thread.isAlive() or not self.error_queue.empty():
             self.after(500, self.find_compatibility_errors)
             
         
@@ -206,7 +180,7 @@ class MainApp(Tk):
         self.error_queue = Queue()
         self.compat_y_pos= self.win_lim_y *.03
         self.compat_x_pos= self.win_lim_x *.59
-        self.compat_test_thread = Thread(target=lambda: compatibility_test(self.error_queue, str(self.input_csv_entry.get()),str(self.excel_solver_entry.get()), str(self.aspen_file_entry.get())))
+        self.compat_test_thread = Thread(target=lambda: compatibility_test(self.error_queue, str(self.input_csv_entry.get()),str(self.excel_solver_entry.get()), str(self.aspen_file_entry.get()), str(self.select_version.get())))
         self.compat_test_thread.start()
         self.after(500, self.find_compatibility_errors)        
 
@@ -393,7 +367,7 @@ class MainApp(Tk):
         type_of_analysis = self.analysis_type.get()
         gui_excel_input = str(self.input_csv_entry.get())
         col_types = {'Variable Name': str, 'Variable Aspen Call': str, 'Distribution Parameters': str, 'Bounds': str, 'Fortran Call':str, 'Fortran Value to Change': str, 'Distribution Type': str, 'Toggle': bool}
-        df = read_excel(open(gui_excel_input,'rb'), dtype=col_types)
+        df = read_excel(gui_excel_input, sheet_name='Inputs', dtype=col_types)
         for index, row in df.iterrows():
             if row['Toggle']:    
                 if row['Variable Name'] in variable_names:
@@ -559,7 +533,7 @@ class MainApp(Tk):
         '''
         gui_excel_input = str(self.input_csv_entry.get())
         col_types = {'Variable Name': str, 'Variable Aspen Call': str, 'Distribution Parameters': str, 'Bounds': str, 'Fortran Call':str, 'Fortran Value to Change': str, 'Distribution Type': str, 'Toggle': bool}
-        df = read_excel(open(gui_excel_input,'rb'), dtype=col_types)
+        df = read_excel(gui_excel_input, sheet_name='Inputs', dtype=col_types)
         if not self.simulation_dist:
             simulation_vars = {}
             simulation_dist = {}
@@ -841,12 +815,18 @@ class MainApp(Tk):
         self.vars_to_change = []
         gui_excel_input = str(self.input_csv_entry.get())
         col_types = {'Variable Name': str, 'Variable Aspen Call': str, 'Distribution Parameters': str, 'Bounds': str, 'Fortran Call':str, 'Fortran Value to Change': str, 'Distribution Type': str, 'Toggle': bool}
-        df = read_excel(open(gui_excel_input,'rb'), dtype=col_types)
+        df = read_excel(gui_excel_input, sheet_name='Inputs', dtype=col_types)
         variable_names = set()
         for index, row in df.iterrows():
             if row['Toggle'] and row['Variable Name'] not in variable_names:
                 variable_names.add(row['Variable Name'])
                 self.vars_to_change.append(row["Variable Name"])
+        col_types = {'Warning Keywords':str}
+        warnings_df = read_excel(gui_excel_input, sheet_name='Warning Messages', dtype=col_types)
+        for index, row in warnings_df.iterrows():
+            self.warning_keywords.add(row['Warning Keywords'])
+        print(self.warning_keywords)
+            
         
         
     def run_simulations(self):
@@ -901,7 +881,7 @@ class MainApp(Tk):
             row_counter += 1
         #self.output_value_cells = "C3:C" + str(row_counter - 1)
         self.output_value_cells = ",".join(self.output_value_cells)
-        self.output_vars += ['Aspen Errors']
+        self.output_vars += ['Aspen Errors', 'Aspen Warnings']
         for p in process_iter():
             if 'excel' in p.name().lower() and p.pid not in excels_to_ignore:
                 p.terminate()
@@ -922,7 +902,8 @@ class MainApp(Tk):
         copyfile(path.abspath(str(self.input_csv_entry.get())), path.join(output_directory,'Input_Variables.xlsx'))
         new_sim = simulations.Simulation(self.sims_completed, num_trial, simulation_vars, output_file, output_directory,
                              temp_aspen_file, self.excel_solver_file, self.abort, vars_to_change, self.output_value_cells,
-                             self.output_columns, self.select_version.get(), weights, self.save_bkp.get(), save_freq=2, num_processes=self.num_processes)
+                             self.output_columns, self.select_version.get(), weights, self.save_bkp.get(), self.warning_keywords,
+                             save_freq=2, num_processes=self.num_processes)
         self.simulations.append(new_sim)
         #self.tot_sim_num += num_trial
         
@@ -989,7 +970,17 @@ class MainApp(Tk):
             if self.time_rem_label:
                 self.time_rem_label.destroy()
             self.time_rem_label = tmp
-            
+    
+    def num_bins(self, data):
+        # Implementing Freedman-Diaconis Rule for bin numbers
+        if len(data) == 0:
+            return 1
+        if len(data) < 20:
+            return len(data)
+        iqr = subtract(*percentile(data, [75, 25]))
+        bin_width = (2*iqr)/(len(data)**(1/3))
+        num_bins = ceil((max(data) - min(data))/bin_width)
+        return num_bins
             
     def plot_on_GUI(self):
         status_label = None
@@ -1033,11 +1024,11 @@ class MainApp(Tk):
             
         if not self.init_plots_constructed:
             results_fig_list =[]
-            num_bins = 15
             for var, toggled in self.graph_toggles.items():
                 if toggled.get():
                     fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=False)
                     ax = fig.add_subplot(111)
+                    num_bins = self.num_bins(results_filtered[var])
                     ax.hist(results_filtered[var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
                     ax.set_title(self.conv_title(var))
                     ax.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
@@ -1048,6 +1039,7 @@ class MainApp(Tk):
             for var, values in self.simulation_dist.items():
                 fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=False)
                 a = fig.add_subplot(111)
+                num_bins = self.num_bins(self.simulation_dist[var])
                 _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
                 a.hist(results_unfiltered[var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
                 a.set_title(self.conv_title(var))
@@ -1146,14 +1138,15 @@ class MainApp(Tk):
                     f.clear()
                 except:
                     pass
-            num_bins = 15
             for output_var, toggled in self.graph_toggles.items():
                 if toggled.get():
+                    num_bins = self.num_bins(results_filtered[output_var])
                     self.plots_dictionary[output_var].hist(
                             results_filtered[output_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
                     self.plots_dictionary[output_var].set_title(self.conv_title(output_var))
                     self.plots_dictionary[output_var].ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
             for var, values in self.simulation_dist.items():
+                num_bins = self.num_bins(self.simulation_dist[var])
                 _, bins, _ = self.plots_dictionary[var].hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
                 self.plots_dictionary[var].hist(results_unfiltered[var], bins=bins, facecolor='blue', edgecolor='black', alpha=1.0)
                 self.plots_dictionary[var].set_title(self.conv_title(var))
@@ -1210,12 +1203,12 @@ class MainApp(Tk):
             results_unfiltered = results_filtered
             
         if not self.init_plots_constructed:
-            num_bins = 15
             fig_list = []                
             for var, values in self.simulation_dist.items():
                 self.plots_dictionary[var] = {}
                 fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255])
                 a = fig.add_subplot(111)
+                num_bins = self.num_bins(self.simulation_dist[var])
                 _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
                 #a.hist(results_unfiltered[var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
                 a.set_title(self.conv_title(var))
@@ -1228,6 +1221,7 @@ class MainApp(Tk):
                         self.num_toggled += 1
                         fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255])
                         ax = fig.add_subplot(111)
+                        num_bins = self.num_bins(results_filtered[output_var])
                         ax.hist(results_filtered[output_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
                         ax.set_title(self.conv_title(output_var))
                         ax.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
@@ -1294,18 +1288,20 @@ class MainApp(Tk):
             for f in self.plots_dictionary[current_var].values():
                 f.cla()
                 f.clear()
-            num_bins = 15
             for output_var, toggled in self.graph_toggles.items():
                 if toggled.get():
                     if len(self.current_simulation.weights) > 0:
                         weights = self.current_simulation.weights[0:len(results_filtered)]
+                        num_bins = self.num_bins(results_filtered[output_var])
                         self.plots_dictionary[current_var][output_var].hist(
                             results_filtered[output_var], num_bins, weights=weights, facecolor='blue', edgecolor='black', alpha=1.0)
                     else:
+                        num_bins = self.num_bins(results_filtered[output_var])
                         self.plots_dictionary[current_var][output_var].hist(
                                 results_filtered[output_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
                     self.plots_dictionary[current_var][output_var].set_title(self.conv_title(output_var))
                     self.plots_dictionary[current_var][output_var].ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
+            num_bins = self.num_bins(self.simulation_dist[current_var])
             _, bins, _ = self.plots_dictionary[current_var][current_var].hist(self.simulation_dist[current_var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
             self.plots_dictionary[current_var][current_var].hist(results_unfiltered[current_var], bins=bins, facecolor='blue', edgecolor='black', alpha=1.0)
             self.plots_dictionary[current_var][current_var].set_title(self.conv_title(current_var))
@@ -1334,7 +1330,7 @@ class MainApp(Tk):
         for var, values in self.simulation_dist.items():
             fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255])
             a = fig.add_subplot(111)
-            num_bins = 15
+            num_bins = self.num_bins(values)
             if var in self.mapping_pdfs:
                 a.hist(values, num_bins, weights=self.mapping_pdfs[var], facecolor='blue', edgecolor='black', alpha=1.0)
             else:
@@ -1473,7 +1469,7 @@ class MainApp(Tk):
             self.disp_output_vars.grid(row = 6,column = 1, columnspan = 2, pady = 10, padx = 10, sticky = E )
             count = 1
 
-            for i,v in enumerate(self.output_vars[:-1]):
+            for i,v in enumerate(self.output_vars[:-2]):
                 self.graph_toggles[v] = IntVar()
                 cb = Checkbutton(self.disp_output_vars, text = v, variable = self.graph_toggles[v])
                 cb.grid(row=count,columnspan = 1, column = 2, sticky=W)
@@ -1507,7 +1503,7 @@ class MainApp(Tk):
         
             x , y = 10, 10
             self.graphs_displayed = []
-            for i,v in enumerate(self.output_vars[:-1]):
+            for i,v in enumerate(self.output_vars[:-2]):
                 self.graph_toggles[v] = IntVar()
                 cb = Checkbutton(figure_frame, text = v, variable = self.graph_toggles[v])
                 cb.place(x = x, y = y)
