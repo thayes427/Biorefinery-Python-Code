@@ -117,9 +117,6 @@ class MainApp(Tk):
               command=self.make_new_tab).grid(row=9,column = 3,sticky = E,
               pady = 5,padx = 5)
         
-        compat_button = Button(self.home_tab, text = 'Test Compatibility of Input Files', command = self.test_compatibility)
-        compat_button.place(x = self.win_lim_x *.59, y = self.win_lim_y*.025)
-        
 #        test= Label(self.home_tab, 
 #                  text=" ",font='Helvetica 2')
 #        test.grid(row=4, column= 1, sticky = E, padx = 5)
@@ -162,27 +159,31 @@ class MainApp(Tk):
         
     def find_compatibility_errors(self):
         while not self.error_queue.empty():
-            is_error, row_num, text = self.error_queue.get()
+            is_error, line_num, text = self.error_queue.get()
             if is_error:
-                Label(self.home_tab, text= 'ERROR: ' + text, font='Helvetica 10 bold',fg='red', justify=LEFT).place(x= self.compat_x_pos, y= self.compat_y_pos)
-                self.compat_y_pos = self.compat_y_pos+20*row_num
+                Label(self.home_tab, text= 'ERROR: ' + text, font='Helvetica 8',fg='red', justify=LEFT).place(x= self.compat_x_pos, y= self.compat_y_pos)
+                self.compat_y_pos = self.compat_y_pos+20*line_num
             else:
-                Label(self.home_tab, text= text).place(x= self.compat_x_pos, y= self.compat_y_pos)
-                self.compat_y_pos = self.compat_y_pos+20*row_num
+                if text == 'Finished with Compatibility Test':
+                    Label(self.home_tab, text= text, font='Helvetica 10 bold', justify=LEFT).place(x= self.compat_x_pos, y= self.compat_y_pos)
+                    self.compat_y_pos = self.compat_y_pos+20*line_num
+                else:
+                    Label(self.home_tab, text= text).place(x= self.compat_x_pos, y= self.compat_y_pos)
+                    self.compat_y_pos = self.compat_y_pos+20*line_num
             # print out errors to the GUI
         if self.compat_test_thread.isAlive() or not self.error_queue.empty():
-            self.after(500, self.find_compatibility_errors)
+            self.after(100, self.find_compatibility_errors)
             
         
         
     def test_compatibility(self):
         
         self.error_queue = Queue()
-        self.compat_y_pos= self.win_lim_y *.03
-        self.compat_x_pos= self.win_lim_x *.59
+        self.compat_y_pos= self.win_lim_y *.03 + 35
+        self.compat_x_pos= self.win_lim_x *.59 - 150
         self.compat_test_thread = Thread(target=lambda: compatibility_test(self.error_queue, str(self.input_csv_entry.get()),str(self.excel_solver_entry.get()), str(self.aspen_file_entry.get()), str(self.select_version.get())))
         self.compat_test_thread.start()
-        self.after(500, self.find_compatibility_errors)        
+        self.after(100, self.find_compatibility_errors)        
 
     def make_new_tab(self):
         if self.analysis_type_error:
@@ -1460,6 +1461,8 @@ class MainApp(Tk):
             plot_output_disp_thread.start()
             self.wait= Label(self.home_tab, text="Wait While Output Variables Are Loading ...")
             self.wait.grid(row=6, column= 1, columnspan = 2, sticky = E,pady = 5,padx = 5)
+            
+            
        
     def graph_toggle(self):
         self.parse_output_vars()
@@ -1512,6 +1515,8 @@ class MainApp(Tk):
             figure_frame.update_idletasks()
             frame_canvas.config(width=frame_width, height=window_height)
             main_canvas.config(scrollregion=(0,0,x,frame_height))
+        compat_button = Button(self.home_tab, text = 'Test Compatibility of Input Files', command = self.test_compatibility)
+        compat_button.place(x = self.win_lim_x *.59, y = self.win_lim_y*.025)
         
        
     def wipe_temp_dir(self):

@@ -61,11 +61,11 @@ def test_aspen_file(aspen_file,excel_input_file, dispatch, error_queue):
     aspen_to_delete.terminate()
 
 def test_calculator_file(calculator_file, aspen_file, error_queue):
+
     excels_to_ignore = set()
     for p in process_iter():
         if 'excel' in p.name().lower():
             excels_to_ignore.add(p.pid)
-    
     excel, book = simulations.open_excelCOMS(calculator_file)
     for p in process_iter():
         if 'excel' in p.name().lower() and p.pid not in excels_to_ignore:
@@ -99,13 +99,11 @@ def test_calculator_file(calculator_file, aspen_file, error_queue):
     try:
         filename, file_extension = path.splitext(book.Sheets('Set-up').Evaluate('B1').Value)
         if not (file_extension=='.bkp' or file_extension == '.apw'):
-
             error_queue.put((True,2,'In the "Set-up" tab, the name of the .apw or .bkp should be in cell B1. If the location of this\nreference needs to be changed, make sure that you also change it in the "sub_GetSumData" macro'))
     except:
         setup_tab_functional = False
         error_queue.put((True,2,'In the "Set-up" tab, the name of the .apw or .bkp should be in cell B1. If the location of this\nreference needs to be changed, make sure that you also change it in the "sub_GetSumData" macro'))
     
-
         
     
         
