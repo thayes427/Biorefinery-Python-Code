@@ -160,15 +160,16 @@ class MainApp(Tk):
     def find_compatibility_errors(self):
         while not self.error_queue.empty():
             is_error, line_num, text = self.error_queue.get()
-            if text == 'Finished with Compatibility Test':
-                Label(self.home_tab, text= text, font='Helvetica 10 bold', justify=LEFT).place(x= self.compat_x_pos, y= self.compat_y_pos)
-                self.compat_y_pos = self.compat_y_pos+20*line_num
             if is_error:
                 Label(self.home_tab, text= 'ERROR: ' + text, font='Helvetica 8',fg='red', justify=LEFT).place(x= self.compat_x_pos, y= self.compat_y_pos)
                 self.compat_y_pos = self.compat_y_pos+20*line_num
             else:
-                Label(self.home_tab, text= text).place(x= self.compat_x_pos, y= self.compat_y_pos)
-                self.compat_y_pos = self.compat_y_pos+20*line_num
+                if text == 'Finished with Compatibility Test':
+                    Label(self.home_tab, text= text, font='Helvetica 10 bold', justify=LEFT).place(x= self.compat_x_pos, y= self.compat_y_pos)
+                    self.compat_y_pos = self.compat_y_pos+20*line_num
+                else:
+                    Label(self.home_tab, text= text).place(x= self.compat_x_pos, y= self.compat_y_pos)
+                    self.compat_y_pos = self.compat_y_pos+20*line_num
             # print out errors to the GUI
         if self.compat_test_thread.isAlive() or not self.error_queue.empty():
             self.after(100, self.find_compatibility_errors)
@@ -178,7 +179,7 @@ class MainApp(Tk):
     def test_compatibility(self):
         
         self.error_queue = Queue()
-        self.compat_y_pos= self.win_lim_y *.03 + 20
+        self.compat_y_pos= self.win_lim_y *.03 + 35
         self.compat_x_pos= self.win_lim_x *.59 - 150
         self.compat_test_thread = Thread(target=lambda: compatibility_test(self.error_queue, str(self.input_csv_entry.get()),str(self.excel_solver_entry.get()), str(self.aspen_file_entry.get()), str(self.select_version.get())))
         self.compat_test_thread.start()
