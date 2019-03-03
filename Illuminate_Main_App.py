@@ -5,7 +5,7 @@ Created on Sat Dec 15 19:58:47 2018
 @author: MENGstudents
 """
 
-from tkinter import Tk, StringVar,E,W,Canvas,END, LEFT,IntVar, Checkbutton, Label
+from tkinter import Tk, StringVar,E,W,Canvas,END, LEFT,IntVar, Checkbutton, Label, Toplevel
 from tkinter.ttk import Entry, Button, Radiobutton, OptionMenu, Labelframe, Scrollbar, Notebook, Frame
 from tkinter.filedialog import askopenfilename
 from threading import Thread
@@ -28,8 +28,6 @@ import Illuminate_Simulations as simulations
 from Illuminate_Test_Compatibility import compatibility_test
 from math import ceil
  
-
-
 
 class MainApp(Tk):
     '''
@@ -164,16 +162,17 @@ class MainApp(Tk):
         while not self.compat_status_queue.empty():
             is_error, line_num, text = self.compat_status_queue.get()
             if is_error:
-                Label(self.home_tab, text= 'ERROR: ' + text, font='Helvetica 8',
+                Label(self.compat_test_window, text= 'ERROR: ' + text, font='Helvetica 10',
                       fg='red',justify=LEFT).place(x= self.compat_x_pos,y=self.compat_y_pos)
                 self.compat_y_pos = self.compat_y_pos+20*line_num
             else:
                 if text == 'Finished with Compatibility Test':
-                    Label(self.home_tab, text= text, font='Helvetica 10 bold', 
+                    Label(self.compat_test_window, text= text, font='Helvetica 10 bold', 
                           justify=LEFT).place(x= self.compat_x_pos, y=self.compat_y_pos)
                     self.compat_y_pos = self.compat_y_pos+20*line_num
                 else:
-                    Label(self.home_tab, text= text).place(x= self.compat_x_pos, y=self.compat_y_pos)
+                    Label(self.compat_test_window, text= text, font='Helvetica 10').place(x= 
+                         self.compat_x_pos, y=self.compat_y_pos)
                     self.compat_y_pos = self.compat_y_pos+20*line_num
 
         # keep calling this function until the compatibility test is complete
@@ -188,10 +187,17 @@ class MainApp(Tk):
         Intializes a thread to run compatibility_test which is found in 
         Illuminate_Test_Compatibility.py
         '''
-        self.error_queue = Queue()
-        self.compat_y_pos= self.win_lim_y *.03 + 35
-        self.compat_x_pos= self.win_lim_x *.59 - 150
-        self.compat_test_thread = Thread(target=lambda: compatibility_test(self.error_queue,
+        
+        self.compat_test_window = Toplevel()
+        self.compat_test_window.wm_title('Illuminate Compatibility Test')
+        self.compat_test_window.wm_geometry(str(self.win_lim_x) + 'x' + str(self.win_lim_y//2) + '+100+100')
+        self.compat_test_window.config()
+        self.compat_test_window.focus_force()
+        self.compat_test_window.bind('<FocusIn>', OnFocusIn) # used to "focus" on the GUI without forcing it to be in focus
+        self.compat_status_queue = Queue()
+        self.compat_y_pos= 0#self.win_lim_y *.03 + 35
+        self.compat_x_pos= 0#self.win_lim_x *.59 - 150
+        self.compat_test_thread = Thread(target=lambda: compatibility_test(self.compat_status_queue,
                 str(self.input_csv_entry.get()),str(self.excel_solver_entry.get()),
                 str(self.aspen_file_entry.get()), str(self.select_version.get())))
         self.compat_test_thread.start()
@@ -910,7 +916,6 @@ class MainApp(Tk):
         Run a multivariate analysis. A single simulation object is created and
         run.
         '''
-        
         self.store_user_inputs()
         if len(self.simulation_vars) == 0:
             # if the user has pressed the display variable distributions 
@@ -947,6 +952,7 @@ class MainApp(Tk):
         reset to their initial values in the event that the user wants to run
         more simulations.
         '''
+
         for sim in self.simulations:
             self.start_time = time()
             self.sims_completed.value = 0
@@ -1091,7 +1097,6 @@ class MainApp(Tk):
         makedirs(output_directory)
         temp_aspen_file = self.copy_aspen_to_temp_dir()
         if not path.exists(path.join(output_directory,'..','Temp')):
-            print(path.join(output_directory,'..','Temp'))
             makedirs(path.join(output_directory,'..','Temp'))
         copyfile(path.abspath(str(self.input_csv_entry.get())), path.join(
                 output_directory,'Input_Variables.xlsx'))

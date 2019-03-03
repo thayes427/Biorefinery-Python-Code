@@ -38,7 +38,8 @@ class Simulation(object):
     
     def __init__(self, sims_completed, tot_sim, simulation_vars, output_file, directory, 
                  aspen_file, excel_solver_file,abort, vars_to_change, output_value_cells,
-                 output_columns, dispatch, weights, save_bkps, warning_keywords, save_freq=2, num_processes=1):
+                 output_columns, dispatch, weights, save_bkps, warning_keywords, save_freq=2, 
+                 num_processes=1):
         self.manager = Manager()
         self.num_processes = min(num_processes, tot_sim) #don't need more processors than trials
         self.tot_sim = tot_sim
@@ -243,7 +244,7 @@ def save_graphs(outputfilename, results, directory, weights):
         collected_data = list(filter(lambda x: not isna(x[x.columns[-2]].values[0]), results))
         if len(collected_data) > 0:
             collected_data = concat(collected_data).sort_index()
-            for index, var in enumerate(collected_data.columns[:-1]):
+            for index, var in enumerate(collected_data.columns[:-2]):
                 fig = plt.figure()
                 fig.set_size_inches(6,6)
                 ax = fig.add_axes([0.12, 0.12, 0.85, 0.85])
