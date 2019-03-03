@@ -16,7 +16,7 @@ import string
 class Simulation(object):
     def __init__(self, sims_completed, tot_sim, simulation_vars, output_file, directory, 
                  aspen_file, excel_solver_file,abort, vars_to_change, output_value_cells,
-                 output_columns, dispatch, weights, save_bkps, save_freq=2, num_processes=1):
+                 output_columns, dispatch, weights, save_bkps, warning_keywords, save_freq=2, num_processes=1):
         self.manager = Manager()
         self.num_processes = min(num_processes, tot_sim)
         self.tot_sim = tot_sim
@@ -45,6 +45,7 @@ class Simulation(object):
         self.lock_to_signal_finish = Lock()
         self.weights = self.manager.list(weights)
         self.save_bkps = self.manager.Value('b',save_bkps)
+        self.warning_keywords = self.manager.list(list(warning_keywords))
           
     
     def init_sims(self):
@@ -106,7 +107,8 @@ class Simulation(object):
                                                                 self.trial_counter, self.save_freq, 
                                                                 self.output_file, self.vars_to_change, 
                                                                 self.output_columns, self.simulation_vars, self.sims_completed, 
-                                                                self.lock_to_signal_finish, self.tot_sim, self.dispatch, self.weights)))
+                                                                self.lock_to_signal_finish, self.tot_sim, self.dispatch, self.weights,
+                                                                self.warning_keywords)))
         for p in self.processes:
             p.start()
         for i in range(self.num_processes):
@@ -195,7 +197,8 @@ def save_graphs(outputfilename, results, directory, weights):
 
 def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilename, save_bkps,
            excelfilename, task_queue, abort, results_lock, results, directory, output_columns, output_value_cells,
-           sim_counter, save_freq, outputfilename, vars_to_change, columns, simulation_vars, sims_completed, lock_to_signal_finish, tot_sim, dispatch, weights):
+           sim_counter, save_freq, outputfilename, vars_to_change, columns, simulation_vars, sims_completed, 
+           lock_to_signal_finish, tot_sim, dispatch, weights, warning_keywords):
     
     local_pids_to_ignore = {}
     local_pids = {}
@@ -236,7 +239,7 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
             except:
                 continue
         
-        aspencom, case_values, errors, obj = aspen_run(aspencom, obj, simulation_vars, trial_num, vars_to_change, directory) 
+        aspencom, case_values, errors, warnings, obj = aspen_run(aspencom, obj, simulation_vars, trial_num, vars_to_change, directory, warning_keywords) 
         
         # save bkp file and tell excel calculator to point to correct bkp file
         if save_bkps.value:
@@ -244,7 +247,7 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
         aspencom.SaveAs(full_bkp_name)
         book.Sheets('Set-up').Evaluate('B1').Value = full_bkp_name
         
-        result = mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_num, output_value_cells, directory)
+        result = mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_num, output_value_cells, directory, warnings)
         
         results_lock.acquire()
         results.append(result) 
@@ -289,7 +292,7 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
             
 
 
-def aspen_run(aspencom, obj, simulation_vars, trial, vars_to_change, directory):
+def aspen_run(aspencom, obj, simulation_vars, trial, vars_to_change, directory, warning_keywords):
     
     #SUC_LOC = r"\Data\Blocks\A300\Data\Blocks\B1\Input\FRAC\TOC5"
     #suobj.FindNode(SUC_LOC).Value = 0.4
@@ -309,13 +312,13 @@ def aspen_run(aspencom, obj, simulation_vars, trial, vars_to_change, directory):
     
     aspencom.Reinit()
     aspencom.Engine.Run2()
-    errors = FindErrors(aspencom)
+    errors, warnings = find_errors_warnings(aspencom, warning_keywords)
     
-    return aspencom, case_values, errors, obj
+    return aspencom, case_values, errors, warnings, obj
 
 
 
-def mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_num, output_value_cells, directory):
+def mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_num, output_value_cells, directory, warnings):
 
 #    column = [x for x in book.Sheets('Aspen_Streams').Evaluate("D1:D100") if x.Value != None] 
 #    
@@ -346,7 +349,7 @@ def mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_
     excel.Run('solvedcfror')
       
     dfstreams = DataFrame(columns=columns)
-    dfstreams.loc[trial_num+1] = case_values + [x.Value for x in book.Sheets('Output').Evaluate(output_value_cells.value)] + ["; ".join(errors)]
+    dfstreams.loc[trial_num+1] = case_values + [x.Value for x in book.Sheets('Output').Evaluate(output_value_cells.value)] + ["; ".join(errors)] + ["; ".join(warnings)]
     return dfstreams
     
     
@@ -362,13 +365,15 @@ def mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_
 #    return dfstreams
 
 
-def FindErrors(aspencom):
+def find_errors_warnings(aspencom, warning_keywords):
     obj = aspencom.Tree
     error = r'\Data\Results Summary\Run-Status\Output\PER_ERROR'
     not_done = True
     counter = 1
     error_number = 0
+    warning_number=0
     error_statements = []
+    warning_statements = []
     while not_done:
         try:
             check_for_errors = obj.FindNode(error + '\\' +  str(counter)).Value
@@ -384,8 +389,21 @@ def FindErrors(aspencom):
                         scan_errors = False
                         error_number += 1
                         counter += 1
+            elif any(keyword in check_for_errors.lower() for keyword in warning_keywords):
+                warning_statements.append(check_for_errors)
+                scan_errors = True
+                counter += 1
+                while scan_errors:
+                    if len(obj.FindNode(error + '\\' + str(counter)).Value.lower()) > 0:
+                        warning_statements[warning_number] = warning_statements[warning_number] + obj.FindNode(error + '\\' + str(counter)).Value
+                        counter += 1
+                    else:
+                        scan_errors = False
+                        warning_number += 1
+                        counter += 1
+                
             else:
                 counter += 1
         except:
             not_done = False
-    return error_statements
+    return error_statements, warning_statements

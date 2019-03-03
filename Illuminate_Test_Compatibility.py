@@ -4,34 +4,72 @@ Created on Thu Feb 28 14:58:42 2019
 
 @author: MENGstudents
 
-output tab: 
-that it exists
-distinguish between value and string to see if they've put it in the right spot
-instead could just make sure they've put the column headers in the right spot
-VBA functions
-test to make sure they all exist and work
-clear: make sure data is empty
-fill: make sure data has appeared in the cell
-solve: try to find the NPV - goes to 0 when DCFROR is called. Break the code and see what happens when it fails. 
-Aspen
-make sure that all of the nodes they want to change are not nonetype
-make sure that the fortran value to change is in the fortran value
 
 """
 
 import Illuminate_Simulations as simulations
 from os import path
+from psutil import process_iter
+from pandas import read_excel
 
 
-
-def compatibility_test(error_queue, excel_input_file, calculator_file, aspen_file):
+def compatibility_test(error_queue, excel_input_file, calculator_file, aspen_file, dispatch):
     error_queue.put((False, 1,'Testing Compatibility of Excel Calculator File...'))
     test_calculator_file(calculator_file, aspen_file, error_queue)
+    error_queue.put((False, 1,'Testing Compatibility of Aspen Model...'))
+    test_aspen_file(aspen_file, excel_input_file, dispatch, error_queue)
+    error_queue.put((False, 1,'Finished with Compatibility Test'))
     
+    
+    
+def test_aspen_file(aspen_file,excel_input_file, dispatch, error_queue):
+    aspens_to_ignore = set()
+    for p in process_iter():
+        if 'aspen' in p.name().lower() or 'apwn' in p.name().lower():
+            aspens_to_ignore.add(p.pid)
+            
+    error_queue.put((False, 1, 'Opening Aspen Model...'))
+    try:
+        aspencom, obj = simulations.open_aspenCOMS(aspen_file, dispatch)
+    except:
+        error_queue.put((True, 1, 'Aspen model cannot be opened'))
+        return
+    
+    for p in process_iter():
+        if ('aspen' in p.name().lower() or 'apwn' in p.name().lower()) and p.pid not in aspens_to_ignore:
+            aspen_to_delete = p
+            
+            
+            
+    # Make sure that all nodes in the tree exist
+    error_queue.put((False, 1, 'Testing Aspen Paths Specified in Input File...'))
+    col_types = {'Variable Name': str, 'Variable Aspen Call': str, 'Distribution Parameters': str, 'Bounds': str, 'Fortran Call':str, 'Fortran Value to Change': str, 'Distribution Type': str, 'Toggle': bool}
+    df = read_excel(open(excel_input_file,'rb'), dtype=col_types)
+    for index, row in df.iterrows():
+        if row['Toggle']: 
+            try:
+                if obj.FindNode(row['Variable Aspen Call']).Value is None:     
+                    error_queue.put((True, 1, 'The value at the node "'+ row['Variable Aspen Call'] + '" for variable "' + row['Variable Name'] + '" is None. Are you sure this is the right path?'))
+            except:
+                error_queue.put((True, 1, 'Aspen call "'+ row['Variable Aspen Call'] + '" for variable "' + row['Variable Name'] + '" does not exist in the Aspen model'))
+    for index, row in df.iterrows():
+        if row['Toggle'] and row['Fortran Call']:
+            if row['Fortran Value to Change'] not in row['Fortran Call']:
+                error_queue.put((True, 1, 'The fortran value to change "' + row['Fortran Value to Change'] + '" for variable "' + row['Variable Name'] + '" is not in the Fortran call "' + row['Fortran Call'] + '"'))
+
+            
+    aspen_to_delete.terminate()
 
 def test_calculator_file(calculator_file, aspen_file, error_queue):
-    print(calculator_file)
+
+    excels_to_ignore = set()
+    for p in process_iter():
+        if 'excel' in p.name().lower():
+            excels_to_ignore.add(p.pid)
     excel, book = simulations.open_excelCOMS(calculator_file)
+    for p in process_iter():
+        if 'excel' in p.name().lower() and p.pid not in excels_to_ignore:
+            excel_to_delete = p
     
     ########### Make sure that the output tab exists  ###################
     output_tab_exists = False
@@ -47,8 +85,8 @@ def test_calculator_file(calculator_file, aspen_file, error_queue):
     if output_tab_exists:
         if any(str(v) != "Variable Name" for v in book.Sheets('Output').Evaluate('B2')):
             error_queue.put((True,2,'Output tab is not configured properly. The column header for "Variable Name"\nshould be in B3 so that the first variable name is in B4'))
-        elif any(str(v) != "Variable Value" for v in book.Sheets('Output').Evaluate('C2')):
-            error_queue.put((True,2,'Output tab is not configured properly. The column header for "Variable Value"\nshould be in C3 so that the first variable value is in C4'))
+        elif any(str(v) != "Value" for v in book.Sheets('Output').Evaluate('C2')):
+            error_queue.put((True,2,'Output tab is not configured properly. The column header for "Value"\nshould be in C3 so that the first variable value is in C4'))
             
             
     ######### Make sure the bkp file reference is where it should be #########
@@ -93,10 +131,11 @@ def test_calculator_file(calculator_file, aspen_file, error_queue):
             error_queue.put((True,2,'Macro with name "sub_GetSumData_ASPEN" does not exist in the Excel calculator .xlsm file or calls\nanother function that does not exist'))
         
     
+    
     #excel.Run('solvedcfror')
         
         
-        
+    excel_to_delete.terminate()
     
     # 
     
