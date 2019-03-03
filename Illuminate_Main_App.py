@@ -32,7 +32,7 @@ from math import ceil
 
 
 class MainApp(Tk):
-
+    
     def __init__(self):
         Tk.__init__(self)
         #self.iconbitmap('01_128x128.ico')
@@ -76,57 +76,50 @@ class MainApp(Tk):
 
 
     def construct_home_tab(self):
+        '''
+        Constructs the home tab used to upload input files and test compatibility 
+        '''
         self.load_aspen_versions()
         self.home_tab = Frame(self.notebook, style= 'frame.TFrame')
         self.notebook.add(self.home_tab, text = 'File Upload Tab')
 
         for i in range (5,20):
             Label(self.home_tab, text='                       ').grid(row=100,column=i,columnspan=1)
+            
         for i in range(106,160):
             Label(self.home_tab, text=' ').grid(row=i,column=0,columnspan=1)
 
-        
-        
         space= Label(self.home_tab, text=" ",font='Helvetica 2')
         space.grid(row=0, column= 1, sticky = E, padx = 5, pady =4)
         space.rowconfigure(0, minsize = 15)
         
-
         Button(self.home_tab, text='Upload Simulation Inputs',
         command=self.open_excel_file).grid(row=1,column=1, sticky = E, pady = 5,padx = 5)
+        
         self.input_csv_entry = Entry(self.home_tab)
         self.input_csv_entry.grid(row=1, column=2)
         
+        Button(self.home_tab, text="Upload Aspen Model",
+        command=self.open_aspen_file).grid(row=2, column = 1,sticky = E, pady = 5,padx = 5)
         
-        Button(self.home_tab, 
-              text="Upload Aspen Model",
-              command=self.open_aspen_file).grid(row=2, column = 1,sticky = E,
-              pady = 5,padx = 5)
         self.aspen_file_entry = Entry(self.home_tab)
         self.aspen_file_entry.grid(row=2, column=2,pady = 5,padx = 5)
         
-        Button(self.home_tab,
-              text="Upload Excel Calculator",
-              command=self.open_solver_file).grid(row=3,column = 1,sticky = E,
-              pady = 5,padx = 5)
+        Button(self.home_tab, text="Upload Excel Calculator", command=self.open_solver_file).grid(
+                row=3,column = 1,sticky = E,pady = 5,padx = 5)
+        
         self.excel_solver_entry = Entry(self.home_tab)
         self.excel_solver_entry.grid(row=3, column=2,pady = 5,padx = 5)
         
-        Button(self.home_tab,
-              text="Load Data",
-              command=self.make_new_tab).grid(row=9,column = 3,sticky = E,
-              pady = 5,padx = 5)
-        
-#        test= Label(self.home_tab, 
-#                  text=" ",font='Helvetica 2')
-#        test.grid(row=4, column= 1, sticky = E, padx = 5)
-#        test.rowconfigure(4, minsize = 4)
+        Button(self.home_tab, text="Load Data", command=self.make_new_tab).grid(
+                row=9, column = 3, sticky = E, pady = 5,padx = 5)
         
         self.analysis_type = StringVar(self.home_tab)
         self.analysis_type.set("Choose Analysis Type")
         
-        OptionMenu(self.home_tab, self.analysis_type,"Choose Analysis Type", "Single Point Analysis","Univariate Sensitivity", 
-                "Multivariate Sensitivity", style = 'raised.TMenubutton').grid(row = 9,sticky = E,column = 2,padx =5, pady = 5)
+        OptionMenu(self.home_tab, self.analysis_type,"Choose Analysis Type", "Single Point Analysis",
+                   "Univariate Sensitivity", "Multivariate Sensitivity", style = 'raised.TMenubutton'
+                   ).grid(row = 9,sticky = E,column = 2,padx =5, pady = 5)
                         
         select_aspen = Labelframe(self.home_tab, text='Select Aspen Version:')
         select_aspen.grid(row = 5,column = 1, columnspan = 3, sticky = W,pady = 10,padx = 10)
@@ -136,26 +129,17 @@ class MainApp(Tk):
         column = 0
         aspen_versions = []
         for key,value in self.aspen_versions.items():
-            aspen_versions.append(key + '      ')
-
-
+            aspen_versions.append(key + '      ')  
         aspen_versions.sort(key=lambda x: -1*float(x[1:-6]))
-
         for i, version in enumerate(aspen_versions):
             v = Radiobutton(select_aspen, text= version, variable=self.select_version, value = self.aspen_versions[version[:-6]])
             v.grid(row=row,column= column, sticky=W)
             if i == 0:
                 v.invoke()
-            
             column += 1
             if column == 4:
                 column = 0
                 row += 1
-
-            
-        #Label(self.home_tab, text='CPU Core Count :').grid(row=3, column=1, sticky=E)
-        #self.num_processes_entry = Entry(self.home_tab)
-        #self.num_processes_entry.grid(row=3, column=2, pady=5, padx=5)
         
     def find_compatibility_errors(self):
         while not self.error_queue.empty():
@@ -177,15 +161,21 @@ class MainApp(Tk):
         
         
     def test_compatibility(self):
-        
+        '''
+        Intializes a thread to run compatibility_test which is found in 
+        Illuminate_Test_Compatibility.py
+        '''
         self.error_queue = Queue()
         self.compat_y_pos= self.win_lim_y *.03 + 35
         self.compat_x_pos= self.win_lim_x *.59 - 150
-        self.compat_test_thread = Thread(target=lambda: compatibility_test(self.error_queue, str(self.input_csv_entry.get()),str(self.excel_solver_entry.get()), str(self.aspen_file_entry.get()), str(self.select_version.get())))
+        self.compat_test_thread = Thread(target=lambda: compatibility_test(self.error_queue,
+                str(self.input_csv_entry.get()),str(self.excel_solver_entry.get()),
+                str(self.aspen_file_entry.get()), str(self.select_version.get())))
         self.compat_test_thread.start()
         self.after(100, self.find_compatibility_errors)        
 
     def make_new_tab(self):
+
         if self.analysis_type_error:
             self.analysis_type_error.destroy()
         try:
@@ -325,10 +315,18 @@ class MainApp(Tk):
                    command=self.plot_init_dist).grid(row=7,
                    column=1, columnspan=2, sticky=W, pady=4, padx=6)
             
-        self.load_variables_into_GUI()
+        self.load_input_variables_into_GUI()
         self.notebook.select(self.current_tab)
         
-    def conv_title(self, s, pad=False):
+    def standardize_graph_title(self, s, pad=False):
+        '''
+        It will pad the string for a graph title to make it 37 characters long, 
+        or shorten the string if it is more than 37 characters
+        
+        inputs: 
+        s: a string to be used as graph title
+        pad: an indicator for whether string needs padding
+        '''
         if len(s) > 37:
             return s[:34] + '...'
         elif pad:
@@ -360,14 +358,24 @@ class MainApp(Tk):
             i += 1
         self.aspen_versions = versions
         
-    def load_variables_into_GUI(self):
+    def load_input_variables_into_GUI(self):
+        '''
+        This function imports the input variables of interest and checks that there
+        are not any duplicates.If Single Point analysis or Univariate Analysis are selected,
+        the function will create a canvas on the Analysis Tab and upload all the input
+        variables into the GUI in accordance with the the variable distibutions selected.
+        '''
+        ################### LOAD INPUT VARIABLES #############################
+        
         single_pt_vars = []
         univariate_vars = []
-        multivariate_vars = []
         variable_names = set()
         type_of_analysis = self.analysis_type.get()
         gui_excel_input = str(self.input_csv_entry.get())
-        col_types = {'Variable Name': str, 'Variable Aspen Call': str, 'Distribution Parameters': str, 'Bounds': str, 'Fortran Call':str, 'Fortran Value to Change': str, 'Distribution Type': str, 'Toggle': bool}
+        col_types = {'Variable Name': str, 'Variable Aspen Call': str, 'Distribution Parameters': str,
+                     'Bounds': str, 'Fortran Call':str, 'Fortran Value to Change': str,
+                     'Distribution Type': str, 'Toggle': bool}
+        
         df = read_excel(gui_excel_input, sheet_name='Inputs', dtype=col_types)
         for index, row in df.iterrows():
             if row['Toggle']:    
@@ -378,19 +386,21 @@ class MainApp(Tk):
                         x,y=73,315
                     else:
                         x,y=60,145
-                    Label(self.current_tab, text='Note: multiple instances of same variable name in input file. \nOnly first instance is received as input.',fg='red').place(
-                                  x=x, y=y)
+                    Label(self.current_tab, text='Note: multiple instances of same variable name ' +\
+                          'in input file. \nOnly first instance is received as input.',fg='red').place(
+                          x=x, y=y)
                     continue
                 variable_names.add(row['Variable Name'])
                 if type_of_analysis =='Single Point Analysis':
-                    single_pt_vars.append((row["Variable Name"], float(row["Distribution Parameters"].split(',')[0].strip())))
-                elif type_of_analysis == 'Multivariate Analysis':
-                    multivariate_vars.append(row["Variable Name"])
+                    single_pt_vars.append((row["Variable Name"], float(row["Distribution Parameters"
+                           ].split(',')[0].strip())))
                 else:
                     univariate_vars.append((
                             row["Variable Name"], row["Distribution Type"].strip().lower(
                                     ), row['Distribution Parameters'].split(',')))
                         
+        #################### PLACE VARIABLES INTO GUI #########################
+        
         #now populate the gui with the appropriate tab and variables stored above
         if type_of_analysis == 'Single Point Analysis':
             self.current_tab.config(width = '10c', height = '5c')
@@ -407,8 +417,10 @@ class MainApp(Tk):
             canvas = Canvas(frame_canvas)
             canvas.grid(row=0, column=0, sticky="news")
             canvas.config(height = '5c', width='10c')
+            
             # Link a scrollbar to the canvas
-            vsb = Scrollbar(frame_canvas, orient="vertical", command=canvas.yview, style='scroll.Vertical.TScrollbar')
+            vsb = Scrollbar(frame_canvas, orient="vertical", command=canvas.yview,
+                            style='scroll.Vertical.TScrollbar')
             vsb.grid(row=0, column=1,sticky = 'ns')
             canvas.configure(yscrollcommand=vsb.set)
             
@@ -420,14 +432,13 @@ class MainApp(Tk):
             self.sp_row_num = 0
             for name,value in single_pt_vars:
                 self.sp_row_num += 1
-                key = str(self.sp_row_num)
-                Label(frame_vars, 
-                text= self.conv_title(name,pad=True)).grid(row=self.sp_row_num, column= 1, sticky = E,pady = 5,padx = 5)
-                key=Entry(frame_vars)
-                key.grid(row=self.sp_row_num, column=2,pady = 5,padx = 5)
-                key.delete(first=0,last=END)
-                key.insert(0,str(value))
-                self.sp_value_entries[name]= key
+                Label(frame_vars, text= self.standardize_graph_title(name,pad=True)
+                ).grid(row=self.sp_row_num, column= 1, sticky = E,pady = 5,padx = 5)
+                sp_val=Entry(frame_vars)
+                sp_val.grid(row=self.sp_row_num, column=2,pady = 5,padx = 5)
+                sp_val.delete(first=0,last=END)
+                sp_val.insert(0,str(value))
+                self.sp_value_entries[name]= sp_val
                 
             # Determine the size of the Canvas
             frame_vars.update_idletasks()
@@ -443,9 +454,7 @@ class MainApp(Tk):
                 text= 'Sampling Type').grid(row=8, column= 2,pady = 5,padx = 5, sticky=E)
             Label(self.current_tab, 
                 text= '# of Trials').grid(row=8, column= 3,pady = 5,padx = 5)
-            # Create a frame for the canvas with non-zero row&column weights
-            #label_frame = Labelframe(self.current_tab)
-            #label_frame.grid(row=9, column=1, columnspan=3)
+
             frame_canvas1 = Labelframe(self.current_tab)
             frame_canvas1.grid(row=9, column=1, columnspan =3, pady=(5, 0))
             frame_canvas1.grid_rowconfigure(0, weight=1)
@@ -458,7 +467,8 @@ class MainApp(Tk):
             canvas1.config(height = '3c', width='13c')
             
             # Link a scrollbar to the canvas
-            vsb = Scrollbar(frame_canvas1, orient="vertical", command=canvas1.yview, style='scroll.Vertical.TScrollbar')
+            vsb = Scrollbar(frame_canvas1, orient="vertical", command=canvas1.yview, 
+                            style='scroll.Vertical.TScrollbar')
             vsb.grid(row=0, column=1,sticky = 'ns')
             canvas1.configure(yscrollcommand=vsb.set)
             
@@ -468,30 +478,34 @@ class MainApp(Tk):
             canvas1.create_window((0, 0), window=frame_vars1, anchor='nw')
             for name, format_of_data, vals in univariate_vars:
                 Label(frame_vars1, 
-                text= self.conv_title(name, True)).grid(row=self.univar_row_num, column= 1,pady = 5,padx = 18)
+                text= self.standardize_graph_title(name, True)).grid(row=self.univar_row_num,
+                                                  column= 1,pady = 5,padx = 18)
                 Label(frame_vars1, 
-                text= self.conv_title(format_of_data, True)).grid(row=self.univar_row_num, column= 2,pady = 5,padx = 18)
+                text= self.standardize_graph_title(format_of_data, True)).grid(row=self.univar_row_num,
+                                                  column= 2,pady = 5,padx = 18)
                 
                 if not(format_of_data == 'linspace' or format_of_data == 'list' or 'mapping' in format_of_data):
-                    key2=Entry(frame_vars1)
-                    key2.grid(row=self.univar_row_num, column=3,pady = 5,padx = 5)
-                    #key2.insert(0,univariate_sims)
-                    self.univar_ntrials_entries[name]= key2
+                    univar_val=Entry(frame_vars1)
+                    univar_val.grid(row=self.univar_row_num, column=3,pady = 5,padx = 5)
+                    self.univar_ntrials_entries[name]= univar_val
                     self.univar_ntrials_entries[name].config(width = 8)
                 else:
                     if "mapping" in format_of_data:
-                        Label(frame_vars1,text= self.conv_title(vals[-1].strip())).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5, sticky= W)
+                        Label(frame_vars1,text= self.standardize_graph_title(vals[-1].strip())).grid(
+                                row=self.univar_row_num, column= 3,pady = 5,padx = 5, sticky= W)
                     elif format_of_data == 'linspace':
                         
-                        Label(frame_vars1,text= self.conv_title(str(vals[2]).strip())).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5, sticky = W)
+                        Label(frame_vars1,text= self.standardize_graph_title(str(vals[2]).strip())).grid(
+                                row=self.univar_row_num, column= 3,pady = 5,padx = 5, sticky = W)
                     else:
-                        Label(frame_vars1,text= self.conv_title(str(len(vals)))).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5, sticky= W)
+                        Label(frame_vars1,text= self.standardize_graph_title(str(len(vals)))).grid(
+                                row=self.univar_row_num, column= 3,pady = 5,padx = 5, sticky= W)
                 self.univar_row_num += 1
                 
             # Update vars frames idle tasks to let tkinter calculate variable sizes
             frame_vars1.update_idletasks()
-            # Determine the size of the Canvas
             
+            # Determine the size of the Canvas
             frame_canvas1.config(width='13c', height='3c')
             
             # Set the canvas scrolling region
@@ -649,6 +663,13 @@ class MainApp(Tk):
     
     
     def sample_gauss(self,mean, std, lb, ub, ntrials):
+        '''
+        Samples all values that are to be sampled from a gaussian distribution.
+        Any values sampled outside of the user specified bounds will be discarded 
+        and resampled to meet user specified num trials. In the event that the user 
+        selects criteria outside the bounds the program will time out and return an
+        error statment
+        '''
         d = []
         for i in range(ntrials):
             rand_sample = random.normal(mean,std)
@@ -666,6 +687,13 @@ class MainApp(Tk):
     
     
     def sample_uniform(self,lb_uniform, ub_uniform, lb, ub, ntrials):
+        '''
+        Samples all values that are to be sampled from a uniform distribution.
+        Any values sampled outside of the user specified bounds will be discarded 
+        and resampled to meet user specified num trials. In the event that the user 
+        selects criteria outside the bounds the program will time out and return an
+        error statment.
+        '''
         d = []
         for i in range(ntrials):
             rand_sample = random.uniform(lb_uniform, ub_uniform)
@@ -683,6 +711,13 @@ class MainApp(Tk):
     
     
     def sample_poisson(self,lambda_p, lb, ub, ntrials):
+        '''
+        Samples all values that are to be sampled from a poisson distribution.
+        Any values sampled outside of the user specified bounds will be discarded 
+        and resampled to meet user specified num trials. In the event that the user 
+        selects criteria outside the bounds the program will time out and return an
+        error statment.
+        '''
         d = []
         for i in range(ntrials):
             rand_sample = random.poisson(10000*lambda_p)/10000
@@ -700,6 +735,13 @@ class MainApp(Tk):
         return d
     
     def sample_pareto(self, shape, scale, lb, ub, ntrials):
+        '''
+        Samples all values that are to be sampled from a pareto distribution.
+        Any values sampled outside of the user specified bounds will be discarded 
+        and resampled to meet user specified num trials. In the event that the user 
+        selects criteria outside the bounds the program will time out and return an
+        error statment.
+        '''
         d = []
         for i in range(ntrials):
             st = time()
@@ -737,7 +779,10 @@ class MainApp(Tk):
             self.after(5000, self.disp_sp_mfsp)
 
     
-    def single_point_analysis(self):
+    def run_single_point_analysis(self):
+        '''
+        
+        '''
         if self.sp_error:
             self.sp_error.destroy()
         self.store_user_inputs()
@@ -915,7 +960,7 @@ class MainApp(Tk):
             print('Simulation Already Running')
             return
         self.worker_thread = Thread(
-                target=lambda: self.single_point_analysis())
+                target=lambda: self.run_single_point_analysis())
         self.worker_thread.start()
         self.after(5000, self.disp_sp_mfsp)
         
@@ -1031,7 +1076,7 @@ class MainApp(Tk):
                     ax = fig.add_subplot(111)
                     num_bins = self.num_bins(results_filtered[var])
                     ax.hist(results_filtered[var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-                    ax.set_title(self.conv_title(var))
+                    ax.set_title(self.standardize_graph_title(var))
                     ax.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
                     self.plots_dictionary[var] = ax
                     results_fig_list.append(fig)
@@ -1043,7 +1088,7 @@ class MainApp(Tk):
                 num_bins = self.num_bins(self.simulation_dist[var])
                 _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
                 a.hist(results_unfiltered[var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
-                a.set_title(self.conv_title(var))
+                a.set_title(self.standardize_graph_title(var))
                 a.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
                # a.get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter(set_powerlimits((n,m))
                 self.plots_dictionary[var] = a
@@ -1144,13 +1189,13 @@ class MainApp(Tk):
                     num_bins = self.num_bins(results_filtered[output_var])
                     self.plots_dictionary[output_var].hist(
                             results_filtered[output_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-                    self.plots_dictionary[output_var].set_title(self.conv_title(output_var))
+                    self.plots_dictionary[output_var].set_title(self.standardize_graph_title(output_var))
                     self.plots_dictionary[output_var].ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
             for var, values in self.simulation_dist.items():
                 num_bins = self.num_bins(self.simulation_dist[var])
                 _, bins, _ = self.plots_dictionary[var].hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
                 self.plots_dictionary[var].hist(results_unfiltered[var], bins=bins, facecolor='blue', edgecolor='black', alpha=1.0)
-                self.plots_dictionary[var].set_title(self.conv_title(var))
+                self.plots_dictionary[var].set_title(self.standardize_graph_title(var))
                 self.plots_dictionary[var].ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
 
 
@@ -1212,7 +1257,7 @@ class MainApp(Tk):
                 num_bins = self.num_bins(self.simulation_dist[var])
                 _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
                 #a.hist(results_unfiltered[var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
-                a.set_title(self.conv_title(var))
+                a.set_title(self.standardize_graph_title(var))
                 a.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
                 fig_list.append(fig)
                 self.plots_dictionary[var][var] = a
@@ -1224,7 +1269,7 @@ class MainApp(Tk):
                         ax = fig.add_subplot(111)
                         num_bins = self.num_bins(results_filtered[output_var])
                         ax.hist(results_filtered[output_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-                        ax.set_title(self.conv_title(output_var))
+                        ax.set_title(self.standardize_graph_title(output_var))
                         ax.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
                         fig_list.append(fig)
                         self.plots_dictionary[var][output_var] = ax
@@ -1300,12 +1345,12 @@ class MainApp(Tk):
                         num_bins = self.num_bins(results_filtered[output_var])
                         self.plots_dictionary[current_var][output_var].hist(
                                 results_filtered[output_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-                    self.plots_dictionary[current_var][output_var].set_title(self.conv_title(output_var))
+                    self.plots_dictionary[current_var][output_var].set_title(self.standardize_graph_title(output_var))
                     self.plots_dictionary[current_var][output_var].ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
             num_bins = self.num_bins(self.simulation_dist[current_var])
             _, bins, _ = self.plots_dictionary[current_var][current_var].hist(self.simulation_dist[current_var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
             self.plots_dictionary[current_var][current_var].hist(results_unfiltered[current_var], bins=bins, facecolor='blue', edgecolor='black', alpha=1.0)
-            self.plots_dictionary[current_var][current_var].set_title(self.conv_title(current_var))
+            self.plots_dictionary[current_var][current_var].set_title(self.standardize_graph_title(current_var))
             self.plots_dictionary[current_var][current_var].ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
 
 
@@ -1336,7 +1381,7 @@ class MainApp(Tk):
                 a.hist(values, num_bins, weights=self.mapping_pdfs[var], facecolor='blue', edgecolor='black', alpha=1.0)
             else:
                 a.hist(values, num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-            a.set_title(self.conv_title(var))
+            a.set_title(self.standardize_graph_title(var))
             a.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
             fig_list.append(fig)
             
