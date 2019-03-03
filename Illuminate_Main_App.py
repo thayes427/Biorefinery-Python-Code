@@ -32,8 +32,14 @@ from math import ceil
 
 
 class MainApp(Tk):
+    '''
+    MainApp object encapsulates all attributes and methods related to the GUI.
+    '''
 
     def __init__(self):
+        '''
+        Initialize the Tkinter notebook and construct the home tab.
+        '''
         Tk.__init__(self)
         #self.iconbitmap('01_128x128.ico')
         self.notebook = Notebook(self)
@@ -41,8 +47,6 @@ class MainApp(Tk):
         self.notebook.grid()
         self.win_lim_x = self.winfo_screenwidth()//2
         self.win_lim_y = int(self.winfo_screenheight()*0.9)
-        self.construct_home_tab()
-        
         self.simulations = []
         self.current_simulation = None
         self.sp_error = None
@@ -52,8 +56,7 @@ class MainApp(Tk):
         self.simulation_vars = {}
         self.attributes('-topmost', True)
         self.focus_force()
-        self.bind('<FocusIn>', OnFocusIn)
-        #self.attributes("-topmost", True)
+        self.bind('<FocusIn>', OnFocusIn) # used to "focus" on the GUI without forcing it to be in focus
         self.tot_sim_num = 0
         self.sims_completed = Value('i',0)
         self.start_time = None
@@ -62,6 +65,7 @@ class MainApp(Tk):
         self.univar_row_num=0
         self.last_results_plotted = None
         self.last_update = None
+        # setting the size and location of the Tkinter window
         self.geometry(str(self.win_lim_x) + 'x' + str(self.win_lim_y) + '+0+0')
         self.worker_thread = None
         self.display_tab = None
@@ -71,17 +75,20 @@ class MainApp(Tk):
         self.analysis_type_error = None
         self.temp_directory = None
         self.warning_keywords = set()
+        self.vars_have_been_sampled = False
+
+        
+        self.construct_home_tab()
         
         
-
-
     def construct_home_tab(self):
         self.load_aspen_versions()
         self.home_tab = Frame(self.notebook, style= 'frame.TFrame')
         self.notebook.add(self.home_tab, text = 'File Upload Tab')
 
         for i in range (5,20):
-            Label(self.home_tab, text='                       ').grid(row=100,column=i,columnspan=1)
+            Label(self.home_tab, text='                       ').grid(
+                    row=100,column=i,columnspan=1)
         for i in range(106,160):
             Label(self.home_tab, text=' ').grid(row=i,column=0,columnspan=1)
 
@@ -93,7 +100,8 @@ class MainApp(Tk):
         
 
         Button(self.home_tab, text='Upload Simulation Inputs',
-        command=self.open_excel_file).grid(row=1,column=1, sticky = E, pady = 5,padx = 5)
+        command=self.open_excel_file).grid(row=1,column=1, sticky = E, pady = 5,
+                                    padx = 5)
         self.input_csv_entry = Entry(self.home_tab)
         self.input_csv_entry.grid(row=1, column=2)
         
@@ -114,7 +122,7 @@ class MainApp(Tk):
         
         Button(self.home_tab,
               text="Load Data",
-              command=self.make_new_tab).grid(row=9,column = 3,sticky = E,
+              command=self.construct_analysis_tab).grid(row=9,column = 3,sticky = E,
               pady = 5,padx = 5)
         
 #        test= Label(self.home_tab, 
@@ -125,11 +133,14 @@ class MainApp(Tk):
         self.analysis_type = StringVar(self.home_tab)
         self.analysis_type.set("Choose Analysis Type")
         
-        OptionMenu(self.home_tab, self.analysis_type,"Choose Analysis Type", "Single Point Analysis","Univariate Sensitivity", 
-                "Multivariate Sensitivity", style = 'raised.TMenubutton').grid(row = 9,sticky = E,column = 2,padx =5, pady = 5)
+        OptionMenu(self.home_tab, self.analysis_type,"Choose Analysis Type", 
+                   "Single Point Analysis","Univariate Sensitivity", 
+                "Multivariate Sensitivity", style = 'raised.TMenubutton').grid(
+                        row = 9,sticky = E,column = 2,padx =5, pady = 5)
                         
         select_aspen = Labelframe(self.home_tab, text='Select Aspen Version:')
-        select_aspen.grid(row = 5,column = 1, columnspan = 3, sticky = W,pady = 10,padx = 10)
+        select_aspen.grid(row = 5,column = 1, columnspan = 3, sticky = W,
+                          pady = 10,padx = 10)
 
         self.select_version = StringVar()
         row = 6
@@ -157,52 +168,75 @@ class MainApp(Tk):
         #self.num_processes_entry = Entry(self.home_tab)
         #self.num_processes_entry.grid(row=3, column=2, pady=5, padx=5)
         
-    def find_compatibility_errors(self):
-        while not self.error_queue.empty():
-            is_error, line_num, text = self.error_queue.get()
+    def print_compatibility_test_status(self):
+        '''
+        While the compatibility test is running in another thread, this function
+        checks a queue of error statements and updates and prints them to the
+        GUI to notify the user of the status of the compatibility test.
+        '''
+        
+        while not self.compat_status_queue.empty():
+            is_error, line_num, text = self.compat_status_queue.get()
             if is_error:
-                Label(self.home_tab, text= 'ERROR: ' + text, font='Helvetica 8',fg='red', justify=LEFT).place(x= self.compat_x_pos, y= self.compat_y_pos)
+                Label(self.home_tab, text= 'ERROR: ' + text, font='Helvetica 8',
+                      fg='red',justify=LEFT).place(x= self.compat_x_pos,y=self.compat_y_pos)
                 self.compat_y_pos = self.compat_y_pos+20*line_num
             else:
                 if text == 'Finished with Compatibility Test':
-                    Label(self.home_tab, text= text, font='Helvetica 10 bold', justify=LEFT).place(x= self.compat_x_pos, y= self.compat_y_pos)
+                    Label(self.home_tab, text= text, font='Helvetica 10 bold', 
+                          justify=LEFT).place(x= self.compat_x_pos, y=self.compat_y_pos)
                     self.compat_y_pos = self.compat_y_pos+20*line_num
                 else:
-                    Label(self.home_tab, text= text).place(x= self.compat_x_pos, y= self.compat_y_pos)
+                    Label(self.home_tab, text= text).place(x= self.compat_x_pos, y=self.compat_y_pos)
                     self.compat_y_pos = self.compat_y_pos+20*line_num
-            # print out errors to the GUI
-        if self.compat_test_thread.isAlive() or not self.error_queue.empty():
-            self.after(100, self.find_compatibility_errors)
+
+        # keep calling this function until the compatibility test is complete
+        # and the status queue is empty
+        if self.compat_test_thread.isAlive() or not self.compat_status_queue.empty():
+            self.after(100, self.print_compatibility_test_status)
             
         
         
     def test_compatibility(self):
         
-        self.error_queue = Queue()
+        self.compat_status_queue = Queue()
         self.compat_y_pos= self.win_lim_y *.03 + 35
         self.compat_x_pos= self.win_lim_x *.59 - 150
-        self.compat_test_thread = Thread(target=lambda: compatibility_test(self.error_queue, str(self.input_csv_entry.get()),str(self.excel_solver_entry.get()), str(self.aspen_file_entry.get()), str(self.select_version.get())))
+        self.compat_test_thread = Thread(target=lambda: compatibility_test(self.compat_status_queue, str(self.input_csv_entry.get()),str(self.excel_solver_entry.get()), str(self.aspen_file_entry.get()), str(self.select_version.get())))
         self.compat_test_thread.start()
-        self.after(100, self.find_compatibility_errors)        
+        self.after(100, self.print_compatibility_test_status)        
 
-    def make_new_tab(self):
+    def construct_analysis_tab(self):
+        '''
+        Depending on the type of analysis chosen, construct a new analysis tab
+        and populate all of the entries and buttons on that tab. After
+        constructing the analysis tab, this function calls load_input_variables_into_GUI
+        to process the user inputs and fill the analysis tabs with the appropriate
+        information.
+        '''
+        
+        # if there was previously an error about not selecting an analysis type
+        # not being chosen, destroy that error message
         if self.analysis_type_error:
             self.analysis_type_error.destroy()
         try:
             self.graphing_frequency = int(self.graphing_freq_entry.get())
         except:
+            # if no graphing frequency was given, by default it is 1
             self.graphing_frequency = 1
         if self.current_tab:
+            # if another analysis tab is open, delete it and forget it
             self.notebook.forget(self.current_tab)
             self.current_tab = None
         if self.analysis_type.get() == 'Choose Analysis Type':
-            self.analysis_type_error = Label(self.home_tab, text='ERROR: Choose An Analysis Type', fg='red')
+            self.analysis_type_error = Label(self.home_tab,
+                                             text='ERROR: Choose An Analysis Type', 
+                                             fg='red')
             self.analysis_type_error.grid(row=10,column=2)
  
         elif self.analysis_type.get() == 'Univariate Sensitivity':
             self.current_tab = Frame(self.notebook)
             self.notebook.add(self.current_tab,text = "Univariate Analysis")
-            ##############Tab 2 LABELS##################
             
             Label(self.current_tab, 
                   text="Save As :").place(x=149,y=6)
@@ -210,7 +244,8 @@ class MainApp(Tk):
             self.save_as_entry.grid(row=4, column=2, sticky=E, pady=6)
             self.save_as_entry.config(width =18)
             
-            Label(self.current_tab,text = ".xlsx").grid(row = 4, column = 3, sticky = W)
+            Label(self.current_tab,text = ".xlsx").grid(row = 4, column = 3, 
+                 sticky = W)
             
             Label(self.current_tab, text='CPU Core Count :').place(x=104,y=39)
             self.num_processes_entry = Entry(self.current_tab)
@@ -218,17 +253,17 @@ class MainApp(Tk):
             self.num_processes_entry.config(width=18)
             
             rec_core = int(cpu_count()//2)
-            Label(self.current_tab, text = 'Recommended Count: ' + str(rec_core)).grid(row = 5, column = 3, sticky = W)
+            Label(self.current_tab, text = 'Recommended Count: ' + str(rec_core)).grid(
+                    row = 5, column = 3, sticky = W)
             
             Label(self.current_tab, text = 'Graphing Frequency:').place(x=90, y=72)
             self.num_processes_entry = Entry(self.current_tab)
             self.num_processes_entry.grid(row=6, column=2, sticky=E, pady=6)
             self.num_processes_entry.config(width=18)
             
-            Label(self.current_tab, text = '(Input 0 for no Graphs)').grid(row=6,column=3, sticky = W)
-            
-            self.resample_cue = True
-            
+            Label(self.current_tab, text = '(Input 0 for no Graphs)').grid(
+                    row=6,column=3, sticky = W)
+                        
             Label(self.current_tab, text ='').grid(row= 13, column =1)
             Button(self.current_tab,
                    text='Run Univariate Sensitivity Analysis',
@@ -236,22 +271,9 @@ class MainApp(Tk):
                    column=3, columnspan=2,
                    pady=4)
             self.save_bkp = IntVar()
-            save_bkp= Checkbutton(self.current_tab, text = "Save .bkp Files", variable=self.save_bkp)
+            save_bkp= Checkbutton(self.current_tab, text = "Save .bkp Files", 
+                                  variable=self.save_bkp)
             save_bkp.grid(row = 13, column = 3, columnspan =2, pady=4)
-            
-#            live_graphing= Labelframe(self.current_tab, text='Live Graphing:')
-#            live_graphing.grid(row=13, column=1, sticky=W)
-#            yes_graph= Button(live_graphing, text='Y')
-#            yes_graph.grid(row=13, column= 1)
-#            yes_graph.configure(width=3)
-#            no_graph=Button(live_graphing, text ='N')
-#            no_graph.grid(row=13, column=2, sticky=E)
-#            no_graph.configure(width=3)
-            
-#            
-#            self.graphing_freq_entry = Entry(self.current_tab)
-#            self.graphing_freq_entry.grid(row=13, column=1, sticky = E, ipady =4)
-#            self.graphing_freq_entry.config(width = 6)
             
             Button(self.current_tab,
                    text='Sample and Display Variable Distributions',
@@ -264,7 +286,8 @@ class MainApp(Tk):
                    column=1,
                    pady=4)
             self.fill_num_sims = Entry(self.current_tab)
-            self.fill_num_sims.grid(row=7,column = 3,sticky =W, pady =2, padx = 2, columnspan=2)
+            self.fill_num_sims.grid(row=7,column = 3,sticky =W, pady =2, padx = 2, 
+                                    columnspan=2)
             self.fill_num_sims.config(width = 10)
             
         elif  self.analysis_type.get() == 'Single Point Analysis':
@@ -278,7 +301,8 @@ class MainApp(Tk):
             Label(self.current_tab,text = ".xlsx").place(x = 295, y= 6)
             
             self.save_bkp = IntVar()
-            save_bkp= Checkbutton(self.current_tab, text = "Save .bkp Files", variable=self.save_bkp)
+            save_bkp= Checkbutton(self.current_tab, text = "Save .bkp Files", 
+                                  variable=self.save_bkp)
             save_bkp.grid(row = 3, column = 2, columnspan =2, pady=4)
             
             Button(self.current_tab, text='Run Analysis',
@@ -295,12 +319,14 @@ class MainApp(Tk):
             self.save_as_entry.grid(row=3, column=2,pady = 5,padx = 5)
             Label(self.current_tab,text = ".xlsx").grid(row = 3, column = 3, sticky = W)
             Label(self.current_tab, 
-                  text="Number of Simulations :").grid(row=4, column= 1, sticky = E, pady = 5, padx = 5)
+                  text="Number of Simulations :").grid(row=4, column= 1, sticky = E, 
+                                                pady = 5, padx = 5)
             self.num_sim_entry = Entry(self.current_tab)
             self.num_sim_entry.grid(row=4, column=2,pady = 5,padx = 5)
             
             rec_core = int(cpu_count()//2)
-            Label(self.current_tab, text='CPU Core Count (Recommend '+ str(rec_core)+ '):').grid(row=5, column=1, sticky=E)
+            Label(self.current_tab, text='CPU Core Count (Recommend '+ str(rec_core)+ '):').grid(
+                    row=5, column=1, sticky=E)
             self.num_processes_entry = Entry(self.current_tab)
             self.num_processes_entry.grid(row=5, column=2, pady=5, padx=5)
                                
@@ -310,13 +336,12 @@ class MainApp(Tk):
                    column=3, columnspan=2, sticky=W, pady=4)
             
             self.save_bkp = IntVar()
-            save_bkp= Checkbutton(self.current_tab, text = "Save .bkp Files", variable=self.save_bkp)
-            save_bkp.grid(row = 6, column = 3, columnspan =2, sticky=W, pady=4)
-            self.resample_cue = True
-            
+            save_bkp= Checkbutton(self.current_tab, text = "Save .bkp Files", 
+                                  variable=self.save_bkp)
+            save_bkp.grid(row = 6, column = 3, columnspan =2, sticky=W, pady=4)            
 
-            
-            Label(self.current_tab, text='Plotting Frequency (0 for No Plots):').grid(row=6, column=1, sticky=E, pady=5, padx=5)
+            Label(self.current_tab, text='Plotting Frequency (0 for No Plots):').grid(
+                    row=6, column=1, sticky=E, pady=5, padx=5)
             self.graphing_freq_entry = Entry(self.current_tab)
             self.graphing_freq_entry.grid(row=6, column=2)
             
@@ -326,7 +351,7 @@ class MainApp(Tk):
                    column=1, columnspan=2, sticky=W, pady=4, padx=6)
             
         self.load_variables_into_GUI()
-        self.notebook.select(self.current_tab)
+        self.notebook.select(self.current_tab) # selecting the new tab
         
     def conv_title(self, s, pad=False):
         if len(s) > 37:
@@ -336,6 +361,12 @@ class MainApp(Tk):
         return s
 
     def load_aspen_versions(self):
+        '''
+        Searches through the user's windows registry to find the versions of
+        Aspen installed on the computer. It stores these versions in a dictionary
+        called self.aspen_versions where the key is the version name and the value
+        is the CLSID. The CLSID is used when dispatching the Aspen COMS object.
+        '''
         
         key = CreateKey(HKEY_CLASSES_ROOT, '')
         stop = False
@@ -498,7 +529,16 @@ class MainApp(Tk):
             canvas1.config(scrollregion=canvas1.bbox("all"))
             
     def get_distributions(self):
+        '''
+        Determines the number of trials needed for each input variable and calls
+        construct_distributions to fill the simulation_vars and simulation_dist
+        dictionaries. For univariate analysis, first the maximum number of trials
+        for all of the variables is determined. After constructing the distribution
+        for each variable, the extra values are truncated off depending on the number of 
+        trials required for each variable.
+        '''
         if self.analysis_type.get() == 'Univariate Sensitivity':
+            # determine the maximum number of trials required
             if self.univar_ntrials_entries:
                 max_num_sim = 0
                 for slot in self.univar_ntrials_entries.values():
@@ -509,14 +549,17 @@ class MainApp(Tk):
                     max_num_sim = max(max_num_sim, cur_num_sim)
             else:
                 max_num_sim = 1
-            self.simulation_vars, self.simulation_dist = self.construct_distributions(ntrials=max_num_sim)
+            self.simulation_vars, self.simulation_dist = self.construct_distributions(
+                    ntrials=max_num_sim)
             for (aspen_variable, aspen_call, fortran_index), dist in self.simulation_vars.items():
                 if aspen_variable in self.univar_ntrials_entries:
                     try:
                         num_trials_per_var = int(self.univar_ntrials_entries[aspen_variable].get())
                     except:
                         num_trials_per_var = 1
-                    self.simulation_vars[(aspen_variable, aspen_call, fortran_index)] = dist[:num_trials_per_var]
+                        # truncate off extra sampled values
+                    self.simulation_vars[(aspen_variable, 
+                                          aspen_call, fortran_index)] = dist[:num_trials_per_var]
                     self.simulation_dist[aspen_variable] = self.simulation_dist[aspen_variable][:num_trials_per_var]                
         else:
             try: 
@@ -528,33 +571,45 @@ class MainApp(Tk):
             
     def construct_distributions(self, ntrials=1):
         '''
-        Given the excel input from the user in the GUI, produce a list_of_variables
-        the user wants to change as well as their distributions that should be 
-        randomly sampled from. 
+        Given the excel input from the user, construct the distributions for 
+        each input variable. If input variables have already been sampled from, 
+        then a subset can be resampled. The function also checks for duplicate 
+        input variables and skips over any duplicates. If the variable is a fortran
+        variable, then the the distribution in simulation_vars will be
+        converted to a fortran string.
         '''
-        gui_excel_input = str(self.input_csv_entry.get())
-        col_types = {'Variable Name': str, 'Variable Aspen Call': str, 'Distribution Parameters': str, 'Bounds': str, 'Fortran Call':str, 'Fortran Value to Change': str, 'Distribution Type': str, 'Toggle': bool}
-        df = read_excel(gui_excel_input, sheet_name='Inputs', dtype=col_types)
+        
+        col_types = {'Variable Name': str, 'Variable Aspen Call': str, 
+                     'Distribution Parameters': str, 'Bounds': str, 
+                     'Fortran Call':str, 'Fortran Value to Change': str, 
+                     'Distribution Type': str, 'Toggle': bool}
+        df = read_excel(str(self.input_csv_entry.get()), sheet_name='Inputs', dtype=col_types)
         if not self.simulation_dist:
             simulation_vars = {}
             simulation_dist = {}
         else:
+            # if the variables have already been sampled from, we don't want to 
+            # wipe those values when we resample for a subset of variables.
             simulation_vars = self.simulation_vars
             simulation_dist = self.simulation_dist
         self.var_bounds = {}
+        check_for_duplicate_vars = set()
         for index, row in df.iterrows():
             if row['Toggle']:
-#                if row['Variable Name'] in simulation_dist:
-#                    continue
-                if self.resample_cue == False and not self.live_graphs[row['Variable Name']].get():
-                    continue
                 dist_type = row['Distribution Type'].lower()
                 aspen_variable = row['Variable Name']
                 aspen_call = row['Variable Aspen Call']
                 bounds = row['Bounds'].split(',')
                 lb = float(bounds[0].strip())
                 ub = float(bounds[1].strip())
+                if aspen_variable in check_for_duplicate_vars:
+                    continue
+                if self.vars_have_been_sampled == True and not self.live_graphs[aspen_variable].get():
+                    # only resample the variables that the user wants to resample
+                    continue
+                
                 self.var_bounds[aspen_variable] = (lb, ub)
+                check_for_duplicate_vars.add(aspen_variable)
                 if 'mapping' in dist_type:
                     dist_vars = row['Distribution Parameters'].split(',')
                     lb_dist, ub_dist = float(dist_vars[-3].strip()), float(dist_vars[-2].strip())
@@ -566,7 +621,9 @@ class MainApp(Tk):
                             distribution = self.sample_gauss(mean, std_dev, lb, ub, ntrials)
                         else:
                             bin_width = (ub_dist - lb_dist)/num_trials
-                            pdf_approx = self.sample_gauss(mean, std_dev, lb_dist-0.5*bin_width, ub_dist+0.5*bin_width, 100000)
+                            pdf_approx = self.sample_gauss(mean, std_dev, 
+                                                           lb_dist-0.5*bin_width, 
+                                                           ub_dist+0.5*bin_width, 100000)
 
                     if 'pareto' in dist_type:
                         shape, scale = float(dist_vars[0].strip()), float(dist_vars[1].strip())
@@ -574,20 +631,25 @@ class MainApp(Tk):
                             distribution = self.sample_pareto(shape, scale, lb, ub, ntrials)
                         else:
                             bin_width = (ub_dist - lb_dist)/num_trials
-                            pdf_approx = self.sample_pareto(shape, scale, lb_dist-0.5*bin_width, ub_dist+0.5*bin_width, 100000)
+                            pdf_approx = self.sample_pareto(shape, scale, 
+                                                            lb_dist-0.5*bin_width, 
+                                                            ub_dist+0.5*bin_width, 100000)
                     if 'poisson' in dist_type:
                         lambda_p = float(dist_vars[0].strip())
                         if self.analysis_type.get() != "Univariate Sensitivity":
                             distribution = self.sample_poisson(lambda_p, lb, ub, ntrials)
                         else:
                             bin_width = (ub_dist - lb_dist)/num_trials
-                            pdf_approx =self.sample_poisson(lambda_p, lb_dist-0.5*bin_width, ub_dist+0.5*bin_width, 100000)
+                            pdf_approx =self.sample_poisson(
+                                    lambda_p, lb_dist-0.5*bin_width, 
+                                    ub_dist+0.5*bin_width, 100000)
                         
                     if self.analysis_type.get() == "Univariate Sensitivity":
                         bin_width = (ub_dist - lb_dist)/num_trials
                         lb_pdf = lb_dist - 0.5*bin_width
                         ub_pdf = ub_dist + 0.5*bin_width
-                        pdf, bin_edges = histogram(pdf_approx, bins=linspace(lb_pdf, ub_pdf, num_trials+1), density=True)
+                        pdf, bin_edges = histogram(pdf_approx, bins=linspace(
+                                lb_pdf, ub_pdf, num_trials+1), density=True)
                         tot_dens = sum(pdf)
                         self.mapping_pdfs[aspen_variable] = [p/tot_dens for p in pdf]
 
@@ -622,14 +684,24 @@ class MainApp(Tk):
                         distribution = distribution2
                 elif 'uniform' in dist_type:
                     lb_ub = row['Distribution Parameters'].split(',')
-                    lb_uniform, ub_uniform = float(lb_ub[0].strip()), float(lb_ub[1].strip())
-                    distribution = self.sample_uniform(lb_uniform, ub_uniform, lb, ub, ntrials)
+                    lb_uniform, ub_uniform = float(
+                            lb_ub[0].strip()), float(lb_ub[1].strip())
+                    distribution = self.sample_uniform(lb_uniform, ub_uniform, 
+                                                       lb, ub, ntrials)
   
                 if distribution is None:
-                    Label(self.current_tab, text= 'ERROR: Distribution Parameters for ' + aspen_variable + ' are NOT valid', fg='red').grid(row=10, column=1, columnspan=3)
-                    Label(self.current_tab, text='Please Adjust Distribution Parameters in Input File and Restart Illuminate', fg='red').grid(row=11,column=1,columnspan=3)
+                    Label(self.current_tab, text= 'ERROR: Distribution Parameters for ' + \
+                          aspen_variable + ' are NOT valid', fg='red').grid(
+                                  row=10, column=1, columnspan=3)
+                    Label(self.current_tab, 
+                          text='Please Adjust Distribution Parameters in'+\
+                          'Input File and Restart Illuminate', fg='red').grid(
+                                  row=11,column=1,columnspan=3)
                     return {}, {}
+                
                 simulation_dist[aspen_variable] = distribution[:]
+                
+                ############## CONVERT FORTRAN VARIABLES TO STRINGS ############
                 fortran_index = (0,0)
                 if row['Fortran Call'] != 'nan':
                     
@@ -642,8 +714,10 @@ class MainApp(Tk):
                             fortran_index = (i, i+len_val) #NOT INCLUSIVE
                     distribution2 = list()
                     for i, v in enumerate(distribution):
-                        distribution2.append(self.make_fortran(fortran_call, fortran_index, float(v)))
+                        distribution2.append(self.make_fortran(fortran_call, 
+                                                               fortran_index, float(v)))
                     distribution = distribution2
+                    
                 simulation_vars[(aspen_variable, aspen_call, fortran_index)] = distribution
         return simulation_vars, simulation_dist
     
@@ -716,17 +790,31 @@ class MainApp(Tk):
             d.append(rand_sample)
         return d
     
+    
     def make_fortran(self, fortran_call, fortran_index, val):
+        '''
+        Takes the fortran call string and the indices indicating the values to 
+        replace and returns a new fortran string with the new distribution value.
+        '''
+        
         return fortran_call[:fortran_index[0]] + str(val) + fortran_call[fortran_index[1]:]
     
-    def disp_sp_mfsp(self):
+    
+    def disp_single_point_results(self):
+        '''
+        Periodically check for a result from single point analysis until a result 
+        is received. One a result is received, print out the outputs line by 
+        line and indicate that the analysis is complete.
+        '''
+        
         if self.current_simulation and self.current_simulation.results:
             row = 4
             for output_var, toggled in self.graph_toggles.items():
                 if toggled.get():
                     output_val = self.current_simulation.results[0].at[1, output_var]
                     if isna(output_val):
-                        Label(self.current_tab, text= 'Aspen Failed to Converge', font='Helvetica 10 bold',fg='red').grid(row=row, column = 1)
+                        Label(self.current_tab, text= 'Aspen Failed to Converge', 
+                              font='Helvetica 10 bold',fg='red').grid(row=row, column = 1)
                         break
                     output_val = "{:,}".format(float("%.2f" % output_val))
                     Label(self.current_tab, text=str(output_var) + '= ' + output_val).grid(
@@ -734,7 +822,7 @@ class MainApp(Tk):
                     row += 1
                     self.sp_status.config(text='Status: Simulation Complete')
         else:
-            self.after(5000, self.disp_sp_mfsp)
+            self.after(5000, self.disp_single_point_results)
 
     
     def single_point_analysis(self):
@@ -760,6 +848,8 @@ class MainApp(Tk):
         
     
     def run_multivar_sens(self):
+        '''
+        '''
         self.store_user_inputs()
         if len(self.simulation_vars) == 0:
             self.get_distributions()
@@ -917,7 +1007,7 @@ class MainApp(Tk):
         self.worker_thread = Thread(
                 target=lambda: self.single_point_analysis())
         self.worker_thread.start()
-        self.after(5000, self.disp_sp_mfsp)
+        self.after(5000, self.disp_single_point_results)
         
     def initialize_univar_analysis(self):
         self.simulations = []
@@ -1351,13 +1441,14 @@ class MainApp(Tk):
         count = 0
         row_track, col_track = 0,0
 
-        if self.resample_cue:
-            self.live_graphs ={}
-            self.resample_cue = False
+        if not self.vars_have_been_sampled:
+            self.live_graphs = {}
+            self.vars_have_been_sampled = True
             for v in self.simulation_dist.keys():
                 self.live_graphs[v] = IntVar()
                 cb = Checkbutton(self.resample_vars, text = v, variable = self.live_graphs[v])
                 cb.grid(row= row_track, column = col_track)
+                cb.select()
                 col_track += 1
                 if col_track%5 == 0:
                         row_track +=1
