@@ -12,13 +12,35 @@ import string
 
 
 
-
 class Simulation(object):
+    '''
+    A class to encapsulate all attributes and methods associated with a simulation.
+    Simulation objects are initialized in the Main_App object function
+    "create_simulation_object." There are a number of multiprocessing specific
+    data structures here that enable pickling/piping of data across different
+    processes. Basically, any variable that needs to be modified by different 
+    multiprocessing processes must be one of these special multiprocessing
+    data structures. 
+    
+    Each process pulls a trial number from the task queue and runs an analysis
+    with the values associated with that trial number. As soon as a trial is 
+    completed, the results are appended to the "results" list, which is a list of 
+    pandas dataframes, with each dataframe containing the results of just one trial.
+    This is why the results are always concatenated together before plotting or
+    saving. By using this multiprocessing results list, the results from each 
+    process are shuttled out of the process to be accessed by the Main_App threads.
+    
+    The lock_to_signal_finish is a lock that is released by the processes only 
+    once the simulation is completed or properly aborted at the level of the processes.
+    Release of this lock notifies the parent worker_thread that the processes are 
+    done.
+    '''
+    
     def __init__(self, sims_completed, tot_sim, simulation_vars, output_file, directory, 
                  aspen_file, excel_solver_file,abort, vars_to_change, output_value_cells,
                  output_columns, dispatch, weights, save_bkps, warning_keywords, save_freq=2, num_processes=1):
         self.manager = Manager()
-        self.num_processes = min(num_processes, tot_sim)
+        self.num_processes = min(num_processes, tot_sim) #don't need more processors than trials
         self.tot_sim = tot_sim
         self.sims_completed = sims_completed
         self.save_freq = self.manager.Value('i', save_freq)
@@ -48,27 +70,28 @@ class Simulation(object):
         self.warning_keywords = self.manager.list(list(warning_keywords))
           
     
-    def init_sims(self):
+    def run_simulation(self):
+        '''
+        Saves a copy of input variables in the output folder. It then constructs the 
+        task queue and starts the simulations. It waits for the
+        lock_to_signal_release before closing all COMS and terminating all processes.
+        Finally, it saves the data and graphs to the output folder.
+        '''
         
-        df = DataFrame(columns=['trial'] + list(self.vars_to_change))
-        for key, value in self.simulation_vars.items():
-            df[key[0]] = value
-            ntrials = len(value)
-        df['trial'] = range(1, ntrials+1)
-        df.to_csv(path.join(self.directory.value, 'Sampled_Variable_Distributions.csv'),index=False)
-        
-        
+        self.save_copy_of_input_variables()
         
         TASKS = [trial for trial in range(0, self.tot_sim)]
         self.lock_to_signal_finish.acquire()
         if not self.abort.value:
-            self.run_sim(TASKS)
+            self.start_simulation(TASKS)
         else:
             try:
                 self.lock_to_signal_finish.release()
             except:
                 pass
         print('Simulation Running\nWaiting for Completion Signal')
+        # it cannot acquire the lock until it is released from a thread or 
+        # is released above if the simulation is aborted.
         self.lock_to_signal_finish.acquire()
         print('Completion Signal Received')
         self.wait()
@@ -81,12 +104,31 @@ class Simulation(object):
         self.abort.value = False    
         
         
+    def save_copy_of_input_variables(self):
+        '''
+        Saves a copy of the excel input file to the output folder.
+        '''
+        df = DataFrame(columns=['trial'] + list(self.vars_to_change))
+        for key, value in self.simulation_vars.items():
+            df[key[0]] = value
+            ntrials = len(value)
+        df['trial'] = range(1, ntrials+1)
+        df.to_csv(path.join(self.directory.value, 'Sampled_Variable_Distributions.csv'),index=False)
+        
+        
     def terminate_processes(self):
+        '''
+        Terminates all multiprocessing processes
+        '''
         for p in self.processes:
             p.terminate()
             p.join()
          
     def wait(self, t=0.1):
+        '''
+        Waits until all processes are dead. It repeatedly calls itself until
+        no processes are alive
+        '''
         if not any(p.is_alive() for p in self.processes):
             return
         else:
@@ -94,30 +136,42 @@ class Simulation(object):
             self.wait()
             
             
-    def run_sim(self, tasks):
+    def start_simulation(self, tasks):
+        '''
+        Constructs and starts the multiprocessing processes to run the simulation
+        '''
         task_queue = Queue()
         for task in tasks:
             task_queue.put(task)
 
         for i in range(self.num_processes):
-                        self.processes.append(Process(target=worker, args=(self.current_COMS_pids, self.pids_to_ignore, 
-                                                                self.aspenlock, self.excellock, self.aspen_file, self.save_bkps,
-                                                                self.excel_solver_file, task_queue, self.abort, 
-                                                                self.results_lock, self.results, self.directory, self.output_columns, self.output_value_cells,
-                                                                self.trial_counter, self.save_freq, 
-                                                                self.output_file, self.vars_to_change, 
-                                                                self.output_columns, self.simulation_vars, self.sims_completed, 
-                                                                self.lock_to_signal_finish, self.tot_sim, self.dispatch, self.weights,
-                                                                self.warning_keywords)))
+            process_args = (self.current_COMS_pids, self.pids_to_ignore, self.aspenlock, 
+                            self.excellock, self.aspen_file, self.save_bkps,self.excel_solver_file,
+                            task_queue, self.abort,self.results_lock, self.results, 
+                            self.directory, self.output_columns, self.output_value_cells,
+                            self.trial_counter, self.save_freq,self.output_file, self.vars_to_change, 
+                            self.output_columns, self.simulation_vars, self.sims_completed, 
+                            self.lock_to_signal_finish, self.tot_sim, self.dispatch, self.weights,
+                            self.warning_keywords)
+            self.processes.append(Process(target=multiprocessing_worker, args=process_args))
+            
         for p in self.processes:
             p.start()
+            
+        # need to add STOP at the end of the task queue so the processes know when
+        # to stop
         for i in range(self.num_processes):
             task_queue.put('STOP')
         
             
     def close_all_COMS(self):
-        self.aspenlock.acquire()
-        self.excellock.acquire()
+        '''
+        If any COMS objects are in the process of being opened, it waits for 
+        them to finish opening so that we make sure to have a handle on them 
+        so we can delete them. It then terminates all current COMS processes.
+        '''
+        self.aspenlock.acquire() # wait for aspen COMS to finish opening
+        self.excellock.acquire() # wait for excel COMS to finish opening
         for p in process_iter():
             if p.pid in self.current_COMS_pids:
                 p.terminate()
@@ -126,25 +180,38 @@ class Simulation(object):
         self.excellock.release()
 
     
-                
     def find_pids_to_ignore(self):
+        '''
+        Searches through all processes running to find any Excel or Aspen
+        processes that the user already has running so we make sure we don't
+        close those when we try to close all of Illuminate's COMS
+        '''
         for p in process_iter():
             if ('aspen' in p.name().lower() or 'apwn' in p.name().lower()) or 'excel' in p.name().lower():
                 self.pids_to_ignore[p.pid] = 1
         
         
         
-############ GLOBAL FUNCTIONS ################
+############ GLOBAL FUNCTIONS THAT PROCESSES CAN ACCESS ################
                 
 def open_aspenCOMS(aspenfilename,dispatch):
+    '''
+    Opens the Aspen COM object and returns a reference to that object
+    as well as the Aspen Tree.
+    '''
     aspencom = Dispatch(str(dispatch))
-    aspencom.InitFromArchive2(path.abspath(aspenfilename), host_type=0, node='', username='', password='', working_directory='', failmode=0)
-    obj = aspencom.Tree
+    aspencom.InitFromArchive2(path.abspath(aspenfilename), host_type=0, node='', username='', 
+                              password='', working_directory='', failmode=0)
+    aspen_tree = aspencom.Tree
     #aspencom.SuppressDialogs = False     
-    return aspencom,obj
+    return aspencom,aspen_tree
 
 
 def open_excelCOMS(excelfilename):
+    '''
+    Opens the Excel COM object and returns a reference to that object as well
+    as the Excel book
+    '''
     pythoncom.CoInitialize()
     excel = DispatchEx('Excel.Application')
     book = excel.Workbooks.Open(path.abspath(excelfilename))
@@ -152,8 +219,13 @@ def open_excelCOMS(excelfilename):
    
     
 def save_data(outputfilename, results, directory, weights):
+    '''
+    Saves simulation results to the output directory. The weights are only
+    for input variables whose distributions have "linspace mapping" type. 
+    It also saves summary statistics for each of the output variables in a second tab.
+    '''
     if results: 
-        collected_data = concat(results).sort_index()
+        collected_data = concat(results).sort_index() # concatenate and sort by trial number
         if len(weights) > 0:
             collected_data['Probability'] = weights[:len(collected_data)]
         writer = ExcelWriter(directory.value + '/' + outputfilename.value + '.xlsx')
@@ -163,6 +235,10 @@ def save_data(outputfilename, results, directory, weights):
         writer.save()
     
 def save_graphs(outputfilename, results, directory, weights):
+    '''
+    Saves histograms for each input variable and output variable to the output
+    directory.
+    '''
     if results:
         collected_data = list(filter(lambda x: not isna(x[x.columns[-2]].values[0]), results))
         if len(collected_data) > 0:
@@ -174,18 +250,25 @@ def save_graphs(outputfilename, results, directory, weights):
                 if len(weights) > 0:
                      plotweight = weights[:len(collected_data)]
                      num_bins = len(collected_data)
-                     plt.hist(collected_data[var], num_bins, weights=plotweight, facecolor='blue', edgecolor='black', alpha=1.0)
+                     plt.hist(collected_data[var], num_bins, weights=plotweight, 
+                              facecolor='blue', edgecolor='black', alpha=1.0)
                 else:
                     num_bins = 20
-                    plt.hist(collected_data[var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
+                    plt.hist(collected_data[var], num_bins, facecolor='blue', 
+                             edgecolor='black', alpha=1.0)
                 ax.set_xlabel(var, Fontsize=14)
                 ax.set_ylabel('Count', Fontsize=14)
                 ax.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3), Fontsize=12)
                 ax.ticklabel_format(axis= 'y', Fontsize=12)
-                char_omit = findall(r"([^\\\/\:\?\*\"\<\>\|]*)[\\\/\:\?\*\"\<\>\|]([^\\\/\:\?\*\"\<\>\|]*)",var)
+                
+                # remove any invalid characters from the variable name so we
+                # can properly save the file
+                char_omit = findall(
+                        r"([^\\\/\:\?\*\"\<\>\|]*)[\\\/\:\?\*\"\<\>\|]([^\\\/\:\?\*\"\<\>\|]*)",var)
                 if char_omit:
                     var = "".join([s[0]+s[1] for s in char_omit])
-                plt.savefig(directory.value + '/' + outputfilename.value + '_' + var + '.png', format='png')
+                plt.savefig(directory.value + '/' + outputfilename.value + \
+                            '_' + var + '.png', format='png')
                 try:
                     fig.clf()
                 except:
@@ -195,43 +278,68 @@ def save_graphs(outputfilename, results, directory, weights):
                 except:
                     pass
 
-def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilename, save_bkps,
-           excelfilename, task_queue, abort, results_lock, results, directory, output_columns, output_value_cells,
-           sim_counter, save_freq, outputfilename, vars_to_change, columns, simulation_vars, sims_completed, 
-           lock_to_signal_finish, tot_sim, dispatch, weights, warning_keywords):
+def multiprocessing_worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilename, save_bkps,
+           excelfilename, task_queue, abort, results_lock, results, directory, output_columns, 
+           output_value_cells, sim_counter, save_freq, outputfilename, vars_to_change, columns, 
+           simulation_vars, sims_completed,lock_to_signal_finish, tot_sim, dispatch, weights, 
+           warning_keywords):
+    '''
+    The function that hosts the multiprocessing running of simulations. Each
+    multiprocessing process is running this function when simulations are being
+    actively run. 
     
-    local_pids_to_ignore = {}
+    Here are the steps of this function:
+        1. Opens one Aspen and Excel COM object and registers those process 
+        IDs as active COMS processes.
+        2. If bkp files are to be saved, then it specifies the bkp directory to
+        be in the output folder. Otherwise, the bkp directory will be in a temporary folder
+        3. Draws trials from the task queue and runs simulations as follows:
+            a. Run an Aspen simulation via aspen_run
+            b. Save the simulation results to a bkp file
+            c. Run the Excel calculator file to calculate all outputs
+            d. Append the resulting pandas dataframe of outputs to the results list
+            e. Given the save frequency and the number of sims completed, maybe save data collected
+            f. Aspen COM objects accumulate memory over many trials. Therefore, if the 
+            memory consumption is above 94%, then the Aspen COM is terminated and
+            reinitialized to conserve memory. 
+            e. After the task queue is emptied, release the lock to signal finish
+    '''
+    
+    local_pids_to_ignore = {} #local as in not accessible by other processes
     local_pids = {}
-    
     aspenlock.acquire()
+    ######## Register any process IDs to ignore before initializing COMS #####
     for p in process_iter():
         if ('aspen' in p.name().lower() or 'apwn' in p.name().lower()):
             local_pids_to_ignore[p.pid] = 1
+            
     if not abort.value:
-        aspencom,obj = open_aspenCOMS(aspenfilename.value, dispatch)
-    for p in process_iter():
-        if ('aspen' in p.name().lower() or 'apwn' in p.name().lower()) and p.pid not in local_pids_to_ignore:
+        aspencom,aspen_tree = open_aspenCOMS(aspenfilename.value, dispatch)
+    for p in process_iter(): # get a handle on the Aspen COM we just made
+        if ('aspen' in p.name().lower() or 'apwn' in p.name().lower()) and (
+                p.pid not in local_pids_to_ignore):
             local_pids[p.pid] = 1
     aspenlock.release()
+    
     excellock.acquire()
     if not abort.value:
-        
-        if save_bkps.value:
-            aspen_temp_dir = directory.value
-        else:
-            aspen_temp_dir = path.dirname(aspenfilename.value)
-            bkp_name = ''.join([choice(string.ascii_letters + string.digits) for n in range(10)]) + '.bkp'
-            full_bkp_name = path.join(aspen_temp_dir,bkp_name)
-        #aspencom.SaveAs(full_bkp_name)
         excel,book = open_excelCOMS(excelfilename.value)
-        #book.Sheets('Set-up').Evaluate('B1').Value = full_bkp_name
     excellock.release() 
-    
-    for p in process_iter(): #register the pids of COMS objects
-        if (('aspen' in p.name().lower() or 'apwn' in p.name().lower()) or 'excel' in p.name().lower()) and p.pid not in pids_to_ignore:
+    for p in process_iter(): # get a handle on the Excel COM we just made
+        if (('aspen' in p.name().lower() or 'apwn' in p.name().lower()) or 'excel' in p.name().lower()) and (
+                p.pid not in pids_to_ignore):
             current_COMS_pids[p.pid] = 1
+    
+    ######## Determine the directory of the bkp files ##############
+    if save_bkps.value:
+        aspen_temp_dir = directory.value
+    else:
+        aspen_temp_dir = path.dirname(aspenfilename.value)
+        bkp_name = ''.join([choice(string.ascii_letters + string.digits) for n in range(10)]) + '.bkp'
+        full_bkp_name = path.join(aspen_temp_dir,bkp_name)
+    
             
-            
+    #####################  Run the simulation ########################
     for trial_num in iter(task_queue.get, 'STOP'):
         if abort.value:
             try:
@@ -239,7 +347,10 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
             except:
                 continue
         
-        aspencom, case_values, errors, warnings, obj = aspen_run(aspencom, obj, simulation_vars, trial_num, vars_to_change, directory, warning_keywords) 
+        # run Aspen simulation
+        aspencom, case_values, errors, warnings, aspen_tree = aspen_run(
+                aspencom, aspen_tree, simulation_vars, trial_num, vars_to_change, 
+                directory, warning_keywords) 
         
         # save bkp file and tell excel calculator to point to correct bkp file
         if save_bkps.value:
@@ -247,8 +358,11 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
         aspencom.SaveAs(full_bkp_name)
         book.Sheets('Set-up').Evaluate('B1').Value = full_bkp_name
         
-        result = mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_num, output_value_cells, directory, warnings)
+        # run the Excel Calculator
+        result = excel_run(excel, book, aspencom, aspen_tree, case_values, columns, errors, 
+                             trial_num, output_value_cells, directory, warnings)
         
+        # dump results into results list and maybe save
         results_lock.acquire()
         results.append(result) 
         sim_counter.value = len(results)
@@ -259,6 +373,7 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
         results_lock.release()
         
 
+        # Restart Aspen COM if memory consumption is an issue
         if virtual_memory().percent > 94:
             aspenlock.acquire()
             for p in process_iter():
@@ -267,12 +382,11 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
                     del current_COMS_pids[p.pid]
                     del local_pids[p.pid]
                     
-            
             for p in process_iter():
                 if ('aspen' in p.name().lower() or 'apwn' in p.name().lower()):
                     local_pids_to_ignore[p.pid] = 1
             if not abort.value:
-                aspencom,obj = open_aspenCOMS(aspenfilename.value,dispatch)
+                aspencom,aspen_tree = open_aspenCOMS(aspenfilename.value,dispatch)
             
             for p in process_iter(): #register the pids of COMS objects
                 if ('aspen' in p.name().lower() or 'apwn' in p.name().lower()) and p.pid not in local_pids_to_ignore:
@@ -280,7 +394,7 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
                     local_pids[p.pid] = 1
             aspenlock.release()
         
-                    
+        # restart the Aspen Engine (very important for conservation of memory)            
         aspencom.Engine.Host(host_type=0, node='', username='', password='', working_directory='')    
 
     try:
@@ -288,24 +402,26 @@ def worker(current_COMS_pids, pids_to_ignore, aspenlock, excellock, aspenfilenam
     except:
         pass
             
-            
-            
 
 
-def aspen_run(aspencom, obj, simulation_vars, trial, vars_to_change, directory, warning_keywords):
-    
-    #SUC_LOC = r"\Data\Blocks\A300\Data\Blocks\B1\Input\FRAC\TOC5"
-    #suobj.FindNode(SUC_LOC).Value = 0.4
+def aspen_run(aspencom, aspen_tree, simulation_vars, trial, vars_to_change, directory, warning_keywords):
+    '''
+    Runs an Aspen simulation given a trial number and the given variable distributions.
+    After running Aspen, it calls find_errors_warnings to identify any errors
+    or warnings of interest Aspen outputed.
+    '''
     
     variable_values = {}
     for (aspen_variable, aspen_call, fortran_index), dist in simulation_vars.items():
-        obj.FindNode(aspen_call).Value = dist[trial]
+        # change value in Aspen tree
+        aspen_tree.FindNode(aspen_call).Value = dist[trial]
         if type(dist[trial]) == str:
+            # if fortran variable
             variable_values[aspen_variable] = float(dist[trial][fortran_index[0]:fortran_index[1]])
         else:
             variable_values[aspen_variable] = dist[trial]
     
-    ########## STORE THE RANDOMLY SAMPLED VARIABLE VALUES  ##########
+    ########## STORE THE VARIABLE VALUES FOR THIS TRIAL  ##########
     case_values = []
     for v in vars_to_change:
         case_values.append(variable_values[v])    
@@ -314,88 +430,69 @@ def aspen_run(aspencom, obj, simulation_vars, trial, vars_to_change, directory, 
     aspencom.Engine.Run2()
     errors, warnings = find_errors_warnings(aspencom, warning_keywords)
     
-    return aspencom, case_values, errors, warnings, obj
+    return aspencom, case_values, errors, warnings, aspen_tree
 
 
 
-def mp_excelrun(excel, book, aspencom, obj, case_values, columns, errors, trial_num, output_value_cells, directory, warnings):
-
-#    column = [x for x in book.Sheets('Aspen_Streams').Evaluate("D1:D100") if x.Value != None] 
-#    
-#    if obj.FindNode(column[0]) == None: # basically, if the massflow out of the system is None, then it failed to converge
-#        dfstreams = DataFrame(columns=columns)
-#        dfstreams.loc[trial_num+1] = case_values + [None]*(len(columns) - 1 - len(case_values)) + ["Aspen Failed to Converge"]
-#        return dfstreams
-#    stream_values = []
-#    for index,stream in enumerate(column):
-#        stream_value = obj.FindNode(stream).Value   
-#        stream_values.append((stream_value,))
-#    cell_string = "C1:C" + str(len(column))
-#    book.Sheets('ASPEN_Streams').Evaluate(cell_string).Value = stream_values
-#    
-#    excel.Calculate()
-#    excel.Run('SOLVE_DCFROR')
-#
-#     
-#    dfstreams = DataFrame(columns=columns)
-#    dfstreams.loc[trial_num+1] = case_values + [x.Value for x in book.Sheets('Output').Evaluate(output_value_cells.value)] + ["; ".join(errors)]
-#    return dfstreams
-    
+def excel_run(excel, book, aspencom, aspen_tree, case_values, columns, errors, 
+                trial_num, output_value_cells, directory, warnings):
+    '''
+    Pulls stream results from Aspen simulation .bkp file and run macros to 
+    solve for output values. Saves simulation results in a pandas dataframe and
+    returns that dataframe.
+    '''
     
     excel.Run('sub_ClearSumData_ASPEN')
     excel.Run('sub_GetSumData_ASPEN')
     excel.Calculate()
-#    excel.Run('SolveProductCost')
     excel.Run('solvedcfror')
       
-    dfstreams = DataFrame(columns=columns)
-    dfstreams.loc[trial_num+1] = case_values + [x.Value for x in book.Sheets('Output').Evaluate(output_value_cells.value)] + ["; ".join(errors)] + ["; ".join(warnings)]
-    return dfstreams
+    outputs_df = DataFrame(columns=columns)
+    outputs_df.loc[trial_num+1] = case_values + [x.Value for x in book.Sheets(
+            'Output').Evaluate(output_value_cells.value)] + ["; ".join(errors)] + ["; ".join(warnings)]
+    return outputs_df
     
-    
-    
-#    excel.Run('sub_ClearSumData_ASPEN')
-#    excel.Run('sub_GetSumData_ASPEN')
-#    excel.Calculate()
-##    excel.Run('SolveProductCost')
-#    excel.Run('solvedcfror')
-#      
-#    dfstreams = DataFrame(columns=columns)
-#    dfstreams.loc[trial_num+1] = case_values + [x.Value for x in book.Sheets('Output').Evaluate(output_value_cells.value)] + ["; ".join(errors)]
-#    return dfstreams
 
 
 def find_errors_warnings(aspencom, warning_keywords):
-    obj = aspencom.Tree
+    '''
+    Searches through the Aspen Run Status node in the Aspen Tree to find any 
+    errors in convergence or warning messages that contain the user-defined
+    keywords of interest. Returns a list of strings for errors and warnings 
+    separately.
+    '''
+    aspen_tree = aspencom.Tree
     error = r'\Data\Results Summary\Run-Status\Output\PER_ERROR'
     not_done = True
     counter = 1
     error_number = 0
-    warning_number=0
+    warning_number = 0
     error_statements = []
     warning_statements = []
     while not_done:
         try:
-            check_for_errors = obj.FindNode(error + '\\' +  str(counter)).Value
+            check_for_errors = aspen_tree.FindNode(error + '\\' +  str(counter)).Value
             if "error" in check_for_errors.lower():
+                ############   FOUND AN ERROR ###################
                 error_statements.append(check_for_errors)
                 scan_errors = True
                 counter += 1
                 while scan_errors:
-                    if len(obj.FindNode(error + '\\' + str(counter)).Value.lower()) > 0:
-                        error_statements[error_number] = error_statements[error_number] + obj.FindNode(error + '\\' + str(counter)).Value
+                    if len(aspen_tree.FindNode(error + '\\' + str(counter)).Value.lower()) > 0:
+                        error_statements[error_number] = error_statements[error_number] + aspen_tree.FindNode(error + '\\' + str(counter)).Value
                         counter += 1
                     else:
                         scan_errors = False
                         error_number += 1
                         counter += 1
             elif any(keyword in check_for_errors.lower() for keyword in warning_keywords):
+                ############# FOUND A WARNING WITH WARNING KEYWORD ##############
                 warning_statements.append(check_for_errors)
                 scan_errors = True
                 counter += 1
                 while scan_errors:
-                    if len(obj.FindNode(error + '\\' + str(counter)).Value.lower()) > 0:
-                        warning_statements[warning_number] = warning_statements[warning_number] + obj.FindNode(error + '\\' + str(counter)).Value
+                    if len(aspen_tree.FindNode(error + '\\' + str(counter)).Value.lower()) > 0:
+                        warning_statements[warning_number] = warning_statements[warning_number] + aspen_tree.FindNode(error + '\\' + str(counter)).Value
                         counter += 1
                     else:
                         scan_errors = False

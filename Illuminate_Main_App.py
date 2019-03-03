@@ -82,6 +82,9 @@ class MainApp(Tk):
         
         
     def construct_home_tab(self):
+        '''
+        Constructs the home tab used to upload input files and test compatibility 
+        '''
         self.load_aspen_versions()
         self.home_tab = Frame(self.notebook, style= 'frame.TFrame')
         self.notebook.add(self.home_tab, text = 'File Upload Tab')
@@ -89,46 +92,36 @@ class MainApp(Tk):
         for i in range (5,20):
             Label(self.home_tab, text='                       ').grid(
                     row=100,column=i,columnspan=1)
+
         for i in range(106,160):
             Label(self.home_tab, text=' ').grid(row=i,column=0,columnspan=1)
 
-        
-        
         space= Label(self.home_tab, text=" ",font='Helvetica 2')
         space.grid(row=0, column= 1, sticky = E, padx = 5, pady =4)
         space.rowconfigure(0, minsize = 15)
         
-
         Button(self.home_tab, text='Upload Simulation Inputs',
-        command=self.open_excel_file).grid(row=1,column=1, sticky = E, pady = 5,
+        command=self.open_input_excel_file).grid(row=1,column=1, sticky = E, pady = 5,
                                     padx = 5)
+
         self.input_csv_entry = Entry(self.home_tab)
         self.input_csv_entry.grid(row=1, column=2)
         
+        Button(self.home_tab, text="Upload Aspen Model",
+        command=self.open_aspen_file).grid(row=2, column = 1,sticky = E, pady = 5,padx = 5)
         
-        Button(self.home_tab, 
-              text="Upload Aspen Model",
-              command=self.open_aspen_file).grid(row=2, column = 1,sticky = E,
-              pady = 5,padx = 5)
         self.aspen_file_entry = Entry(self.home_tab)
         self.aspen_file_entry.grid(row=2, column=2,pady = 5,padx = 5)
         
-        Button(self.home_tab,
-              text="Upload Excel Calculator",
-              command=self.open_solver_file).grid(row=3,column = 1,sticky = E,
-              pady = 5,padx = 5)
+        Button(self.home_tab, text="Upload Excel Calculator", command=self.open_excel_calculator_file).grid(
+                row=3,column = 1,sticky = E,pady = 5,padx = 5)
+        
         self.excel_solver_entry = Entry(self.home_tab)
         self.excel_solver_entry.grid(row=3, column=2,pady = 5,padx = 5)
         
-        Button(self.home_tab,
-              text="Load Data",
-              command=self.construct_analysis_tab).grid(row=9,column = 3,sticky = E,
-              pady = 5,padx = 5)
-        
-#        test= Label(self.home_tab, 
-#                  text=" ",font='Helvetica 2')
-#        test.grid(row=4, column= 1, sticky = E, padx = 5)
-#        test.rowconfigure(4, minsize = 4)
+
+        Button(self.home_tab, text="Load Data", command=self.construct_analysis_tab).grid(
+                row=9, column = 3, sticky = E, pady = 5,padx = 5)
         
         self.analysis_type = StringVar(self.home_tab)
         self.analysis_type.set("Choose Analysis Type")
@@ -147,26 +140,19 @@ class MainApp(Tk):
         column = 0
         aspen_versions = []
         for key,value in self.aspen_versions.items():
-            aspen_versions.append(key + '      ')
-
-
+            aspen_versions.append(key + '      ')  
         aspen_versions.sort(key=lambda x: -1*float(x[1:-6]))
-
         for i, version in enumerate(aspen_versions):
-            v = Radiobutton(select_aspen, text= version, variable=self.select_version, value = self.aspen_versions[version[:-6]])
+            v = Radiobutton(select_aspen, text= version, 
+                            variable=self.select_version, 
+                            value = self.aspen_versions[version[:-6]])
             v.grid(row=row,column= column, sticky=W)
             if i == 0:
                 v.invoke()
-            
             column += 1
             if column == 4:
                 column = 0
                 row += 1
-
-            
-        #Label(self.home_tab, text='CPU Core Count :').grid(row=3, column=1, sticky=E)
-        #self.num_processes_entry = Entry(self.home_tab)
-        #self.num_processes_entry.grid(row=3, column=2, pady=5, padx=5)
         
     def print_compatibility_test_status(self):
         '''
@@ -198,13 +184,19 @@ class MainApp(Tk):
         
         
     def test_compatibility(self):
-        
-        self.compat_status_queue = Queue()
+        '''
+        Intializes a thread to run compatibility_test which is found in 
+        Illuminate_Test_Compatibility.py
+        '''
+        self.error_queue = Queue()
         self.compat_y_pos= self.win_lim_y *.03 + 35
         self.compat_x_pos= self.win_lim_x *.59 - 150
-        self.compat_test_thread = Thread(target=lambda: compatibility_test(self.compat_status_queue, str(self.input_csv_entry.get()),str(self.excel_solver_entry.get()), str(self.aspen_file_entry.get()), str(self.select_version.get())))
+        self.compat_test_thread = Thread(target=lambda: compatibility_test(self.error_queue,
+                str(self.input_csv_entry.get()),str(self.excel_solver_entry.get()),
+                str(self.aspen_file_entry.get()), str(self.select_version.get())))
         self.compat_test_thread.start()
         self.after(100, self.print_compatibility_test_status)        
+
 
     def construct_analysis_tab(self):
         '''
@@ -277,7 +269,7 @@ class MainApp(Tk):
             
             Button(self.current_tab,
                    text='Sample and Display Variable Distributions',
-                   command=self.plot_init_dist).grid(row=14,
+                   command=self.plot_variable_distributions).grid(row=14,
                    column=1, columnspan=2, sticky = W,
                    pady=4, padx=6)
             Button(self.current_tab,
@@ -347,13 +339,22 @@ class MainApp(Tk):
             
             Button(self.current_tab,
                    text='Sample and Display Variable Distributions',
-                   command=self.plot_init_dist).grid(row=7,
+                   command=self.plot_variable_distributions).grid(row=7,
                    column=1, columnspan=2, sticky=W, pady=4, padx=6)
             
-        self.load_variables_into_GUI()
-        self.notebook.select(self.current_tab) # selecting the new tab
+        self.load_input_variables_into_GUI()
+        self.notebook.select(self.current_tab)
         
-    def conv_title(self, s, pad=False):
+    def standardize_graph_title(self, s, pad=False):
+        '''
+        It will pad the string for a graph title to make it 37 characters long, 
+        or shorten the string if it is more than 37 characters
+        
+        inputs: 
+        s: a string to be used as graph title
+        pad: an indicator for whether string needs padding
+        '''
+        
         if len(s) > 37:
             return s[:34] + '...'
         elif pad:
@@ -391,14 +392,24 @@ class MainApp(Tk):
             i += 1
         self.aspen_versions = versions
         
-    def load_variables_into_GUI(self):
+    def load_input_variables_into_GUI(self):
+        '''
+        This function imports the input variables of interest and checks that there
+        are not any duplicates.If Single Point analysis or Univariate Analysis are selected,
+        the function will create a canvas on the Analysis Tab and upload all the input
+        variables into the GUI in accordance with the the variable distibutions selected.
+        '''
+        ################### LOAD INPUT VARIABLES #############################
+        
         single_pt_vars = []
         univariate_vars = []
-        multivariate_vars = []
         variable_names = set()
         type_of_analysis = self.analysis_type.get()
         gui_excel_input = str(self.input_csv_entry.get())
-        col_types = {'Variable Name': str, 'Variable Aspen Call': str, 'Distribution Parameters': str, 'Bounds': str, 'Fortran Call':str, 'Fortran Value to Change': str, 'Distribution Type': str, 'Toggle': bool}
+        col_types = {'Variable Name': str, 'Variable Aspen Call': str, 'Distribution Parameters': str,
+                     'Bounds': str, 'Fortran Call':str, 'Fortran Value to Change': str,
+                     'Distribution Type': str, 'Toggle': bool}
+        
         df = read_excel(gui_excel_input, sheet_name='Inputs', dtype=col_types)
         for index, row in df.iterrows():
             if row['Toggle']:    
@@ -409,19 +420,21 @@ class MainApp(Tk):
                         x,y=73,315
                     else:
                         x,y=60,145
-                    Label(self.current_tab, text='Note: multiple instances of same variable name in input file. \nOnly first instance is received as input.',fg='red').place(
-                                  x=x, y=y)
+                    Label(self.current_tab, text='Note: multiple instances of same variable name ' +\
+                          'in input file. \nOnly first instance is received as input.',fg='red').place(
+                          x=x, y=y)
                     continue
                 variable_names.add(row['Variable Name'])
                 if type_of_analysis =='Single Point Analysis':
-                    single_pt_vars.append((row["Variable Name"], float(row["Distribution Parameters"].split(',')[0].strip())))
-                elif type_of_analysis == 'Multivariate Analysis':
-                    multivariate_vars.append(row["Variable Name"])
+                    single_pt_vars.append((row["Variable Name"], float(row["Distribution Parameters"
+                           ].split(',')[0].strip())))
                 else:
                     univariate_vars.append((
                             row["Variable Name"], row["Distribution Type"].strip().lower(
                                     ), row['Distribution Parameters'].split(',')))
                         
+        #################### PLACE VARIABLES INTO GUI #########################
+        
         #now populate the gui with the appropriate tab and variables stored above
         if type_of_analysis == 'Single Point Analysis':
             self.current_tab.config(width = '10c', height = '5c')
@@ -438,8 +451,10 @@ class MainApp(Tk):
             canvas = Canvas(frame_canvas)
             canvas.grid(row=0, column=0, sticky="news")
             canvas.config(height = '5c', width='10c')
+            
             # Link a scrollbar to the canvas
-            vsb = Scrollbar(frame_canvas, orient="vertical", command=canvas.yview, style='scroll.Vertical.TScrollbar')
+            vsb = Scrollbar(frame_canvas, orient="vertical", command=canvas.yview,
+                            style='scroll.Vertical.TScrollbar')
             vsb.grid(row=0, column=1,sticky = 'ns')
             canvas.configure(yscrollcommand=vsb.set)
             
@@ -451,14 +466,13 @@ class MainApp(Tk):
             self.sp_row_num = 0
             for name,value in single_pt_vars:
                 self.sp_row_num += 1
-                key = str(self.sp_row_num)
-                Label(frame_vars, 
-                text= self.conv_title(name,pad=True)).grid(row=self.sp_row_num, column= 1, sticky = E,pady = 5,padx = 5)
-                key=Entry(frame_vars)
-                key.grid(row=self.sp_row_num, column=2,pady = 5,padx = 5)
-                key.delete(first=0,last=END)
-                key.insert(0,str(value))
-                self.sp_value_entries[name]= key
+                Label(frame_vars, text= self.standardize_graph_title(name,pad=True)
+                ).grid(row=self.sp_row_num, column= 1, sticky = E,pady = 5,padx = 5)
+                sp_val=Entry(frame_vars)
+                sp_val.grid(row=self.sp_row_num, column=2,pady = 5,padx = 5)
+                sp_val.delete(first=0,last=END)
+                sp_val.insert(0,str(value))
+                self.sp_value_entries[name]= sp_val
                 
             # Determine the size of the Canvas
             frame_vars.update_idletasks()
@@ -474,9 +488,7 @@ class MainApp(Tk):
                 text= 'Sampling Type').grid(row=8, column= 2,pady = 5,padx = 5, sticky=E)
             Label(self.current_tab, 
                 text= '# of Trials').grid(row=8, column= 3,pady = 5,padx = 5)
-            # Create a frame for the canvas with non-zero row&column weights
-            #label_frame = Labelframe(self.current_tab)
-            #label_frame.grid(row=9, column=1, columnspan=3)
+
             frame_canvas1 = Labelframe(self.current_tab)
             frame_canvas1.grid(row=9, column=1, columnspan =3, pady=(5, 0))
             frame_canvas1.grid_rowconfigure(0, weight=1)
@@ -489,7 +501,8 @@ class MainApp(Tk):
             canvas1.config(height = '3c', width='13c')
             
             # Link a scrollbar to the canvas
-            vsb = Scrollbar(frame_canvas1, orient="vertical", command=canvas1.yview, style='scroll.Vertical.TScrollbar')
+            vsb = Scrollbar(frame_canvas1, orient="vertical", command=canvas1.yview, 
+                            style='scroll.Vertical.TScrollbar')
             vsb.grid(row=0, column=1,sticky = 'ns')
             canvas1.configure(yscrollcommand=vsb.set)
             
@@ -499,30 +512,35 @@ class MainApp(Tk):
             canvas1.create_window((0, 0), window=frame_vars1, anchor='nw')
             for name, format_of_data, vals in univariate_vars:
                 Label(frame_vars1, 
-                text= self.conv_title(name, True)).grid(row=self.univar_row_num, column= 1,pady = 5,padx = 18)
+                text= self.standardize_graph_title(name, True)).grid(row=self.univar_row_num,
+                                                  column= 1,pady = 5,padx = 18)
                 Label(frame_vars1, 
-                text= self.conv_title(format_of_data, True)).grid(row=self.univar_row_num, column= 2,pady = 5,padx = 18)
+                text= self.standardize_graph_title(format_of_data, True)).grid(row=self.univar_row_num,
+                                                  column= 2,pady = 5,padx = 18)
                 
-                if not(format_of_data == 'linspace' or format_of_data == 'list' or 'mapping' in format_of_data):
-                    key2=Entry(frame_vars1)
-                    key2.grid(row=self.univar_row_num, column=3,pady = 5,padx = 5)
-                    #key2.insert(0,univariate_sims)
-                    self.univar_ntrials_entries[name]= key2
+                if not(format_of_data == 'linspace' or 
+                       format_of_data == 'list' or 'mapping' in format_of_data):
+                    univar_val=Entry(frame_vars1)
+                    univar_val.grid(row=self.univar_row_num, column=3,pady = 5,padx = 5)
+                    self.univar_ntrials_entries[name]= univar_val
                     self.univar_ntrials_entries[name].config(width = 8)
                 else:
                     if "mapping" in format_of_data:
-                        Label(frame_vars1,text= self.conv_title(vals[-1].strip())).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5, sticky= W)
+                        Label(frame_vars1,text= self.standardize_graph_title(vals[-1].strip())).grid(
+                                row=self.univar_row_num, column= 3,pady = 5,padx = 5, sticky= W)
                     elif format_of_data == 'linspace':
                         
-                        Label(frame_vars1,text= self.conv_title(str(vals[2]).strip())).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5, sticky = W)
+                        Label(frame_vars1,text= self.standardize_graph_title(str(vals[2]).strip())).grid(
+                                row=self.univar_row_num, column= 3,pady = 5,padx = 5, sticky = W)
                     else:
-                        Label(frame_vars1,text= self.conv_title(str(len(vals)))).grid(row=self.univar_row_num, column= 3,pady = 5,padx = 5, sticky= W)
+                        Label(frame_vars1,text= self.standardize_graph_title(str(len(vals)))).grid(
+                                row=self.univar_row_num, column= 3,pady = 5,padx = 5, sticky= W)
                 self.univar_row_num += 1
                 
             # Update vars frames idle tasks to let tkinter calculate variable sizes
             frame_vars1.update_idletasks()
-            # Determine the size of the Canvas
             
+            # Determine the size of the Canvas
             frame_canvas1.config(width='13c', height='3c')
             
             # Set the canvas scrolling region
@@ -537,6 +555,7 @@ class MainApp(Tk):
         for each variable, the extra values are truncated off depending on the number of 
         trials required for each variable.
         '''
+        
         if self.analysis_type.get() == 'Univariate Sensitivity':
             # determine the maximum number of trials required
             if self.univar_ntrials_entries:
@@ -560,7 +579,8 @@ class MainApp(Tk):
                         # truncate off extra sampled values
                     self.simulation_vars[(aspen_variable, 
                                           aspen_call, fortran_index)] = dist[:num_trials_per_var]
-                    self.simulation_dist[aspen_variable] = self.simulation_dist[aspen_variable][:num_trials_per_var]                
+                    self.simulation_dist[aspen_variable] = \
+                    self.simulation_dist[aspen_variable][:num_trials_per_var]                
         else:
             try: 
                 ntrials = int(self.num_sim_entry.get())
@@ -604,7 +624,7 @@ class MainApp(Tk):
                 ub = float(bounds[1].strip())
                 if aspen_variable in check_for_duplicate_vars:
                     continue
-                if self.vars_have_been_sampled == True and not self.live_graphs[aspen_variable].get():
+                if self.vars_have_been_sampled == True and not self.vars_to_resample[aspen_variable].get():
                     # only resample the variables that the user wants to resample
                     continue
                 
@@ -723,6 +743,14 @@ class MainApp(Tk):
     
     
     def sample_gauss(self,mean, std, lb, ub, ntrials):
+        '''
+        Samples all values that are to be sampled from a gaussian distribution.
+        Any values sampled outside of the user specified bounds will be discarded 
+        and resampled to meet user specified num trials. In the event that the user 
+        selects criteria outside the bounds the program will time out and return an
+        error statment
+        '''
+        
         d = []
         for i in range(ntrials):
             rand_sample = random.normal(mean,std)
@@ -740,6 +768,14 @@ class MainApp(Tk):
     
     
     def sample_uniform(self,lb_uniform, ub_uniform, lb, ub, ntrials):
+        '''
+        Samples all values that are to be sampled from a uniform distribution.
+        Any values sampled outside of the user specified bounds will be discarded 
+        and resampled to meet user specified num trials. In the event that the user 
+        selects criteria outside the bounds the program will time out and return an
+        error statment.
+        '''
+        
         d = []
         for i in range(ntrials):
             rand_sample = random.uniform(lb_uniform, ub_uniform)
@@ -757,6 +793,14 @@ class MainApp(Tk):
     
     
     def sample_poisson(self,lambda_p, lb, ub, ntrials):
+        '''
+        Samples all values that are to be sampled from a poisson distribution.
+        Any values sampled outside of the user specified bounds will be discarded 
+        and resampled to meet user specified num trials. In the event that the user 
+        selects criteria outside the bounds the program will time out and return an
+        error statment.
+        '''
+        
         d = []
         for i in range(ntrials):
             rand_sample = random.poisson(10000*lambda_p)/10000
@@ -774,6 +818,14 @@ class MainApp(Tk):
         return d
     
     def sample_pareto(self, shape, scale, lb, ub, ntrials):
+        '''
+        Samples all values that are to be sampled from a pareto distribution.
+        Any values sampled outside of the user specified bounds will be discarded 
+        and resampled to meet user specified num trials. In the event that the user 
+        selects criteria outside the bounds the program will time out and return an
+        error statment.
+        '''
+        
         d = []
         for i in range(ntrials):
             st = time()
@@ -825,23 +877,29 @@ class MainApp(Tk):
             self.after(5000, self.disp_single_point_results)
 
     
-    def single_point_analysis(self):
+    def run_single_point_analysis(self):
+        '''
+        Run a single point analysis using the values specified in the GUI. A 
+        single simulation object is created and run.
+        '''
+        
         if self.sp_error:
             self.sp_error.destroy()
         self.store_user_inputs()
         self.get_distributions()
-        if not self.simulation_vars:
-            return
         # update simulation variable values based on user input in GUI
         for (aspen_variable, aspen_call, fortran_index), values in self.simulation_vars.items():
             value = float(self.sp_value_entries[aspen_variable].get())
             if value < self.var_bounds[aspen_variable][0] or value > self.var_bounds[aspen_variable][1]:
-                self.sp_error = Label(self.current_tab, text='Error: Value Specified for ' + aspen_variable + ' is Outside Bounds', fg='red')
+                self.sp_error = Label(self.current_tab, 
+                                      text='Error: Value Specified for ' + \
+                                      aspen_variable + ' is Outside Bounds', fg='red')
                 self.sp_error.grid(row=6, column=1, columnspan=2)
                 return
             self.simulation_vars[(aspen_variable, aspen_call, fortran_index)] = [value]
             
-        self.create_simulation_object(self.simulation_vars, self.vars_to_change, self.output_file, self.num_trial)
+        self.create_simulation_object(self.simulation_vars, self.vars_to_change, 
+                                      self.output_file, self.num_trial)
         self.sp_status = Label(self.current_tab,text='Status: Simulation Running')
         self.sp_status.grid(row=3,column=0, columnspan=2, sticky=W)
         self.run_simulations()
@@ -849,32 +907,86 @@ class MainApp(Tk):
     
     def run_multivar_sens(self):
         '''
+        Run a multivariate analysis. A single simulation object is created and
+        run.
         '''
+        
         self.store_user_inputs()
         if len(self.simulation_vars) == 0:
+            # if the user has pressed the display variable distributions 
+            # button, then we don't want to resample
             self.get_distributions()
-        if not self.simulation_vars:
-            return
-        self.create_simulation_object(self.simulation_vars, self.vars_to_change, self.output_file, self.num_trial)
+        self.create_simulation_object(self.simulation_vars, self.vars_to_change, 
+                                      self.output_file, self.num_trial)
         self.run_simulations()
         
         
     def run_univ_sens(self):
+        '''
+        Run a univariate analysis. A distinct simulation object is created for each
+        variable in the univariate analysis.
+        '''
+        
         self.store_user_inputs()
         if len(self.simulation_vars) == 0:
             self.get_distributions()
-        if not self.simulation_vars:
-            return
         for (aspen_variable, aspen_call, fortran_index), values in self.simulation_vars.items():
+            # if a variable has a "mapping" distribution, then we need to store
+            # the weights of that distribution.
             weights = self.mapping_pdfs.get(aspen_variable, [])
-            self.create_simulation_object({(aspen_variable, aspen_call, 
-                                            fortran_index): values}, [aspen_variable], 
-        self.output_file+'_'+aspen_variable, len(values), weights)
+            self.create_simulation_object(
+                    {(aspen_variable, aspen_call,fortran_index): values}, 
+                    [aspen_variable],self.output_file+'_'+aspen_variable, 
+                    len(values), weights)
         self.run_simulations()
     
+    def run_simulations(self):
+        '''
+        Run simulations for all of the simulation objects in self.simulations.
+        After all simulations are created, many Main_App attributes are
+        reset to their initial values in the event that the user wants to run
+        more simulations.
+        '''
+        for sim in self.simulations:
+            self.start_time = time()
+            self.sims_completed.value = 0
+            self.tot_sim_num = sim.tot_sim
+            self.current_simulation = sim
+            self.current_simulation.run_simulation() # run the simulation
+            
+            # the following code only runs once the simulation is complete
+            # or is aborted
+            if self.abort_univar_overall.value:
+                self.abort.value = True
+            self.univar_plot_counter += 1
+            self.last_update = None
+        
+        # reset Main_App attributes to original values
+        self.abort_univar_overall.value = False
+        self.abort.value=False
+        self.current_simulation = None
+        self.tot_sim_num = 0
+        self.sims_completed.value=0
+        self.start_time = None
+        self.univar_plot_counter = 1
+        self.finished_figures = []
+        self.last_results_plotted = None
+        self.last_update = None
+        self.mapping_pdfs = {}
     
-    def copy_bkp_to_temp_dir(self):
+    def copy_aspen_to_temp_dir(self):
+        '''
+        Copies the aspen .apw or .bkp file provided by the user to a temporary
+        directory within the 'Output' folder. This is done in order to encapsulate
+        all of the extra files that Aspen outputs so that they can be easily removed
+        if Aspen crashes or is aborted. It first checks to see if this directory exists,
+        and if it does exist, then it deletes the temporary directory and all
+        of its contents.
+        '''
+        
         self.temp_directory = path.join(path.dirname(str(self.input_csv_entry.get())),'Output','Temp')
+        
+        # delete the directory if it exists
         try:
             rmdir(self.temp_directory)
         except: pass
@@ -888,6 +1000,12 @@ class MainApp(Tk):
         
     
     def store_user_inputs(self):
+        '''
+        Stores inputs provided by the user, including the number of processors,
+        number of trials, output file name, aspen and calculator files, 
+        and variables and warning keywords specified in the input file.
+        '''
+        
         self.aspen_file = str(self.aspen_file_entry.get())
         try:
             self.num_processes = int(self.num_processes_entry.get())
@@ -905,7 +1023,10 @@ class MainApp(Tk):
         
         self.vars_to_change = []
         gui_excel_input = str(self.input_csv_entry.get())
-        col_types = {'Variable Name': str, 'Variable Aspen Call': str, 'Distribution Parameters': str, 'Bounds': str, 'Fortran Call':str, 'Fortran Value to Change': str, 'Distribution Type': str, 'Toggle': bool}
+        col_types = {'Variable Name': str, 'Variable Aspen Call': str, 
+                     'Distribution Parameters': str, 'Bounds': str, 
+                     'Fortran Call':str, 'Fortran Value to Change': str, 
+                     'Distribution Type': str, 'Toggle': bool}
         df = read_excel(gui_excel_input, sheet_name='Inputs', dtype=col_types)
         variable_names = set()
         for index, row in df.iterrows():
@@ -915,45 +1036,24 @@ class MainApp(Tk):
         col_types = {'Warning Keywords':str}
         warnings_df = read_excel(gui_excel_input, sheet_name='Warning Messages', dtype=col_types)
         for index, row in warnings_df.iterrows():
-            self.warning_keywords.update([word.strip().lower() for word in row['Warning Keywords'].split()])
-        print(self.warning_keywords)
+            self.warning_keywords.update(
+                    [word.strip().lower() for word in row['Warning Keywords'].split()])
             
-        
-        
-    def run_simulations(self):
-
-        for sim in self.simulations:
-            self.start_time = time()
-            self.sims_completed.value = 0
-            self.tot_sim_num = sim.tot_sim
-            self.current_simulation = sim
-            self.current_simulation.init_sims()
-            
-            if self.abort_univar_overall.value:
-                self.abort.value = True
-            self.univar_plot_counter += 1
-            self.last_update = None
-        #self.simulations = []
-        self.abort_univar_overall.value = False
-        self.abort.value=False
-        self.current_simulation = None
-        self.tot_sim_num = 0
-        self.sims_completed.value=0
-        self.start_time = None
-        self.univar_plot_counter = 1
-        self.finished_figures = []
-        self.last_results_plotted = None
-        self.last_update = None
-        self.mapping_pdfs = {}
-        #self.wipe_temp_dir()
     
     def parse_output_vars(self):
+        '''
+        Opens the excel calculator file and stores the output variables of interest
+        specified in the "Output" tab.
+        '''
+        
         self.excel_solver_file= str(self.excel_solver_entry.get())
-        excels_to_ignore = {}
+        excels_to_ignore = set()
         variable_names = set()
+        # storing a set of already open excel processes so we don't terminate those
         for p in process_iter():
             if 'excel' in p.name().lower():
-                excels_to_ignore[p.pid] = 1
+                excels_to_ignore.add(p.pid)
+        # opening the excel COMS for the calculator file
         excel, book = simulations.open_excelCOMS(self.excel_solver_file)
         self.output_vars = []
         self.output_value_cells = []
@@ -970,48 +1070,66 @@ class MainApp(Tk):
             else:
                 break
             row_counter += 1
-        #self.output_value_cells = "C3:C" + str(row_counter - 1)
         self.output_value_cells = ",".join(self.output_value_cells)
-        self.output_vars += ['Aspen Errors', 'Aspen Warnings']
+        self.output_vars += ['Aspen Errors', 'Aspen Warnings'] # adding 2 more columns to output file
+        # closing the excel COMS we just opened
         for p in process_iter():
             if 'excel' in p.name().lower() and p.pid not in excels_to_ignore:
                 p.terminate()
             
         
-    def create_simulation_object(self, simulation_vars, vars_to_change, output_file, num_trial, weights=[]):
-        temp_aspen_file = self.copy_bkp_to_temp_dir()
+    def create_simulation_object(self, simulation_vars, vars_to_change,
+                                 output_file, num_trial, weights=[]):
+        '''
+        Constructs a Simulation object from the "Illuminate_Simulations.py" file.
+        It also calls copy_aspen_to_temp_dir and creates the Output folder and
+        temporary directory. 
+        '''
         self.output_columns = vars_to_change + self.output_vars
-        output_directory = path.join(path.dirname(str(self.input_csv_entry.get())),'Output/',datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
+        output_directory = path.join(path.dirname(str(self.input_csv_entry.get())),
+                                     'Output/',datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
         makedirs(output_directory)
-        print(output_directory)
-        print(path.join(output_directory,'..','Temp'))
-        print(path.exists(path.join(output_directory,'..','Temp')))
-        print(self.save_bkp.get())
+        temp_aspen_file = self.copy_aspen_to_temp_dir()
         if not path.exists(path.join(output_directory,'..','Temp')):
             print(path.join(output_directory,'..','Temp'))
             makedirs(path.join(output_directory,'..','Temp'))
-        copyfile(path.abspath(str(self.input_csv_entry.get())), path.join(output_directory,'Input_Variables.xlsx'))
-        new_sim = simulations.Simulation(self.sims_completed, num_trial, simulation_vars, output_file, output_directory,
-                             temp_aspen_file, self.excel_solver_file, self.abort, vars_to_change, self.output_value_cells,
-                             self.output_columns, self.select_version.get(), weights, self.save_bkp.get(), self.warning_keywords,
-                             save_freq=2, num_processes=self.num_processes)
+        copyfile(path.abspath(str(self.input_csv_entry.get())), path.join(
+                output_directory,'Input_Variables.xlsx'))
+        new_sim = simulations.Simulation(
+                self.sims_completed, num_trial, simulation_vars,output_file, 
+                output_directory, temp_aspen_file, self.excel_solver_file, 
+                self.abort, vars_to_change, self.output_value_cells, self.output_columns, 
+                self.select_version.get(),weights, self.save_bkp.get(), self.warning_keywords,
+                save_freq=2, num_processes=self.num_processes)
         self.simulations.append(new_sim)
-        #self.tot_sim_num += num_trial
+
         
         
     def initialize_single_point(self):
+        '''
+        Initializes the single point analysis in a new worker thread. This analysis
+        is run in a new thread so that the GUI can remain active in the main thread
+        while the simulation is running.
+        '''
         self.simulations = []
         if self.worker_thread and self.worker_thread.isAlive():
+            #don't start another simulation if one is already running
             print('Simulation Already Running')
             return
         self.worker_thread = Thread(
-                target=lambda: self.single_point_analysis())
+                target=lambda: self.run_single_point_analysis())
         self.worker_thread.start()
         self.after(5000, self.disp_single_point_results)
         
     def initialize_univar_analysis(self):
+        '''
+        Initializes a univariate analysis in a new worker thread. This analysis
+        is run in a new thread so that the GUI can remain active in the main thread
+        while the simulation is running.
+        '''
         self.simulations = []
         if self.worker_thread and self.worker_thread.isAlive():
+            #don't start another simulation if one is already running
             print('Simulation Already Running')
             return
         self.worker_thread = Thread(
@@ -1023,8 +1141,14 @@ class MainApp(Tk):
 
     
     def initialize_multivar_analysis(self):
+        '''
+        Initializes a multivariate analysis in a new worker thread. This analysis
+        is run in a new thread so that the GUI can remain active in the main thread
+        while the simulation is running.
+        '''
         self.simulations = []
         if self.worker_thread and self.worker_thread.isAlive():
+            #don't start another simulation if one is already running
             print('Simulation Already Running')
             return
         self.worker_thread = Thread(
@@ -1035,7 +1159,11 @@ class MainApp(Tk):
         self.multivar_gui_update()
         
         
-    def disp_status_update(self):
+    def find_status_update(self):
+        '''
+        Constructs the status update string based on the status of the current
+        simulation.
+        '''
         if self.current_simulation and not self.abort.value:
             if len(self.current_simulation.results) == self.current_simulation.tot_sim:
                 status_update = 'Status: Simulation Complete'
@@ -1046,15 +1174,24 @@ class MainApp(Tk):
         return None
         
     def disp_time_remaining(self, status_update):
+        '''
+        Calculates the estimated time remaining and displays the full
+        status update on the GUI. It only updates the status if new results
+        have been collected.
+        
+        Input: status_update (str) from the function find_status_update
+        '''
         if self.start_time and self.sims_completed.value != self.last_update:
             if not status_update:
                 status_update = ''
             self.last_update = self.sims_completed.value
             elapsed_time = time() - self.start_time
             if self.sims_completed.value > 0:
-                remaining_time = ((elapsed_time / self.sims_completed.value) * (self.tot_sim_num - self.sims_completed.value))//60
+                remaining_time = ((elapsed_time / self.sims_completed.value) * (
+                        self.tot_sim_num - self.sims_completed.value))//60
                 hours, minutes = divmod(remaining_time, 60)
-                tmp = Label(self.display_tab, text=status_update + ' | ' + 'Time Remaining: {} Hours, {} Minutes    '.format(int(hours), int(minutes)))
+                tmp = Label(self.display_tab, text=status_update + ' | ' + \
+                            'Time Remaining: {} Hours, {} Minutes    '.format(int(hours), int(minutes)))
             else:
                 tmp = Label(self.display_tab, text=status_update + ' | ' +'Time Remaining: N/A')
             tmp.place(x=6, y=4)
@@ -1063,7 +1200,12 @@ class MainApp(Tk):
             self.time_rem_label = tmp
     
     def num_bins(self, data):
-        # Implementing Freedman-Diaconis Rule for bin numbers
+        '''
+        Determines the optimal bin number for histograms based on the number of 
+        data points and the distribution of those points. For data with more 
+        than 20 values, it implements the Freedman-Diaconis rule for bin numbers.
+        '''
+        
         if len(data) == 0:
             return 1
         if len(data) < 20:
@@ -1073,11 +1215,17 @@ class MainApp(Tk):
         num_bins = ceil((max(data) - min(data))/bin_width)
         return num_bins
             
-    def plot_on_GUI(self):
-        status_label = None
+    def generate_or_update_multivar_plots(self):
+        '''
+        Generates histograms for the display tab of a multivariate analysis or
+        updates those histograms if they already exist. 
+        '''
+        
         if not self.simulation_dist:
             return
+        status_label = None
         if not self.display_tab:
+            # create the display tab and put the status label "setting up simulation"
             self.display_tab = Frame(self.notebook)
             self.notebook.add(self.display_tab,text = "Simulation Status")
             
@@ -1085,10 +1233,14 @@ class MainApp(Tk):
             status_label.place(x=6, y=4)
             self.init_plots_constructed = False
             self.plots_dictionary = {}
-            Button(self.display_tab, text = "Abort", command=self.abort_sim).place(x=(4*self.win_lim_x)//5, y = 5)
+            Button(self.display_tab, text = "Abort", command=self.abort_sim).place(
+                    x=(4*self.win_lim_x)//5, y = 5)
             self.notebook.select(self.display_tab)
         if not self.simulations:
             self.notebook.select(self.display_tab)
+            
+        # don't want to make histograms if current_simulation hasn't been started,
+        # if the graphing_frequency=0, or if there are no new results to plot
         if self.graphing_frequency == 0:
             return
         if not self.current_simulation:
@@ -1100,6 +1252,8 @@ class MainApp(Tk):
         if len(self.current_simulation.results) % self.graphing_frequency != 0:
             return
         if self.current_simulation.results:
+            # need to filter out any empty results from aspen failing to converge
+            # before attempting to plot them
             results_to_plot = list(filter(lambda x: not isna(x[self.current_simulation.output_columns[len(
                     self.current_simulation.vars_to_change)]].values[0]), self.current_simulation.results))
             if len(results_to_plot) == 0:
@@ -1110,39 +1264,44 @@ class MainApp(Tk):
                 results_unfiltered = concat(self.current_simulation.results).sort_index()
             
         else:
+            # if no results, then just generate empty plots
             results_filtered = DataFrame(columns=self.output_columns)
             results_unfiltered = results_filtered
             
         if not self.init_plots_constructed:
-            results_fig_list =[]
+            
+            ###########    Generate the initial histograms    ###############
+            results_fig_list =[] # for results histograms
             for var, toggled in self.graph_toggles.items():
                 if toggled.get():
                     fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=False)
                     ax = fig.add_subplot(111)
                     num_bins = self.num_bins(results_filtered[var])
                     ax.hist(results_filtered[var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-                    ax.set_title(self.conv_title(var))
+                    ax.set_title(self.standardize_graph_title(var))
                     ax.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
                     self.plots_dictionary[var] = ax
                     results_fig_list.append(fig)
             
-            inputs_fig_list = []
+            inputs_fig_list = [] # for input distribution histograms
             for var, values in self.simulation_dist.items():
                 fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255], tight_layout=False)
                 a = fig.add_subplot(111)
                 num_bins = self.num_bins(self.simulation_dist[var])
-                _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
+                _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='white', 
+                                    edgecolor='black',alpha=1.0)
                 a.hist(results_unfiltered[var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
-                a.set_title(self.conv_title(var))
+                a.set_title(self.standardize_graph_title(var))
                 a.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
-               # a.get_xaxis().set_major_formatter(matplotlib.ticker.ScalarFormatter(set_powerlimits((n,m))
                 self.plots_dictionary[var] = a
                 inputs_fig_list.append(fig)
             
+            ############### Making Frames and Scroll Bars for plotting region of GUI ################
             row_num = 0
             frame_width = self.win_lim_x - 30
             num_graphs_per_row = frame_width//250
-            frame_height = 60+(230*((len(inputs_fig_list) + len(results_fig_list)+1)//num_graphs_per_row + 1))  
+            frame_height = 60+(230*((len(inputs_fig_list) + len(
+                    results_fig_list)+1)//num_graphs_per_row + 1))  
             window_height = self.win_lim_y - 30
             
             frame_canvas = Frame(self.display_tab)
@@ -1155,7 +1314,8 @@ class MainApp(Tk):
             main_canvas.grid(row=0, column=0, sticky="news")
             main_canvas.config(height = window_height, width=frame_width)
             
-            vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview, style='scroll.Vertical.TScrollbar')
+            vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview, 
+                            style='scroll.Vertical.TScrollbar')
             vsb.grid(row=0, column=1,sticky = 'ns')
             main_canvas.configure(yscrollcommand=vsb.set)
             
@@ -1165,26 +1325,7 @@ class MainApp(Tk):
             if status_label:
                 status_label.destroy()
         
-    #        row_num = 0
-    #        column = False
-    #        count = 1
-    #        for figs in results_fig_list + inputs_fig_list:
-    #            figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
-    #            if column:
-    #                col = 4
-    #            else:
-    #                col = 1
-    #            #figure_canvas.draw()
-    #            figure_canvas.get_tk_widget().grid(
-    #                    row=row_num, column=col,columnspan=2, rowspan = 5, pady = 5,padx = 8, sticky=E)
-    #            #figure_canvas._tkcanvas.grid(row=row_num, column = 0,columnspan = 10, rowspan = 10, sticky= W+E+N+S, pady = 5,padx = 5)
-    #            if column:
-    #                row_num += 5
-    #            column = not column
-    #            count += 1
-            
-            
-            
+            ############# Placing plots on the GUI   ###################
             count = 0
             x, y = 10, 30
             output_dis = Label(figure_frame, text = 'Outputs:', font='Helvetica 10 bold')
@@ -1198,7 +1339,10 @@ class MainApp(Tk):
                     y += 230
                 count += 1
             y += 240
-            line= Label(figure_frame, text = '------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------')
+            line= Label(figure_frame, text = '-------------------------------------------'+\
+                        '-----------------------------------------------------------------'+\
+                        '------------------------------------------------------------------'+\
+                        '------------------------------------------------')
             line.place(x = 0, y = y-12)
             input_dis = Label(figure_frame, text = 'Inputs:', font='Helvetica 10 bold')
             input_dis.place(x = 10, y = y)
@@ -1216,11 +1360,14 @@ class MainApp(Tk):
             figure_frame.update_idletasks()
             frame_canvas.config(width=frame_width, height=window_height)
             main_canvas.config(scrollregion=(0,0,x,frame_height))
-            Button(self.display_tab, text = "Abort", command=self.abort_sim).place(x=(4*self.win_lim_x)//5, y = 5)
+            Button(self.display_tab, text = "Abort", command=self.abort_sim).place(
+                    x=(4*self.win_lim_x)//5, y = 5)
 
 
+        ######### If init plots have been constructed, just update their axes and data ##########
         else:
             for f in self.plots_dictionary.values():
+                # clear the axes first
                 try:
                     f.cla()
                 except:
@@ -1233,27 +1380,42 @@ class MainApp(Tk):
                 if toggled.get():
                     num_bins = self.num_bins(results_filtered[output_var])
                     self.plots_dictionary[output_var].hist(
-                            results_filtered[output_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-                    self.plots_dictionary[output_var].set_title(self.conv_title(output_var))
-                    self.plots_dictionary[output_var].ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
+                            results_filtered[output_var], num_bins, facecolor='blue', 
+                            edgecolor='black', alpha=1.0)
+                    self.plots_dictionary[output_var].set_title(
+                            self.standardize_graph_title(output_var))
+                    self.plots_dictionary[output_var].ticklabel_format(axis= 'x', 
+                                         style = 'sci', scilimits= (-3,3))
             for var, values in self.simulation_dist.items():
                 num_bins = self.num_bins(self.simulation_dist[var])
-                _, bins, _ = self.plots_dictionary[var].hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
-                self.plots_dictionary[var].hist(results_unfiltered[var], bins=bins, facecolor='blue', edgecolor='black', alpha=1.0)
-                self.plots_dictionary[var].set_title(self.conv_title(var))
-                self.plots_dictionary[var].ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
+                _, bins, _ = self.plots_dictionary[var].hist(
+                        self.simulation_dist[var], num_bins, facecolor='white', 
+                        edgecolor='black',alpha=1.0)
+                self.plots_dictionary[var].hist(results_unfiltered[var], bins=bins, 
+                                     facecolor='blue', edgecolor='black', alpha=1.0)
+                self.plots_dictionary[var].set_title(self.standardize_graph_title(var))
+                self.plots_dictionary[var].ticklabel_format(axis= 'x', style = 'sci', 
+                                     scilimits= (-3,3))
 
 
             for fig in self.graphs_displayed:
+                # updates the plots on the GUI
                 fig.draw()
+                
     
                 
             
-    def plot_univ_on_GUI(self):
+    def generate_or_update_univar_plots(self):
+        '''
+        Generates histograms for the display tab of a univariate analysis or
+        updates those histograms if they already exist. 
+        '''
+        
         status_label = None
         if not self.simulation_dist:
             return
         if not self.display_tab:
+            # create display tab and put the status label "setting up simulation"
             self.display_tab = Frame(self.notebook)
             self.notebook.add(self.display_tab,text = "Simulation Status")
             
@@ -1261,12 +1423,17 @@ class MainApp(Tk):
             status_label.place(x=6, y=4)
             self.init_plots_constructed = False
             self.plots_dictionary = {}
-            Button(self.display_tab, text = "Next Variable", command=self.abort_sim).place(x=self.win_lim_x - 110, y=3)
+            Button(self.display_tab, text = "Next Variable", command=self.abort_sim).place(
+                    x=self.win_lim_x - 110, y=3)
             
-            Button(self.display_tab, text = "Abort", command=self.abort_univar_overall_fun).place(x=self.win_lim_x-190, y=3)
+            Button(self.display_tab, text = "Abort", command=self.abort_univar_overall_fun).place(
+                    x=self.win_lim_x-190, y=3)
             self.notebook.select(self.display_tab)
         if not self.simulations:
             self.notebook.select(self.display_tab)
+            
+        # don't want to make histograms if current_simulation hasn't been started,
+        # if the graphing_frequency=0, or if there are no new results to plot
         if self.graphing_frequency == 0:
             return
         if not self.current_simulation:
@@ -1279,8 +1446,11 @@ class MainApp(Tk):
         
         if len(self.current_simulation.results) % self.graphing_frequency != 0:
             return
+        
         current_var = self.current_simulation.vars_to_change[0]
         if self.current_simulation.results:
+            # need to filter out any empty results from aspen failing to converge
+            # before attempting to plot them
             results_to_plot = list(filter(lambda x: not isna(x[self.current_simulation.output_columns[len(
                     self.current_simulation.vars_to_change)]].values[0]), self.current_simulation.results))
             if len(results_to_plot) == 0:
@@ -1290,9 +1460,11 @@ class MainApp(Tk):
                 results_filtered = concat(results_to_plot).sort_index()
                 results_unfiltered = concat(self.current_simulation.results).sort_index()
         else:
+            # if no results, then just generate empty plots
             results_filtered = DataFrame(columns=self.current_simulation.output_columns)
             results_unfiltered = results_filtered
             
+        ########### Generate the Initial Histograms  ############
         if not self.init_plots_constructed:
             fig_list = []                
             for var, values in self.simulation_dist.items():
@@ -1300,9 +1472,9 @@ class MainApp(Tk):
                 fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255])
                 a = fig.add_subplot(111)
                 num_bins = self.num_bins(self.simulation_dist[var])
-                _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
-                #a.hist(results_unfiltered[var], bins=bins, facecolor='blue',edgecolor='black', alpha=1.0)
-                a.set_title(self.conv_title(var))
+                _, bins, _ = a.hist(self.simulation_dist[var], num_bins, facecolor='white', 
+                                    edgecolor='black',alpha=1.0)
+                a.set_title(self.standardize_graph_title(var))
                 a.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
                 fig_list.append(fig)
                 self.plots_dictionary[var][var] = a
@@ -1313,20 +1485,20 @@ class MainApp(Tk):
                         fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255])
                         ax = fig.add_subplot(111)
                         num_bins = self.num_bins(results_filtered[output_var])
-                        ax.hist(results_filtered[output_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-                        ax.set_title(self.conv_title(output_var))
+                        ax.hist(results_filtered[output_var], num_bins, facecolor='blue', 
+                                edgecolor='black', alpha=1.0)
+                        ax.set_title(self.standardize_graph_title(output_var))
                         ax.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
                         fig_list.append(fig)
                         self.plots_dictionary[var][output_var] = ax
                 
-        
+            ########  Creating the Frame, Canvas, and Scroll bars for plotting region of GUI #####
             row_num = 0
             frame_width = self.win_lim_x - 30
             num_graphs_per_row = self.num_toggled + 1
             graphs_frame_width = 30 + 250*(num_graphs_per_row)
             frame_height = 30+(230*((len(fig_list)+1)//num_graphs_per_row + 1))
             window_height = self.win_lim_y - 60
-            
             
             frame_canvas = Frame(self.display_tab)
             frame_canvas.grid(row=row_num, column=1, columnspan = 3,pady=(5, 0))
@@ -1338,11 +1510,13 @@ class MainApp(Tk):
             main_canvas.grid(row=0, column=0, sticky="news")
             main_canvas.config(height = window_height, width=frame_width)
             
-            hsb = Scrollbar(frame_canvas, orient="horizontal", command=main_canvas.xview, style='scroll.Horizontal.TScrollbar')
+            hsb = Scrollbar(frame_canvas, orient="horizontal", command=main_canvas.xview, 
+                            style='scroll.Horizontal.TScrollbar')
             hsb.grid(row=1, column=0,sticky = 'we')
             main_canvas.configure(xscrollcommand=hsb.set)
             
-            vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview, style='scroll.Vertical.TScrollbar')
+            vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview, 
+                            style='scroll.Vertical.TScrollbar')
             vsb.grid(row=0, column=1,sticky = 'ns')
             main_canvas.configure(yscrollcommand=vsb.set)
             
@@ -1350,7 +1524,7 @@ class MainApp(Tk):
             main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
             figure_frame.config(height = frame_height, width=graphs_frame_width)
         
-    
+            ############ Placing plots on the GUI ##############
             count = 0
             x, y = 10, 30
             self.graphs_displayed = []
@@ -1369,12 +1543,14 @@ class MainApp(Tk):
             figure_frame.update_idletasks()
             # Set the canvas scrolling region
             main_canvas.config(scrollregion=(0,0,graphs_frame_width,frame_height))
-            Button(self.display_tab, text = "Next Variable", command=self.abort_sim).place(x=self.win_lim_x - 110, y=3)
+            Button(self.display_tab, text = "Next Variable", command=self.abort_sim).place(
+                    x=self.win_lim_x - 110, y=3)
             
-            Button(self.display_tab, text = "Abort", command=self.abort_univar_overall_fun).place(x=self.win_lim_x-190, y=3)
+            Button(self.display_tab, text = "Abort", command=self.abort_univar_overall_fun).place(
+                    x=self.win_lim_x-190, y=3)
         
     
-
+        ######### If init plots already constructed, then just update their axes and data #######
         else:
             for f in self.plots_dictionary[current_var].values():
                 f.cla()
@@ -1385,68 +1561,83 @@ class MainApp(Tk):
                         weights = self.current_simulation.weights[0:len(results_filtered)]
                         num_bins = self.num_bins(results_filtered[output_var])
                         self.plots_dictionary[current_var][output_var].hist(
-                            results_filtered[output_var], num_bins, weights=weights, facecolor='blue', edgecolor='black', alpha=1.0)
+                            results_filtered[output_var], num_bins, weights=weights, 
+                            facecolor='blue', edgecolor='black', alpha=1.0)
                     else:
                         num_bins = self.num_bins(results_filtered[output_var])
                         self.plots_dictionary[current_var][output_var].hist(
-                                results_filtered[output_var], num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-                    self.plots_dictionary[current_var][output_var].set_title(self.conv_title(output_var))
-                    self.plots_dictionary[current_var][output_var].ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
+                                results_filtered[output_var], num_bins, facecolor='blue', 
+                                edgecolor='black', alpha=1.0)
+                    self.plots_dictionary[current_var][output_var].set_title(
+                            self.standardize_graph_title(output_var))
+                    self.plots_dictionary[current_var][output_var].ticklabel_format(
+                            axis= 'x', style = 'sci', scilimits= (-3,3))
             num_bins = self.num_bins(self.simulation_dist[current_var])
-            _, bins, _ = self.plots_dictionary[current_var][current_var].hist(self.simulation_dist[current_var], num_bins, facecolor='white', edgecolor='black',alpha=1.0)
-            self.plots_dictionary[current_var][current_var].hist(results_unfiltered[current_var], bins=bins, facecolor='blue', edgecolor='black', alpha=1.0)
-            self.plots_dictionary[current_var][current_var].set_title(self.conv_title(current_var))
-            self.plots_dictionary[current_var][current_var].ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
-
+            _, bins, _ = self.plots_dictionary[current_var][current_var].hist(
+                    self.simulation_dist[current_var], num_bins, facecolor='white', 
+                    edgecolor='black',alpha=1.0)
+            self.plots_dictionary[current_var][current_var].hist(
+                    results_unfiltered[current_var], bins=bins, facecolor='blue', 
+                    edgecolor='black', alpha=1.0)
+            self.plots_dictionary[current_var][current_var].set_title(
+                    self.standardize_graph_title(current_var))
+            self.plots_dictionary[current_var][current_var].ticklabel_format(
+                    axis= 'x', style = 'sci', scilimits= (-3,3))
 
             for fig in self.graphs_displayed:
                 fig.draw()
     
         
             
-    def plot_init_dist(self):
+    def plot_variable_distributions(self):
         '''
-        This function will plot the distribution of variable calls prior to running
-        the simulation. This will enable users to see whether the distributions are as they expected.
-        
+        This function will get distributions for each input variable and plot them
+        prior to running the simulation. It also creates the toggle boxes for
+        resample of specific variables. This is called from both univariate
+        and multivariate analyses.
         '''
 
-#        if self.display_tab:
-#                self.notebook.forget(self.display_tab)
+
         self.get_distributions()      
         
-#        self.display_tab = Frame(self.notebook)
-#        self.notebook.add(self.display_tab,text = "Results (Graphed)")
+        # generate the histograms from distributions
         fig_list =[]
         for var, values in self.simulation_dist.items():
             fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255])
             a = fig.add_subplot(111)
             num_bins = self.num_bins(values)
             if var in self.mapping_pdfs:
-                a.hist(values, num_bins, weights=self.mapping_pdfs[var], facecolor='blue', edgecolor='black', alpha=1.0)
+                a.hist(values, num_bins, weights=self.mapping_pdfs[var], facecolor='blue', 
+                       edgecolor='black', alpha=1.0)
             else:
                 a.hist(values, num_bins, facecolor='blue', edgecolor='black', alpha=1.0)
-            a.set_title(self.conv_title(var))
+            a.set_title(self.standardize_graph_title(var))
             a.ticklabel_format(axis= 'x', style = 'sci', scilimits= (-3,3))
             fig_list.append(fig)
             
+        # the location of placement of these plots on the GUI is dependent
+        # on the type of analysis
         if self.univar_row_num != 0:
+            # univariate
             row_num = 17
         else:
+            # multivariate
             row_num = 10
 
+        ######## Create the toggle boxes for individual variable resampling ######
         self.resample_vars= Labelframe(self.current_tab, text='Select Variables to Resample:')
         self.resample_vars.grid(row = row_num, column = 1, columnspan = 5)
-        
         count = 0
         row_track, col_track = 0,0
-
         if not self.vars_have_been_sampled:
-            self.live_graphs = {}
+            self.vars_to_resample = {}
+            # This variable vars_have_been_sampled is just an indicator that these
+            # toggles have been created
             self.vars_have_been_sampled = True
+            
             for v in self.simulation_dist.keys():
-                self.live_graphs[v] = IntVar()
-                cb = Checkbutton(self.resample_vars, text = v, variable = self.live_graphs[v])
+                self.vars_to_resample[v] = IntVar()
+                cb = Checkbutton(self.resample_vars, text = v, variable = self.vars_to_resample[v])
                 cb.grid(row= row_track, column = col_track)
                 cb.select()
                 col_track += 1
@@ -1455,7 +1646,7 @@ class MainApp(Tk):
                         col_track = 0
         
             
-
+        ########## Create the frame, canvas, and scroll bars for plotting region of GUI ######
         frame_width = self.win_lim_x - 30
         num_graphs_per_row = frame_width//250
         frame_height = 30+(230*((len(fig_list)-1)//num_graphs_per_row + 1)) 
@@ -1476,8 +1667,8 @@ class MainApp(Tk):
         main_canvas.grid(row=0, column=0, sticky="news")
         main_canvas.config(height = window_height, width=frame_width)
         
-        
-        vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview, style='scroll.Vertical.TScrollbar')
+        vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview, 
+                        style='scroll.Vertical.TScrollbar')
         vsb.grid(row=0, column=1,sticky = 'ns')
         main_canvas.configure(yscrollcommand=vsb.set)
         
@@ -1490,6 +1681,7 @@ class MainApp(Tk):
         output_dis = Label(figure_frame, text = 'Inputs:', font='Helvetica 10 bold')
         output_dis.place(x = x, y = y)
         
+        ########  Placing plots on the GUI ############
         count =0
         for figs in fig_list:
             figure_canvas = FigureCanvasTkAgg(figs, master=figure_frame)
@@ -1502,65 +1694,110 @@ class MainApp(Tk):
         frame_canvas.config(width=frame_width, height=window_height)
         main_canvas.config(scrollregion=(0,0,x,frame_height))
         
-    
-    
-
-        
         
     def univar_gui_update(self):
-        self.plot_univ_on_GUI()
-        self.disp_time_remaining(self.disp_status_update())
+        '''
+        Responsible for calling all of the auto-updating functionality for a 
+        univariate analysis. This includes updating the plots and updating the
+        status and time remaining.
+        '''
         
-        if not self.current_simulation or (self.current_simulation and not self.abort_univar_overall.value):
+        self.generate_or_update_univar_plots()
+        self.disp_time_remaining(self.find_status_update())
+        
+        # only keep updating if there is a current simulation or if the current simulation
+        # has not been aborted
+        if not self.current_simulation or (
+                self.current_simulation and not self.abort_univar_overall.value):
+            # call itself after 5 seconds
             self.after(5000, self.univar_gui_update)
         
         
     def multivar_gui_update(self):
-        self.plot_on_GUI()
-        self.disp_time_remaining(self.disp_status_update())
-        if not self.current_simulation or (self.current_simulation and not self.current_simulation.abort.value):
+        '''
+        Responsible for calling all of the auto-updating functionality for a 
+        multivariate analysis. This includes updating the plots and updating the
+        status and time remaining.
+        '''
+        
+        self.generate_or_update_multivar_plots()
+        self.disp_time_remaining(self.find_status_update())
+        
+        # only keep updating if there is a current simulation or if the current simulation
+        # has not been aborted
+        if not self.current_simulation or (
+                self.current_simulation and not self.current_simulation.abort.value):
+            # call itself after 5 seconds
             self.after(5000, self.multivar_gui_update)
         
         
     
     def fill_num_trials(self):
+        '''
+        Responsible for filling all univariate ntrials entries when the user
+        presses the fill #trials button.
+        '''
+        
         ntrials = self.fill_num_sims.get()
         for name, slot in self.univar_ntrials_entries.items():
             slot.delete(0, END)
             slot.insert(0, ntrials)
         
 
-    def open_excel_file(self):
-        filename = askopenfilename(title = "Select file", filetypes = ((".xlsx Files","*.xlsx"),))
+    def open_input_excel_file(self):
+        '''
+        Prompts the user to select an input excel file and fills the entry with the
+        full path name.
+        '''
+        filename = askopenfilename(title = "Select file", filetypes = (
+                (".xlsx Files","*.xlsx"),))
         self.input_csv_entry.delete(0, END)
         self.input_csv_entry.insert(0, filename)
                 
         
-        
     def open_aspen_file(self):
-        filename = askopenfilename(title = "Select file", filetypes = (("Aspen Models",["*.bkp", "*.apw"]),))
+        '''
+        Prompts the user to select an Aspen .bkp or .apw file and fills the entry with the
+        full path name.
+        '''
+        filename = askopenfilename(title = "Select file", filetypes = (
+                ("Aspen Models",["*.bkp", "*.apw"]),))
         self.aspen_file_entry.delete(0, END)
         self.aspen_file_entry.insert(0, filename)
     
     
-    def open_solver_file(self):
-        filename = askopenfilename(title = "Select file", filetypes = ((".xlsm Files","*.xlsm"),))
+    def open_excel_calculator_file(self):
+        '''
+        Prompts the user to select an Excel calculator .xlsm file and fills the entry with the
+        full path name. It also calls self.graph_toggle() to load the output variables
+        for the user to select which to graph.
+        '''
+        filename = askopenfilename(title = "Select file", filetypes = (
+                (".xlsm Files","*.xlsm"),))
         self.excel_solver_entry.delete(0, END)
         self.excel_solver_entry.insert(0, filename)
         if filename:
-            plot_output_disp_thread = Thread(target=self.graph_toggle)
+            plot_output_disp_thread = Thread(target=self.output_vars_to_graph_toggle)
             plot_output_disp_thread.start()
             self.wait= Label(self.home_tab, text="Wait While Output Variables Are Loading ...")
             self.wait.grid(row=6, column= 1, columnspan = 2, sticky = E,pady = 5,padx = 5)
-            
-            
+              
        
-    def graph_toggle(self):
+    def output_vars_to_graph_toggle(self):
+        '''
+        Calls parse_output_vars to open the excel calculator .xlsm file and load
+        output variables of interest. It then creates the check boxes for the user
+        to toggle which they want to graph. After this is completed, it displays the button 
+        for testing compatibility of input files.
+        '''
+        
         self.parse_output_vars()
         self.graph_toggles = {}
         if len(self.output_vars) < 10:
+            # if there are fewer than 10, then we don't need a scroll bar
             self.disp_output_vars= Labelframe(self.home_tab, text='Output Variables to Graph:')
-            self.disp_output_vars.grid(row = 6,column = 1, columnspan = 2, pady = 10, padx = 10, sticky = E )
+            self.disp_output_vars.grid(row = 6,column = 1, columnspan = 2, pady = 10, 
+                                       padx = 10, sticky = E )
             count = 1
 
             for i,v in enumerate(self.output_vars[:-2]):
@@ -1586,7 +1823,8 @@ class MainApp(Tk):
             main_canvas.grid(row=0, column=0, sticky="news")
             main_canvas.config(height = window_height, width=frame_width)
             
-            vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview, style='scroll.Vertical.TScrollbar')
+            vsb = Scrollbar(frame_canvas, orient="vertical", command=main_canvas.yview, 
+                            style='scroll.Vertical.TScrollbar')
             vsb.grid(row=0, column=1 ,sticky = 'ns')
             main_canvas.configure(yscrollcommand=vsb.set)
             
@@ -1594,9 +1832,7 @@ class MainApp(Tk):
             main_canvas.create_window((0, 0), window=figure_frame, anchor='nw')
             figure_frame.config(height = frame_height, width=frame_width)
 
-        
             x , y = 10, 10
-            self.graphs_displayed = []
             for i,v in enumerate(self.output_vars[:-2]):
                 self.graph_toggles[v] = IntVar()
                 cb = Checkbutton(figure_frame, text = v, variable = self.graph_toggles[v])
@@ -1606,48 +1842,65 @@ class MainApp(Tk):
             figure_frame.update_idletasks()
             frame_canvas.config(width=frame_width, height=window_height)
             main_canvas.config(scrollregion=(0,0,x,frame_height))
-        compat_button = Button(self.home_tab, text = 'Test Compatibility of Input Files', command = self.test_compatibility)
+            
+            
+        ##### After variables have been loaded, we display the compatibility test button #######
+        compat_button = Button(self.home_tab, text = 'Test Compatibility of Input Files', 
+                               command = self.test_compatibility)
         compat_button.place(x = self.win_lim_x *.59, y = self.win_lim_y*.025)
         
        
-    def wipe_temp_dir(self):
-        print('hiiiiiiiiiiiiiiiiiiiIIGGGGGG')
-        print(self.temp_directory)
-        try:
-            rmdir(self.temp_directory)
-        except: pass
-        try:
-            rmtree(self.temp_directory)
-        except:
-            pass
         
     def abort_sim(self):
+        '''
+        The function linked to the abort button in a multivariate analysis. It is linked to
+        the next variable button in a univariate analysis. It changes the value of abort, which
+        the multiprocessing simulations have access to so they know to abort. It also
+        starts a cleanup thread which terminates all lingering processes and COMS. While the simulation
+        is aborting, it displays a status update notifying the user that it is aborting.
+        '''
+        
         self.abort.value = True
         self.cleanup_thread = Thread(target=self.cleanup_processes_and_COMS)
         self.cleanup_thread.start()
         try:
             if self.analysis_type.get() == 'Multivariate Sensitivity' or self.abort_univar_overall.value:
-                self.time_rem_label.config(text='Status: Aborting Simulation, Please Wait Before Starting New Simulation')
+                self.time_rem_label.config(text='Status: Aborting Simulation, '+\
+                                           'Please Wait Before Starting New Simulation')
             else:
                 self.time_rem_label.config(text='Status: Transitioning to Next Variable')
 
         except: pass
-        #self.abort_status_label.place(x=350,y=30)
         Thread(target=self.abort_helper).start()
 
         
     def abort_helper(self):
+        '''
+        Waits for the cleanup thread to finish before notifying the user that
+        it is ready to start a new simulation.
+        '''
         self.cleanup_thread.join()
         try:
             self.time_rem_label.config(text='Status: Ready for New Simulation')
         except:
             pass
         
+        
     def abort_univar_overall_fun(self):
+        '''
+        The function linked to the abort button for a univariate analysis.
+        It changes the value of abort_univ_overall, which ensures that no further
+        simulations are started after the current univariate analysis is aborted.
+        '''
         self.abort_univar_overall.value = True
         self.abort_sim()
         
+        
     def cleanup_processes_and_COMS(self):
+        '''
+        Ensures that all COMS have been closed and that all multiprocessing
+        processes are terminated. It also saves the final results to the output folder.
+        '''
         try:
             self.current_simulation.close_all_COMS()
             self.current_simulation.terminate_processes()
@@ -1655,20 +1908,27 @@ class MainApp(Tk):
                 self.current_simulation.lock_to_signal_finish.release()
             except:
                 pass
-            simulations.save_data(self.current_simulation.output_file, self.current_simulation.results, self.current_simulation.directory, self.current_simulation.weights)
-            simulations.save_graphs(self.current_simulation.output_file, self.current_simulation.results, self.current_simulation.directory, self.current_simulation.weights)
-            #self.wipe_temp_dir()
+            simulations.save_data(self.current_simulation.output_file, 
+                                  self.current_simulation.results, 
+                                  self.current_simulation.directory, 
+                                  self.current_simulation.weights)
+            simulations.save_graphs(self.current_simulation.output_file, 
+                                    self.current_simulation.results, 
+                                    self.current_simulation.directory, 
+                                    self.current_simulation.weights)
         except:
-            self.after(1000, self.cleanup_processes_and_COMS)
+            self.after(400, self.cleanup_processes_and_COMS)
             
 
 
         
         
-      
-
 
 def OnFocusIn(event):
+    '''
+    Brings the GUI into focus but ensures that it is not always in focus (i.e.
+    the user can click off of it and it does not remain in front of other windows)
+    '''
     if type(event.widget).__name__ == 'MainApp':
         event.widget.attributes('-topmost', False)
 
@@ -1677,6 +1937,8 @@ if __name__ == "__main__":
     freeze_support()
     main_app = MainApp()
     main_app.mainloop()
+    
+    ####### If there is a current simulation, make sure it is aborted before closing
     if main_app.current_simulation:
         main_app.abort_univar_overall.value = True
         main_app.abort_sim()
