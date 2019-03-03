@@ -870,7 +870,7 @@ class MainApp(Tk):
         col_types = {'Warning Keywords':str}
         warnings_df = read_excel(gui_excel_input, sheet_name='Warning Messages', dtype=col_types)
         for index, row in warnings_df.iterrows():
-            self.warning_keywords.add(row['Warning Keywords'])
+            self.warning_keywords.update([word.strip().lower() for word in row['Warning Keywords'].split()])
         print(self.warning_keywords)
             
         
