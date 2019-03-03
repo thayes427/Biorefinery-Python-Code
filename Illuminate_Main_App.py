@@ -185,13 +185,13 @@ class MainApp(Tk):
         
     def find_compatibility_errors(self):
         while not self.error_queue.empty():
-            is_error, text = self.error_queue.get()
+            is_error, line_num, text = self.error_queue.get()
             if is_error:
                 Label(self.home_tab, text= text, font='Helvetica 8',fg='red').place(x= self.compat_x_pos, y= self.compat_y_pos)
-                self.compat_y_pos = self.compat_y_pos+20
+                self.compat_y_pos = self.compat_y_pos+20*line_num
             else:
                 Label(self.home_tab, text= text).place(x= self.compat_x_pos, y= self.compat_y_pos)
-                self.compat_y_pos = self.compat_y_pos+20
+                self.compat_y_pos = self.compat_y_pos+20*line_num
             # print out errors to the GUI
         if self.compat_test_thread.isAlive() or not self.error_queue.empty():
             self.after(100, self.find_compatibility_errors)
