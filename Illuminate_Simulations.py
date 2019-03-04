@@ -390,7 +390,8 @@ def multiprocessing_worker(current_COMS_pids, pids_to_ignore, aspenlock, excello
                 aspencom,aspen_tree = open_aspenCOMS(aspenfilename.value,dispatch)
             
             for p in process_iter(): #register the pids of COMS objects
-                if ('aspen' in p.name().lower() or 'apwn' in p.name().lower()) and p.pid not in local_pids_to_ignore:
+                if ('aspen' in p.name().lower() or 'apwn' in p.name().lower()) and (
+                        p.pid not in local_pids_to_ignore):
                     current_COMS_pids[p.pid] = 1
                     local_pids[p.pid] = 1
             aspenlock.release()
@@ -480,7 +481,8 @@ def find_errors_warnings(aspencom, warning_keywords):
                 counter += 1
                 while scan_errors:
                     if len(aspen_tree.FindNode(error + '\\' + str(counter)).Value.lower()) > 0:
-                        error_statements[error_number] = error_statements[error_number] + aspen_tree.FindNode(error + '\\' + str(counter)).Value
+                        error_statements[error_number] = error_statements[error_number] + aspen_tree.FindNode(
+                                error + '\\' + str(counter)).Value
                         counter += 1
                     else:
                         scan_errors = False
@@ -493,7 +495,8 @@ def find_errors_warnings(aspencom, warning_keywords):
                 counter += 1
                 while scan_errors:
                     if len(aspen_tree.FindNode(error + '\\' + str(counter)).Value.lower()) > 0:
-                        warning_statements[warning_number] = warning_statements[warning_number] + aspen_tree.FindNode(error + '\\' + str(counter)).Value
+                        warning_statements[warning_number] = warning_statements[warning_number] + aspen_tree.FindNode(
+                                error + '\\' + str(counter)).Value
                         counter += 1
                     else:
                         scan_errors = False

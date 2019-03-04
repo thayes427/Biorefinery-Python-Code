@@ -27,6 +27,7 @@ from random import choices
 import Illuminate_Simulations as simulations
 from Illuminate_Test_Compatibility import compatibility_test
 from math import ceil
+from textwrap import wrap
  
 
 class MainApp(Tk):
@@ -159,10 +160,16 @@ class MainApp(Tk):
         GUI to notify the user of the status of the compatibility test.
         '''
         
+        char_per_row = 100
         while not self.compat_status_queue.empty():
-            is_error, line_num, text = self.compat_status_queue.get()
+            is_error, text = self.compat_status_queue.get()
             if is_error:
-                Label(self.compat_test_window, text= 'ERROR: ' + text, font='Helvetica 10',
+                text = 'ERROR: ' + text
+            lines = wrap(text, char_per_row)
+            line_num = len(lines)
+            text = '\n'.join(lines)
+            if is_error:
+                Label(self.compat_test_window, text=text, font='Helvetica 10',
                       fg='red',justify=LEFT).place(x= self.compat_x_pos,y=self.compat_y_pos)
                 self.compat_y_pos = self.compat_y_pos+20*line_num
             else:
@@ -171,7 +178,7 @@ class MainApp(Tk):
                           justify=LEFT).place(x= self.compat_x_pos, y=self.compat_y_pos)
                     self.compat_y_pos = self.compat_y_pos+20*line_num
                 else:
-                    Label(self.compat_test_window, text= text, font='Helvetica 10').place(x= 
+                    Label(self.compat_test_window, text= text, font='Helvetica 10',justify=LEFT).place(x= 
                          self.compat_x_pos, y=self.compat_y_pos)
                     self.compat_y_pos = self.compat_y_pos+20*line_num
 
