@@ -1,5 +1,5 @@
 from pandas import ExcelWriter, DataFrame, concat, isna
-from multiprocessing import Value, Manager, Lock, Queue, Process
+from multiprocessing import Value, Manager, Lock, Queue
 from time import sleep
 from psutil import process_iter, virtual_memory
 from win32com.client import Dispatch, DispatchEx
@@ -11,10 +11,31 @@ from random import choice
 import string
 from math import ceil
 from shutil import copyfile
+from threading import Thread
 
+import multiprocessing as mp
+import traceback
 
+class Process_with_Error_Support(mp.Process):
+    def __init__(self, *args, **kwargs):
+        mp.Process.__init__(self, *args, **kwargs)
+        self._pconn, self._cconn = mp.Pipe()
+        self._exception = None
 
+    def run(self):
+        try:
+            mp.Process.run(self)
+            self._cconn.send(None)
+        except Exception as e:
+            tb = traceback.format_exc()
+            self._cconn.send((e, tb))
+            # raise e  # You can still rise this exception if you need to
 
+    @property
+    def exception(self):
+        if self._pconn.poll():
+            self._exception = self._pconn.recv()
+        return self._exception
 
 
 class Simulation(object):
@@ -45,7 +66,9 @@ class Simulation(object):
                  aspen_files, excel_solver_file,abort, vars_to_change, output_value_cells,
                  output_columns, dispatch, weights, save_bkps, warning_keywords, save_freq=2, 
                  num_processes=1):
+        print('hhhllllo')
         self.manager = Manager()
+        print('hlsls')
         self.num_processes = min(num_processes, tot_sim) #don't need more processors than trials
         self.tot_sim = tot_sim
         self.sims_completed = sims_completed
@@ -92,6 +115,7 @@ class Simulation(object):
         self.lock_to_signal_finish.acquire()
         if not self.abort.value:
             self.start_simulation(TASKS)
+            Thread(target=self.check_mp_errors).start()
         else:
             try:
                 self.lock_to_signal_finish.release()
@@ -110,6 +134,16 @@ class Simulation(object):
         save_data(self.output_file, self.results, self.directory, self.weights)
         save_graphs(self.output_file, self.results, self.directory, self.weights)        
         self.abort.value = False    
+        
+        
+    def check_mp_errors(self):
+        for p in self.processes:
+            if p.exception:
+                error, traceback = p.exception
+                print(traceback)
+        sleep(4)
+        if not self.abort.value and any(p.is_alive() for p in self.processes):
+            self.check_mp_errors()
         
         
     def save_copy_of_input_variables(self):
@@ -161,7 +195,7 @@ class Simulation(object):
                             self.output_columns, self.simulation_vars, self.sims_completed, 
                             self.lock_to_signal_finish, self.tot_sim, self.dispatch, self.weights,
                             self.warning_keywords)
-            self.processes.append(Process(target=multiprocessing_worker, args=process_args))
+            self.processes.append(Process_with_Error_Support(target=multiprocessing_worker, args=process_args))
             
         for p in self.processes:
             p.start()
@@ -468,16 +502,13 @@ def excel_run(excel, book, aspencom, aspen_tree, case_values, columns, run_summa
     solve for output values. Saves simulation results in a pandas dataframe and
     returns that dataframe.
     '''
-#    
-#    for file in listdir(path.dirname(aspenfilename)):
-#        if file.endswith(".his"):
-#            copyfile(path.join(path.dirname(aspenfilename), file), path.join(
-#                    directory,'history_for_trial_' + str(trial_num) + '.his'))
+   
+
     if aspen_tree.FindNode(r"\Data\Results Summary\Run-Status\Output\SPDATE").Value == None:
         for file in listdir(path.dirname(aspenfilename)):
             if file.endswith(".his"):
                 copyfile(path.join(path.dirname(aspenfilename), file), path.join(
-                        directory,'history_for_trial_' + str(trial_num) + '.his'))
+                        directory.value,'history_for_trial_' + str(trial_num) + '.his'))
         
         dfstreams = DataFrame(columns=columns)
         dfstreams.loc[trial_num+1] = case_values + [None]*(len(columns)-1-len(case_values))+["Aspen Failed to Converge"] 
@@ -623,3 +654,5 @@ def format_run_summary(summary):
 #        except:
 #            not_done = False
 #    return error_statements, warning_statements
+#if __name__ == "__main__":
+#    freeze_support()

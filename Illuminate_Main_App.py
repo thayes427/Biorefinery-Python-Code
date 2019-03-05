@@ -164,7 +164,7 @@ class MainApp(Tk):
         char_per_row = 100
         while not self.compat_status_queue.empty():
             is_error, text = self.compat_status_queue.get()
-            if is_error and not "Finished" in text:
+            if is_error and not ( "Finished" in text or "Cannot test" in text):
                 text = 'ERROR: ' + text
             lines = wrap(text, char_per_row)
             line_num = len(lines)
@@ -1015,12 +1015,14 @@ class MainApp(Tk):
         # delete the directory if it exists
         try:
             rmdir(self.temp_directory)
-        except: pass
+        except: 
+            pass
         try:
             rmtree(self.temp_directory)
         except: 
             pass
-        makedirs(self.temp_directory)
+        if not path.exists(self.temp_directory):
+            makedirs(self.temp_directory)
         aspen_file_names = []
         for i in range(self.num_processes):
             process_specific_dir = self.temp_directory + '\\' + str(i)

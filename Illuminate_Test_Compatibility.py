@@ -8,11 +8,13 @@ Created on Thu Feb 28 14:58:42 2019
 """
 
 import Illuminate_Simulations as simulations
-from os import path
+from os import path, rmdir, makedirs
 from psutil import process_iter
 from pandas import read_excel
 from re import findall
 from math import isclose
+from shutil import copyfile, rmtree
+
 
 
 def compatibility_test(status_queue, excel_input_file, calculator_file, aspen_file, dispatch):
@@ -22,19 +24,98 @@ def compatibility_test(status_queue, excel_input_file, calculator_file, aspen_fi
     function are live updated on the GUI in the Main_App.
     '''
     
+    aspen_dir = copy_aspen_to_temp_dir(aspen_file)
+    
+    status_queue.put((False, 'Testing Compatibility of Excel Input File...'))
+    excel_input_errors_found = test_excel_input_file(excel_input_file, status_queue)
+    if excel_input_errors_found:
+        status_queue.put((True, 'Finished Testing Excel Input File, Please Fix Errors'))
+    else:
+        status_queue.put((False, 'SUCCESS: Excel Input File is Compatible with Illuminate'))
     status_queue.put((False, 'Testing Compatibility of Excel Calculator File...'))
     errors_found = test_calculator_file(calculator_file, aspen_file, status_queue)
     if errors_found:
         status_queue.put((True, 'Finished Testing Excel Calculator File, Please Fix Errors'))
     else:
         status_queue.put((False, 'SUCCESS: Excel Calculator File is Compatible with Illuminate'))
-    status_queue.put((False, 'Testing Compatibility of Aspen Model...'))
-    errors_found = test_aspen_file(aspen_file, excel_input_file, dispatch, status_queue)
-    if errors_found:
-        status_queue.put((True, 'Finished Testing Aspen Model, Please Fix Errors'))
+        
+    if excel_input_errors_found:
+        status_queue.put((True, 'Cannot test compatibility of Aspen model until Excel input file is compatible. Please fix errors with Excel input file and test compatibility again'))
     else:
-        status_queue.put((False, 'SUCCESS: Aspen Model is Compatible with Illuminate'))
+        status_queue.put((False, 'Testing Compatibility of Aspen Model...'))
+        errors_found = test_aspen_file(aspen_dir, excel_input_file, dispatch, status_queue)
+        if errors_found:
+            status_queue.put((True, 'Finished Testing Aspen Model, Please Fix Errors'))
+        else:
+            status_queue.put((False, 'SUCCESS: Aspen Model is Compatible with Illuminate'))
     status_queue.put((False, 'Finished with Compatibility Test'))
+    
+    
+def copy_aspen_to_temp_dir(aspen_file):
+    '''
+    Copies the aspen .apw or .bkp file provided by the user to a temporary
+    directory within the 'Output' folder. This is done in order to encapsulate
+    all of the extra files that Aspen outputs so that they can be easily removed
+    if Aspen crashes or is aborted. It first checks to see if this directory exists,
+    and if it does exist, then it deletes the temporary directory and all
+    of its contents.
+    '''
+    
+    output_directory = path.join(path.dirname(aspen_file),'Output')
+    if not path.exists(output_directory):
+        makedirs(output_directory)
+    if not path.exists(path.join(output_directory,'Temp')):
+        makedirs(path.join(output_directory,'Temp'))
+    
+    temp_directory = path.join(path.dirname(aspen_file),'Output','Temp')
+    
+    # delete the directory if it exists
+    try:
+        rmdir(temp_directory)
+    except: 
+        pass
+    try:
+        rmtree(temp_directory)
+    except: 
+        pass
+    makedirs(temp_directory)
+    aspen_file_temp = path.join(temp_directory,path.basename(aspen_file))
+    copyfile(aspen_file, aspen_file_temp)
+    
+    return aspen_file_temp
+    
+def test_excel_input_file(excel_input_file, status_queue):
+    
+    errors_found = False
+    col_types = {'Variable Name': str, 'Variable Aspen Call': str, 'Distribution Parameters': str, 
+                 'Bounds': str, 'Fortran Call':str, 'Fortran Value to Change': str, 
+                 'Distribution Type': str, 'Toggle': bool}
+    try:
+        df = read_excel(excel_input_file, sheet_name='Inputs', dtype=col_types)
+    except:
+        status_queue.put((True, 'There must be a sheet titled "Inputs" in the Excel input file and another sheet titled "Warning Messages"'))
+        errors_found = True
+        return
+    try:
+        df = read_excel(excel_input_file, sheet_name='Warning Messages')
+    except:
+        status_queue.put((True, 'There must be a sheet titled "Inputs" in the Excel input file and another sheet titled "Warning Messages"'))
+        errors_found = True
+    
+    
+    required_columns = ['Variable Name', 'Variable Aspen Call', 'Distribution Parameters', 
+                 'Bounds', 'Fortran Call', 'Fortran Value to Change', 
+                 'Distribution Type', 'Toggle']
+    df = read_excel(excel_input_file, sheet_name='Inputs', dtype=col_types)
+    user_columns = set(df.columns)
+    
+    for col in required_columns:
+        if col not in user_columns:
+            status_queue.put((True, 'Column "' + col + '" must be in the "Inputs" tab of the Excel input file'))
+            errors_found = True
+    
+    return errors_found
+    
     
     
 def test_aspen_file(aspen_file,excel_input_file, dispatch, status_queue):
@@ -209,7 +290,7 @@ def test_calculator_file(calculator_file, aspen_file, status_queue):
     try:
         excel.Run('sub_ClearSumData_ASPEN')
         try:
-            for v in book.Sheets('aspen').Evaluate(clear_load_cell):
+            if book.Sheets('aspen').Evaluate(clear_load_cell).Value is not None:
                 status_queue.put((True,'Excel macro sub_ClearSumData_ASPEN does not appear to '+\
                                   'be working. Values in column C of sheet "aspen" are not being cleared.'))
                 errors_found = True
@@ -227,7 +308,7 @@ def test_calculator_file(calculator_file, aspen_file, status_queue):
         try:
             book.Sheets('Set-up').Evaluate(bkp_reference_cell).Value = aspen_file
             excel.Run('sub_GetSumData_ASPEN')
-            if not all(str(v)!='None' for v in book.Sheets('aspen').Evaluate(clear_load_cell)):
+            if book.Sheets('aspen').Evaluate(clear_load_cell).Value is None:
                 status_queue.put((True,'"sub_GetSumData_ASPEN" does not appear to be '+\
                                   'working. Values should be populated in column C of sheet "aspen"'))
                 errors_found = True
@@ -282,23 +363,22 @@ def test_calculator_file(calculator_file, aspen_file, status_queue):
             errors_found = True
         else:
             goal_seek, change_cell = DCFROR_cells[0]
-            for v in book.Sheets(DCFROR_sheetname).Evaluate(goal_seek):
-                seek_val = float(str(v))
+            seek_val = float(book.Sheets(DCFROR_sheetname).Evaluate(goal_seek).Value)
             book.Sheets(DCFROR_sheetname).Evaluate(change_cell).Value = 5.0
             
-            for v in book.Sheets(DCFROR_sheetname).Evaluate(goal_seek):
-                if isclose(float(str(v)), seek_val):
-                    status_queue.put((True, 'The "goal seek" and "change cell" cells indicated '+\
-                                      'in the "solvedcfror" code do not appear to be linked.'+\
-                                      'Make sure these are the correct cells referenced in the macro' ))
-                    errors_found = True
+            
+            
+            if isclose(book.Sheets(DCFROR_sheetname).Evaluate(goal_seek).Value, seek_val):
+                status_queue.put((True, 'The "goal seek" and "change cell" cells indicated '+\
+                                  'in the "solvedcfror" code do not appear to be linked.'+\
+                                  'Make sure these are the correct cells referenced in the macro' ))
+                errors_found = True
             
             excel.Run('solvedcfror')
-            for v in book.Sheets(DCFROR_sheetname).Evaluate(goal_seek):
-                if not isclose(float(str(v)), 0.0):
-                    status_queue.put((True, 'The "solvedcfror" function is not minimizing the '+\
-                                      '"goal seek" cell to 0 as it should be.' ))
-                    errors_found = True
+            if not isclose(float(book.Sheets(DCFROR_sheetname).Evaluate(goal_seek).Value), 0.0):
+                status_queue.put((True, 'The "solvedcfror" function is not minimizing the '+\
+                                  '"goal seek" cell to 0 as it should be.' ))
+                errors_found = True
 
         
         
