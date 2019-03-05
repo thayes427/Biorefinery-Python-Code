@@ -72,6 +72,7 @@ class MainApp(Tk):
         self.simulation_dist, self.simulation_vars = {}, {}
         self.graphing_frequency = None
         self.analysis_type_error = None
+        self.missing_inputs_error = None
         self.temp_directory = None
         self.warning_keywords = set()
         self.vars_have_been_sampled = False
@@ -163,7 +164,7 @@ class MainApp(Tk):
         char_per_row = 100
         while not self.compat_status_queue.empty():
             is_error, text = self.compat_status_queue.get()
-            if is_error:
+            if is_error and not "Finished" in text:
                 text = 'ERROR: ' + text
             lines = wrap(text, char_per_row)
             line_num = len(lines)
@@ -173,7 +174,12 @@ class MainApp(Tk):
                       fg='red',justify=LEFT).place(x= self.compat_x_pos,y=self.compat_y_pos)
                 self.compat_y_pos = self.compat_y_pos+20*line_num
             else:
-                if text == 'Finished with Compatibility Test':
+                if 'SUCCESS' in text:
+                    Label(self.compat_test_window, text= text, font='Helvetica 10', 
+                          justify=LEFT, fg='green').place(x= self.compat_x_pos, y=self.compat_y_pos)
+                    self.compat_y_pos = self.compat_y_pos+20*line_num
+                    
+                elif text == 'Finished with Compatibility Test':
                     Label(self.compat_test_window, text= text, font='Helvetica 10 bold', 
                           justify=LEFT).place(x= self.compat_x_pos, y=self.compat_y_pos)
                     self.compat_y_pos = self.compat_y_pos+20*line_num
@@ -220,15 +226,22 @@ class MainApp(Tk):
         information.
         '''
         
-        # if there was previously an error about not selecting an analysis type
-        # not being chosen, destroy that error message
+
+        # if there was previously error messages about analysis type or missing inputs, delete them
         if self.analysis_type_error:
             self.analysis_type_error.destroy()
-        try:
-            self.graphing_frequency = int(self.graphing_freq_entry.get())
-        except:
-            # if no graphing frequency was given, by default it is 1
-            self.graphing_frequency = 1
+            self.analysis_type_error = None
+        if self.missing_inputs_error:
+            self.missing_inputs_error.destroy()
+            self.missing_inputs_error = None
+            
+        if any(len(file.get()) == 0 for file in (
+                self.input_csv_entry, self.excel_solver_entry, self.aspen_file_entry)):
+            self.missing_inputs_error = Label(
+                    self.home_tab, text='ERROR: Please Provide All Input Files', fg='red')
+            self.missing_inputs_error.grid(row=10,column=2, columnspan=2)
+            return
+            
         if self.current_tab:
             # if another analysis tab is open, delete it and forget it
             self.notebook.forget(self.current_tab)
@@ -237,7 +250,7 @@ class MainApp(Tk):
             self.analysis_type_error = Label(self.home_tab,
                                              text='ERROR: Choose An Analysis Type', 
                                              fg='red')
-            self.analysis_type_error.grid(row=10,column=2)
+            self.analysis_type_error.grid(row=10,column=2, columnspan=2)
  
         elif self.analysis_type.get() == 'Univariate Sensitivity':
             self.current_tab = Frame(self.notebook)
@@ -262,9 +275,9 @@ class MainApp(Tk):
                     row = 5, column = 3, sticky = W)
             
             Label(self.current_tab, text = 'Graphing Frequency:').place(x=90, y=72)
-            self.num_processes_entry = Entry(self.current_tab)
-            self.num_processes_entry.grid(row=6, column=2, sticky=E, pady=6)
-            self.num_processes_entry.config(width=18)
+            self.graphing_freq_entry = Entry(self.current_tab)
+            self.graphing_freq_entry.grid(row=6, column=2, sticky=E, pady=6)
+            self.graphing_freq_entry.config(width=18)
             
             Label(self.current_tab, text = '(Input 0 for no Graphs)').grid(
                     row=6,column=3, sticky = W)
@@ -1024,6 +1037,11 @@ class MainApp(Tk):
             self.num_processes = int(self.num_processes_entry.get())
         except:
             self.num_processes = 1
+        try:
+            self.graphing_frequency = int(self.graphing_freq_entry.get())
+        except:
+            # if no graphing frequency was given, by default it is 1
+            self.graphing_frequency = 1
         self.excel_solver_file= str(self.excel_solver_entry.get())
         try:
             self.num_trial = int(self.num_sim_entry.get())
@@ -1084,7 +1102,7 @@ class MainApp(Tk):
                 break
             row_counter += 1
         self.output_value_cells = ",".join(self.output_value_cells)
-        self.output_vars += ['Aspen Errors', 'Aspen Warnings'] # adding 2 more columns to output file
+        self.output_vars += ['Aspen Error Count', 'Aspen Warning Count', 'Aspen Run Summary'] # adding 2 more columns to output file
         # closing the excel COMS we just opened
         for p in process_iter():
             if 'excel' in p.name().lower() and p.pid not in excels_to_ignore:
@@ -1098,6 +1116,7 @@ class MainApp(Tk):
         It also calls copy_aspen_to_temp_dir and creates the Output folder and
         temporary directory. 
         '''
+        
         self.output_columns = vars_to_change + self.output_vars
         output_directory = path.join(path.dirname(str(self.input_csv_entry.get())),
                                      'Output/',datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
@@ -1812,7 +1831,7 @@ class MainApp(Tk):
                                        padx = 10, sticky = E )
             count = 1
 
-            for i,v in enumerate(self.output_vars[:-2]):
+            for i,v in enumerate(self.output_vars[:-3]):
                 self.graph_toggles[v] = IntVar()
                 cb = Checkbutton(self.disp_output_vars, text = v, variable = self.graph_toggles[v])
                 cb.grid(row=count,columnspan = 1, column = 2, sticky=W)
@@ -1845,7 +1864,7 @@ class MainApp(Tk):
             figure_frame.config(height = frame_height, width=frame_width)
 
             x , y = 10, 10
-            for i,v in enumerate(self.output_vars[:-2]):
+            for i,v in enumerate(self.output_vars[:-3]):
                 self.graph_toggles[v] = IntVar()
                 cb = Checkbutton(figure_frame, text = v, variable = self.graph_toggles[v])
                 cb.place(x = x, y = y)

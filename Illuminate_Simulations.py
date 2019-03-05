@@ -6,9 +6,10 @@ from win32com.client import Dispatch, DispatchEx
 import pythoncom
 from os import path
 import matplotlib.pyplot as plt
-from re import findall
+from numpy import subtract, percentile
 from random import choice
 import string
+from math import ceil
 
 
 
@@ -171,14 +172,21 @@ class Simulation(object):
         them to finish opening so that we make sure to have a handle on them 
         so we can delete them. It then terminates all current COMS processes.
         '''
-        self.aspenlock.acquire() # wait for aspen COMS to finish opening
-        self.excellock.acquire() # wait for excel COMS to finish opening
-        for p in process_iter():
-            if p.pid in self.current_COMS_pids:
-                p.terminate()
-                del self.current_COMS_pids[p.pid]
-        self.aspenlock.release()
-        self.excellock.release()
+        
+        if self.results:
+            self.aspenlock.acquire() # wait for aspen COMS to finish opening
+            self.excellock.acquire() # wait for excel COMS to finish opening
+            for p in process_iter():
+                if p.pid in self.current_COMS_pids:
+                    p.terminate()
+                    del self.current_COMS_pids[p.pid]
+            self.aspenlock.release()
+            self.excellock.release()
+        else:
+            for p in process_iter(): # get a handle on the Excel COM we just made
+                if (('aspen' in p.name().lower() or 'apwn' in p.name().lower()) or 'excel' in p.name().lower()) and (
+                        p.pid not in self.pids_to_ignore):
+                    p.terminate()
 
     
     def find_pids_to_ignore(self):
@@ -244,7 +252,7 @@ def save_graphs(outputfilename, results, directory, weights):
         collected_data = list(filter(lambda x: not isna(x[x.columns[-2]].values[0]), results))
         if len(collected_data) > 0:
             collected_data = concat(collected_data).sort_index()
-            for index, var in enumerate(collected_data.columns[:-2]):
+            for index, var in enumerate(collected_data.columns[:-3]):
                 fig = plt.figure()
                 fig.set_size_inches(6,6)
                 ax = fig.add_axes([0.12, 0.12, 0.85, 0.85])
@@ -254,7 +262,15 @@ def save_graphs(outputfilename, results, directory, weights):
                      plt.hist(collected_data[var], num_bins, weights=plotweight, 
                               facecolor='blue', edgecolor='black', alpha=1.0)
                 else:
-                    num_bins = 20
+                    data = collected_data[var]
+                    if len(data) == 0:
+                        num_bins = 1
+                    elif len(data) < 20:
+                        num_bins = len(data)
+                    else:
+                        iqr = subtract(*percentile(data, [75, 25]))
+                        bin_width = (2*iqr)/(len(data)**(1/3))
+                        num_bins = ceil((max(data) - min(data))/bin_width)
                     plt.hist(collected_data[var], num_bins, facecolor='blue', 
                              edgecolor='black', alpha=1.0)
                 ax.set_xlabel(var, Fontsize=14)
@@ -264,10 +280,9 @@ def save_graphs(outputfilename, results, directory, weights):
                 
                 # remove any invalid characters from the variable name so we
                 # can properly save the file
-                char_omit = findall(
-                        r"([^\\\/\:\?\*\"\<\>\|]*)[\\\/\:\?\*\"\<\>\|]([^\\\/\:\?\*\"\<\>\|]*)",var)
-                if char_omit:
-                    var = "".join([s[0]+s[1] for s in char_omit])
+                var = var.replace('\\','').replace('/','').replace(
+                        ':','').replace('?','').replace('*','').replace(
+                                '"','').replace('<','').replace('>','').replace('|','')
                 plt.savefig(directory.value + '/' + outputfilename.value + \
                             '_' + var + '.png', format='png')
                 try:
@@ -349,7 +364,7 @@ def multiprocessing_worker(current_COMS_pids, pids_to_ignore, aspenlock, excello
                 continue
         
         # run Aspen simulation
-        aspencom, case_values, errors, warnings, aspen_tree = aspen_run(
+        aspencom, case_values, run_summary, aspen_tree = aspen_run(
                 aspencom, aspen_tree, simulation_vars, trial_num, vars_to_change, 
                 directory, warning_keywords) 
         
@@ -360,8 +375,8 @@ def multiprocessing_worker(current_COMS_pids, pids_to_ignore, aspenlock, excello
         book.Sheets('Set-up').Evaluate('B1').Value = full_bkp_name
         
         # run the Excel Calculator
-        result = excel_run(excel, book, aspencom, aspen_tree, case_values, columns, errors, 
-                             trial_num, output_value_cells, directory, warnings)
+        result = excel_run(excel, book, aspencom, aspen_tree, case_values, columns, run_summary, 
+                             trial_num, output_value_cells, directory)
         
         # dump results into results list and maybe save
         results_lock.acquire()
@@ -430,81 +445,164 @@ def aspen_run(aspencom, aspen_tree, simulation_vars, trial, vars_to_change, dire
     
     aspencom.Reinit()
     aspencom.Engine.Run2()
-    errors, warnings = find_errors_warnings(aspencom, warning_keywords)
+    run_summary = format_run_summary(retrieve_run_summary(aspencom))
+    #errors, warnings = find_errors_warnings(aspencom, warning_keywords)
     
-    return aspencom, case_values, errors, warnings, aspen_tree
+    return aspencom, case_values, run_summary, aspen_tree
 
 
 
-def excel_run(excel, book, aspencom, aspen_tree, case_values, columns, errors, 
-                trial_num, output_value_cells, directory, warnings):
+def excel_run(excel, book, aspencom, aspen_tree, case_values, columns, run_summary, 
+                trial_num, output_value_cells, directory):
     '''
     Pulls stream results from Aspen simulation .bkp file and run macros to 
     solve for output values. Saves simulation results in a pandas dataframe and
     returns that dataframe.
     '''
     
+    if aspen_tree.FindNode(r"\Data\Results Summary\Run-Status\Output\SPDATE").Value == None:
+        dfstreams = DataFrame(columns=columns)
+        dfstreams.loc[trial_num+1] = case_values + [None]*(len(columns)-1-len(case_values))+["Aspen Failed to Converge"] 
+        return dfstreams
     excel.Run('sub_ClearSumData_ASPEN')
     excel.Run('sub_GetSumData_ASPEN')
     excel.Calculate()
     excel.Run('solvedcfror')
       
-    outputs_df = DataFrame(columns=columns)
-    outputs_df.loc[trial_num+1] = case_values + [x.Value for x in book.Sheets(
-            'Output').Evaluate(output_value_cells.value)] + ["; ".join(errors)] + ["; ".join(warnings)]
-    return outputs_df
+    results_df = DataFrame(columns=columns)
+    results_df.loc[trial_num+1] = case_values + [x.Value for x in book.Sheets('Output').Evaluate(
+            output_value_cells.value)] + [run_summary[0]] + [run_summary[1]]  + [";  ".join(run_summary[2])]
+    return results_df
+
+
+
     
-
-
-def find_errors_warnings(aspencom, warning_keywords):
+def retrieve_run_summary(aspencom):
     '''
-    Searches through the Aspen Run Status node in the Aspen Tree to find any 
-    errors in convergence or warning messages that contain the user-defined
-    keywords of interest. Returns a list of strings for errors and warnings 
-    separately.
+    Retrieves the run summary from the Aspen Tree. If Aspen failed to converge, 
+    this will be empty
     '''
-    aspen_tree = aspencom.Tree
-    error = r'\Data\Results Summary\Run-Status\Output\PER_ERROR'
+    obj = aspencom.Tree
+    node = r'\Data\Results Summary\Run-Status\Output\PER_ERROR'
     not_done = True
     counter = 1
-    error_number = 0
-    warning_number = 0
-    error_statements = []
-    warning_statements = []
+    summary_status = []
     while not_done:
         try:
-            check_for_errors = aspen_tree.FindNode(error + '\\' +  str(counter)).Value
-            if "error" in check_for_errors.lower():
-                ############   FOUND AN ERROR ###################
-                error_statements.append(check_for_errors)
-                scan_errors = True
-                counter += 1
-                while scan_errors:
-                    if len(aspen_tree.FindNode(error + '\\' + str(counter)).Value.lower()) > 0:
-                        error_statements[error_number] = error_statements[error_number] + aspen_tree.FindNode(
-                                error + '\\' + str(counter)).Value
-                        counter += 1
-                    else:
-                        scan_errors = False
-                        error_number += 1
-                        counter += 1
-            elif any(keyword in check_for_errors.lower() for keyword in warning_keywords):
-                ############# FOUND A WARNING WITH WARNING KEYWORD ##############
-                warning_statements.append(check_for_errors)
-                scan_errors = True
-                counter += 1
-                while scan_errors:
-                    if len(aspen_tree.FindNode(error + '\\' + str(counter)).Value.lower()) > 0:
-                        warning_statements[warning_number] = warning_statements[warning_number] + aspen_tree.FindNode(
-                                error + '\\' + str(counter)).Value
-                        counter += 1
-                    else:
-                        scan_errors = False
-                        warning_number += 1
-                        counter += 1
-                
-            else:
-                counter += 1
+            line = obj.FindNode(node + '\\' +  str(counter)).Value
+            summary_status.append(line)
+            counter += 1
         except:
             not_done = False
-    return error_statements, warning_statements
+    return summary_status
+        
+
+def format_run_summary(summary):
+    '''
+    Counts the number of warnings and errors in the summary and also formats the run summary so it
+    can be saved in the output excel file.
+    '''
+    
+    if not summary:
+        return [0, 0, []]
+    error_count = 0
+    warning_count = 0 
+        
+    summary_formatted = []
+    summary_formatted.append('')
+        
+    num_lines = len(summary)
+    i = 0 
+    while i < num_lines:
+        if not len(summary[i]) > 0:
+            if i > 0:
+                if ":" in summary[(i-1)]:
+                    i += 1
+                    continue
+            summary_formatted.append(summary[i])
+        elif "error" in summary[i].lower():
+            summary_formatted[len(summary_formatted)-1] = summary_formatted[len(
+                    summary_formatted)-1] + summary[i]
+            scan_errors = True
+            while scan_errors:
+                i += 1
+                if len(summary[i]) > 0:
+                    summary_formatted[len(summary_formatted)-1] = summary_formatted[len(
+                            summary_formatted)-1] + summary[i]
+                    error_count += (summary[i].count(' ') + 1)
+                else:
+                    i -= 1
+                    scan_errors = False                    
+        elif "warning" in summary[i].lower():
+            summary_formatted[len(summary_formatted)-1] = summary_formatted[len(
+                    summary_formatted)-1] + summary[i]
+            scan_warnings = True
+            while scan_warnings:
+                i += 1
+                if len(summary[i]) > 0:
+                    summary_formatted[len(summary_formatted)-1] = summary_formatted[len(
+                            summary_formatted)-1] + summary[i]
+                    warning_count += (summary[i].count(' ') + 1)
+                else:
+                    i -= 1
+                    scan_warnings = False   
+        else:
+            summary_formatted[len(summary_formatted)-1] = summary_formatted[len(
+                    summary_formatted)-1] + summary[i]
+        i += 1
+
+    return [error_count, warning_count, summary_formatted]
+
+
+#def find_errors_warnings(aspencom, warning_keywords):
+#    '''
+#    Searches through the Aspen Run Status node in the Aspen Tree to find any 
+#    errors in convergence or warning messages that contain the user-defined
+#    keywords of interest. Returns a list of strings for errors and warnings 
+#    separately.
+#    '''
+#    aspen_tree = aspencom.Tree
+#    error = r'\Data\Results Summary\Run-Status\Output\PER_ERROR'
+#    not_done = True
+#    counter = 1
+#    error_number = 0
+#    warning_number = 0
+#    error_statements = []
+#    warning_statements = []
+#    while not_done:
+#        try:
+#            check_for_errors = aspen_tree.FindNode(error + '\\' +  str(counter)).Value
+#            if "error" in check_for_errors.lower():
+#                ############   FOUND AN ERROR ###################
+#                error_statements.append(check_for_errors)
+#                scan_errors = True
+#                counter += 1
+#                while scan_errors:
+#                    if len(aspen_tree.FindNode(error + '\\' + str(counter)).Value.lower()) > 0:
+#                        error_statements[error_number] = error_statements[error_number] + aspen_tree.FindNode(
+#                                error + '\\' + str(counter)).Value
+#                        counter += 1
+#                    else:
+#                        scan_errors = False
+#                        error_number += 1
+#                        counter += 1
+#            elif any(keyword in check_for_errors.lower() for keyword in warning_keywords):
+#                ############# FOUND A WARNING WITH WARNING KEYWORD ##############
+#                warning_statements.append(check_for_errors)
+#                scan_errors = True
+#                counter += 1
+#                while scan_errors:
+#                    if len(aspen_tree.FindNode(error + '\\' + str(counter)).Value.lower()) > 0:
+#                        warning_statements[warning_number] = warning_statements[warning_number] + aspen_tree.FindNode(
+#                                error + '\\' + str(counter)).Value
+#                        counter += 1
+#                    else:
+#                        scan_errors = False
+#                        warning_number += 1
+#                        counter += 1
+#                
+#            else:
+#                counter += 1
+#        except:
+#            not_done = False
+#    return error_statements, warning_statements
