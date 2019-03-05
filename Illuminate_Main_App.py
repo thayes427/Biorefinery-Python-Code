@@ -1018,11 +1018,17 @@ class MainApp(Tk):
         except: pass
         try:
             rmtree(self.temp_directory)
-        except: pass
+        except: 
+            pass
         makedirs(self.temp_directory)
-        aspen_file_name = path.join(self.temp_directory,path.basename(str(self.aspen_file_entry.get())))
-        copyfile(str(self.aspen_file_entry.get()), aspen_file_name)
-        return aspen_file_name
+        aspen_file_names = []
+        for i in range(self.num_processes):
+            process_specific_dir = self.temp_directory + '\\' + str(i)
+            makedirs(process_specific_dir)
+            aspen_file_name = path.join(process_specific_dir,path.basename(str(self.aspen_file_entry.get())))
+            aspen_file_names.append(aspen_file_name)
+            copyfile(str(self.aspen_file_entry.get()), aspen_file_name)
+        return aspen_file_names
         
     
     def store_user_inputs(self):
@@ -1121,14 +1127,15 @@ class MainApp(Tk):
         output_directory = path.join(path.dirname(str(self.input_csv_entry.get())),
                                      'Output/',datetime.now().strftime('%Y-%m-%d_%H-%M-%S'))
         makedirs(output_directory)
-        temp_aspen_file = self.copy_aspen_to_temp_dir()
         if not path.exists(path.join(output_directory,'..','Temp')):
             makedirs(path.join(output_directory,'..','Temp'))
         copyfile(path.abspath(str(self.input_csv_entry.get())), path.join(
                 output_directory,'Input_Variables.xlsx'))
+        
+        aspen_file_names = self.copy_aspen_to_temp_dir()
         new_sim = simulations.Simulation(
                 self.sims_completed, num_trial, simulation_vars,output_file, 
-                output_directory, temp_aspen_file, self.excel_solver_file, 
+                output_directory, aspen_file_names, self.excel_solver_file, 
                 self.abort, vars_to_change, self.output_value_cells, self.output_columns, 
                 self.select_version.get(),weights, self.save_bkp.get(), self.warning_keywords,
                 save_freq=2, num_processes=self.num_processes)

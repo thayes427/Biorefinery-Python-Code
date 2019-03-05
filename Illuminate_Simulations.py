@@ -4,12 +4,16 @@ from time import sleep
 from psutil import process_iter, virtual_memory
 from win32com.client import Dispatch, DispatchEx
 import pythoncom
-from os import path
+from os import path, listdir
 import matplotlib.pyplot as plt
 from numpy import subtract, percentile
 from random import choice
 import string
 from math import ceil
+from shutil import copyfile
+
+
+
 
 
 
@@ -38,7 +42,7 @@ class Simulation(object):
     '''
     
     def __init__(self, sims_completed, tot_sim, simulation_vars, output_file, directory, 
-                 aspen_file, excel_solver_file,abort, vars_to_change, output_value_cells,
+                 aspen_files, excel_solver_file,abort, vars_to_change, output_value_cells,
                  output_columns, dispatch, weights, save_bkps, warning_keywords, save_freq=2, 
                  num_processes=1):
         self.manager = Manager()
@@ -50,7 +54,9 @@ class Simulation(object):
         self.simulation_vars = self.manager.dict(simulation_vars) 
         self.output_file = self.manager.Value('s', output_file)
         self.directory = self.manager.Value('s', directory)
-        self.aspen_file = self.manager.Value('s', aspen_file)
+        self.aspen_files = []
+        for f in range(len(aspen_files)):
+            self.aspen_files.append(self.manager.Value('s', aspen_files[f]))
         self.excel_solver_file = self.manager.Value('s', excel_solver_file)
         self.output_value_cells = self.manager.Value('s',output_value_cells)
         self.dispatch = dispatch
@@ -148,7 +154,7 @@ class Simulation(object):
 
         for i in range(self.num_processes):
             process_args = (self.current_COMS_pids, self.pids_to_ignore, self.aspenlock, 
-                            self.excellock, self.aspen_file, self.save_bkps,self.excel_solver_file,
+                            self.excellock, self.aspen_files[i], self.save_bkps,self.excel_solver_file,
                             task_queue, self.abort,self.results_lock, self.results, 
                             self.directory, self.output_columns, self.output_value_cells,
                             self.trial_counter, self.save_freq,self.output_file, self.vars_to_change, 
@@ -270,7 +276,10 @@ def save_graphs(outputfilename, results, directory, weights):
                     else:
                         iqr = subtract(*percentile(data, [75, 25]))
                         bin_width = (2*iqr)/(len(data)**(1/3))
-                        num_bins = ceil((max(data) - min(data))/bin_width)
+                        if bin_width == 0:
+                            num_bins = 1
+                        else:
+                            num_bins = ceil((max(data) - min(data))/bin_width)
                     plt.hist(collected_data[var], num_bins, facecolor='blue', 
                              edgecolor='black', alpha=1.0)
                 ax.set_xlabel(var, Fontsize=14)
@@ -376,7 +385,7 @@ def multiprocessing_worker(current_COMS_pids, pids_to_ignore, aspenlock, excello
         
         # run the Excel Calculator
         result = excel_run(excel, book, aspencom, aspen_tree, case_values, columns, run_summary, 
-                             trial_num, output_value_cells, directory)
+                             trial_num, output_value_cells, directory, aspenfilename.value)
         
         # dump results into results list and maybe save
         results_lock.acquire()
@@ -453,14 +462,23 @@ def aspen_run(aspencom, aspen_tree, simulation_vars, trial, vars_to_change, dire
 
 
 def excel_run(excel, book, aspencom, aspen_tree, case_values, columns, run_summary, 
-                trial_num, output_value_cells, directory):
+                trial_num, output_value_cells, directory, aspenfilename):
     '''
     Pulls stream results from Aspen simulation .bkp file and run macros to 
     solve for output values. Saves simulation results in a pandas dataframe and
     returns that dataframe.
     '''
-    
+#    
+#    for file in listdir(path.dirname(aspenfilename)):
+#        if file.endswith(".his"):
+#            copyfile(path.join(path.dirname(aspenfilename), file), path.join(
+#                    directory,'history_for_trial_' + str(trial_num) + '.his'))
     if aspen_tree.FindNode(r"\Data\Results Summary\Run-Status\Output\SPDATE").Value == None:
+        for file in listdir(path.dirname(aspenfilename)):
+            if file.endswith(".his"):
+                copyfile(path.join(path.dirname(aspenfilename), file), path.join(
+                        directory,'history_for_trial_' + str(trial_num) + '.his'))
+        
         dfstreams = DataFrame(columns=columns)
         dfstreams.loc[trial_num+1] = case_values + [None]*(len(columns)-1-len(case_values))+["Aspen Failed to Converge"] 
         return dfstreams
@@ -473,7 +491,6 @@ def excel_run(excel, book, aspencom, aspen_tree, case_values, columns, run_summa
     results_df.loc[trial_num+1] = case_values + [x.Value for x in book.Sheets('Output').Evaluate(
             output_value_cells.value)] + [run_summary[0]] + [run_summary[1]]  + [";  ".join(run_summary[2])]
     return results_df
-
 
 
     

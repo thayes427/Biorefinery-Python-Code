@@ -157,7 +157,8 @@ def test_calculator_file(calculator_file, aspen_file, status_queue):
         i +=1
     
     if get_data_VBA:
-        bkp_reference_cell = findall(r"RTrim\(Worksheets\(\"Set-up\"\)\.Range\(\"([A-Z]+[0-9]+)\"\)\.VALUE", get_data_VBA)[0]
+        bkp_reference_cell = findall(r"RTrim\(Worksheets\(\"Set-up\"\)\.Range\(\"([A-Z]+[0-9]+)\"\)\.VALUE", 
+                                              get_data_VBA)[0]
     else:
         bkp_reference_cell = 'B1'
     
@@ -176,13 +177,20 @@ def test_calculator_file(calculator_file, aspen_file, status_queue):
         filename, file_extension = path.splitext(book.Sheets('Set-up').Evaluate(bkp_reference_cell).Value)
         if not (file_extension=='.bkp' or file_extension == '.apw'):
             status_queue.put((True,'In the "Set-up" tab, the name of the .apw or .bkp '+\
-                              'should be in cell B1. If, however, you have made VBA accessible to Illuminate, then you can have this bkp reference in a different location. If it is not in B1, then the reference in "sub_GetSumData_ASPEN" must be updated. If the location of this reference needs '+\
+                              'should be in cell B1. If, however, you have made VBA '+\
+                              'accessible to Illuminate, then you can have this bkp '+\
+                              'reference in a different location. If it is not in B1, '+\
+                              'then the reference in "sub_GetSumData_ASPEN" must be updated. '+\
+                              'If the location of this reference needs '+\
                               'to be changed, make sure that you also change it in the "sub_GetSumData" macro'))
             errors_found = True
     except:
         setup_tab_functional = False
         status_queue.put((True,'In the "Set-up" tab, the name of the .apw or .bkp '+\
-                              'should be in cell B1. If, however, you have made VBA accessible to Illuminate, then you can have this bkp reference in a different location. If it is not in B1, then the reference in "sub_GetSumData_ASPEN" must be updated. If the location of this reference needs '+\
+                              'should be in cell B1. If, however, you have made VBA accessible to '+\
+                              'Illuminate, then you can have this bkp reference in a different '+\
+                              'location. If it is not in B1, then the reference in "sub_GetSumData_ASPEN" '+\
+                              'must be updated. If the location of this reference needs '+\
                               'to be changed, make sure that you also change it in the "sub_GetSumData" macro'))
         errors_found = True
     
@@ -190,10 +198,12 @@ def test_calculator_file(calculator_file, aspen_file, status_queue):
     ####################  Test all important macros ########################
     
     try:
-        clear_load_cell = findall(r"Range\(\"([A-Z]+[0-9]+)\"\)\.End\(xlDown\)\.Row", book.VBProject.VBComponents("GelAllData").CodeModule.Lines(1,500000))[0]
+        clear_load_cell = findall(r"Range\(\"([A-Z]+[0-9]+)\"\)\.End\(xlDown\)\.Row", 
+                                  book.VBProject.VBComponents("GelAllData").CodeModule.Lines(1,500000))[0]
     except:
         try:
-            clear_load_cell = findall(r"Range\(\"([A-Z]+[0-9]+)\"\)\.End\(xlDown\)\.Row", book.VBProject.VBComponents("GelAllData").CodeModule.Lines(1,500000))[0]
+            clear_load_cell = findall(r"Range\(\"([A-Z]+[0-9]+)\"\)\.End\(xlDown\)\.Row", 
+                                      book.VBProject.VBComponents("GelAllData").CodeModule.Lines(1,500000))[0]
         except:
             clear_load_cell = 'C7'
     try:
@@ -240,9 +250,12 @@ def test_calculator_file(calculator_file, aspen_file, status_queue):
         module1_VBA = book.VBProject.VBComponents("Module1").CodeModule.Lines(1,50000000)
         vba_code_access = True
     except:
-        status_queue.put((True, 'Unable to access "solvedcfror" VBA code and therefore cannot test "solvedcfror" functionality. ' +\
-                          'If you would like Illuminate to be able to test this, you must enable access by opening the .xlsm file and going to' +\
-                          'File -> Options -> Trust Center -> Trust Center Settings -> Macro Settings -> Trust Access to VBA project object model'))
+        status_queue.put((True, 'Unable to access "solvedcfror" VBA code and therefore cannot test'+\
+                          '"solvedcfror" functionality. ' +\
+                          'If you would like Illuminate to be able to test this, you must enable access'+\
+                          'by opening the .xlsm file and going to' +\
+                          'File -> Options -> Trust Center -> Trust Center Settings -> '+\
+                          'Macro Settings -> Trust Access to VBA project object model'))
         errors_found = True
         vba_code_access = False
     if vba_code_access:
@@ -258,7 +271,8 @@ def test_calculator_file(calculator_file, aspen_file, status_queue):
             i +=1
             
         DCFROR_cells = findall(
-                r"Range\(\"([A-Z]+[0-9]+)\"\)\.GoalSeek Goal\:\=0\, ChangingCell\:\=Range\(\"([A-Z]+[0-9]+)\"\)", DCFROR_VBA)
+                r"Range\(\"([A-Z]+[0-9]+)\"\)\.GoalSeek Goal\:\=0\, ChangingCell\:\=Range\(\"([A-Z]+[0-9]+)\"\)", 
+                DCFROR_VBA)
         DCFROR_sheetname = findall(r"Sheets\(\"(.*)\"\).Select",DCFROR_VBA)[0]
         
         if not DCFROR_cells:
@@ -274,13 +288,16 @@ def test_calculator_file(calculator_file, aspen_file, status_queue):
             
             for v in book.Sheets(DCFROR_sheetname).Evaluate(goal_seek):
                 if isclose(float(str(v)), seek_val):
-                    status_queue.put((True, 'The "goal seek" and "change cell" cells indicated in the "solvedcfror" code do not appear to be linked. Make sure these are the correct cells referenced in the macro' ))
+                    status_queue.put((True, 'The "goal seek" and "change cell" cells indicated '+\
+                                      'in the "solvedcfror" code do not appear to be linked.'+\
+                                      'Make sure these are the correct cells referenced in the macro' ))
                     errors_found = True
             
             excel.Run('solvedcfror')
             for v in book.Sheets(DCFROR_sheetname).Evaluate(goal_seek):
                 if not isclose(float(str(v)), 0.0):
-                    status_queue.put((True, 'The "solvedcfror" function is not minimizing the "goal seek" cell to 0 as it should be.' ))
+                    status_queue.put((True, 'The "solvedcfror" function is not minimizing the '+\
+                                      '"goal seek" cell to 0 as it should be.' ))
                     errors_found = True
 
         
