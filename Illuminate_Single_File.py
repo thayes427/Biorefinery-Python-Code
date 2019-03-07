@@ -80,6 +80,8 @@ class MainApp(Tk):
         self.temp_directory = None
         self.warning_keywords = set()
         self.vars_have_been_sampled = False
+        self.sp_results_text = []
+        self.sp_status = None
 
         
         self.construct_home_tab()
@@ -899,8 +901,9 @@ class MainApp(Tk):
                               font='Helvetica 10 bold',fg='red').grid(row=row, column = 1)
                         break
                     output_val = "{:,}".format(float("%.2f" % output_val))
-                    Label(self.current_tab, text=str(output_var) + '= ' + output_val).grid(
-                    row=row, column = 1)
+                    output_text_label = Label(self.current_tab, text=str(output_var) + '= ' + output_val)
+                    self.sp_results_text.append(output_text_label)
+                    output_text_label.grid(row=row, column = 1)
                     row += 1
                     self.sp_status.config(text='Status: Simulation Complete')
         else:
@@ -915,6 +918,11 @@ class MainApp(Tk):
         
         if self.sp_error:
             self.sp_error.destroy()
+        if self.sp_status:
+            self.sp_status.destroy()
+        for l in self.sp_results_text:
+            l.destroy()
+        self.sp_results_text = []
         self.store_user_inputs()
         self.get_distributions()
         # update simulation variable values based on user input in GUI
@@ -1347,7 +1355,7 @@ class MainApp(Tk):
             row_num = 0
             frame_width = self.win_lim_x - 30
             num_graphs_per_row = frame_width//250
-            frame_height = 120+(230*((len(inputs_fig_list) + len(
+            frame_height = 60+(230*((len(inputs_fig_list) + len(
                     results_fig_list)+1)//num_graphs_per_row + 1))  
             window_height = self.win_lim_y - 30
             
@@ -1653,7 +1661,6 @@ class MainApp(Tk):
             fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255])
             a = fig.add_subplot(111)
             num_bins = self.num_bins(values)
-            print(num_bins)
             if var in self.mapping_pdfs:
                 a.hist(values, num_bins, weights=self.mapping_pdfs[var], facecolor='blue', 
                        edgecolor='black', alpha=1.0)
@@ -2077,7 +2084,7 @@ class Simulation(object):
         self.lock_to_signal_finish.acquire()
         if not self.abort.value:
             self.start_simulation(TASKS)
-            #Thread(target=self.check_mp_errors).start()
+            Thread(target=self.check_mp_errors).start()
         else:
             try:
                 self.lock_to_signal_finish.release()
@@ -2103,15 +2110,13 @@ class Simulation(object):
         Periodically checks the multiprocessing Processes to see if there are errors.
         If errors are found, it prints the error and traceback.
         '''
-        for p in self.processes:
-            print('checking')
-            if p.exception:
-                error, traceback = p.exception
-                print(error)
-                print(traceback)
-        sleep(4)
-        if not self.abort.value and any(p.is_alive() for p in self.processes):
-            self.check_mp_errors()
+        while not self.abort.value and any(p.is_alive() for p in self.processes):
+            for p in self.processes:
+                if p.exception:
+                    error, traceback = p.exception
+                    print(error)
+                    print(traceback)
+            sleep(4)
         
         
     def save_copy_of_input_variables(self):
@@ -2284,7 +2289,7 @@ def save_graphs(outputfilename, results, directory, weights):
     '''
     if results:
         collected_data = list(filter(lambda x: not isna(x[x.columns[-2]].values[0]), results))
-        if len(collected_data) > 0:
+        if len(collected_data) > 1:
             collected_data = concat(collected_data).sort_index()
             for index, var in enumerate(collected_data.columns[:-3]):
                 fig = plt.figure()
@@ -2358,7 +2363,6 @@ def multiprocessing_worker(current_COMS_pids, pids_to_ignore, aspenlock, excello
             e. After the task queue is emptied, release the lock to signal finish
     '''
 
-    task_queue.get()
     local_pids_to_ignore = {} #local as in not accessible by other processes
     local_pids = {}
     aspenlock.acquire()

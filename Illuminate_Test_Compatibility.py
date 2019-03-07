@@ -284,7 +284,7 @@ def test_calculator_file(calculator_file, aspen_file, status_queue):
     except:
         try:
             clear_load_cell = findall(r"Range\(\"([A-Z]+[0-9]+)\"\)\.End\(xlDown\)\.Row", 
-                                      book.VBProject.VBComponents("GelAllData").CodeModule.Lines(1,500000))[0]
+                                      book.VBProject.VBComponents("GetAllData").CodeModule.Lines(1,500000))[0]
         except:
             clear_load_cell = 'C7'
     try:
