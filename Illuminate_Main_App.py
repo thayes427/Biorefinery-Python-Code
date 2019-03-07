@@ -1340,7 +1340,7 @@ class MainApp(Tk):
             row_num = 0
             frame_width = self.win_lim_x - 30
             num_graphs_per_row = frame_width//250
-            frame_height = 60+(230*((len(inputs_fig_list) + len(
+            frame_height = 120+(230*((len(inputs_fig_list) + len(
                     results_fig_list)+1)//num_graphs_per_row + 1))  
             window_height = self.win_lim_y - 30
             
@@ -1646,6 +1646,7 @@ class MainApp(Tk):
             fig = Figure(figsize = (3,3), facecolor=[240/255,240/255,237/255])
             a = fig.add_subplot(111)
             num_bins = self.num_bins(values)
+            print(num_bins)
             if var in self.mapping_pdfs:
                 a.hist(values, num_bins, weights=self.mapping_pdfs[var], facecolor='blue', 
                        edgecolor='black', alpha=1.0)
