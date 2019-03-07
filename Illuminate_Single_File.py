@@ -2357,7 +2357,6 @@ def multiprocessing_worker(current_COMS_pids, pids_to_ignore, aspenlock, excello
             e. After the task queue is emptied, release the lock to signal finish
     '''
 
-    task_queue.get()
     local_pids_to_ignore = {} #local as in not accessible by other processes
     local_pids = {}
     aspenlock.acquire()

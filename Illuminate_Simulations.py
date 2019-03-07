@@ -1,5 +1,5 @@
 from pandas import ExcelWriter, DataFrame, concat, isna
-from multiprocessing import Value, Manager, Lock, Queue
+from multiprocessing import Value, Lock, Queue, Process, Manager
 from time import sleep
 from psutil import process_iter, virtual_memory
 from win32com.client import Dispatch, DispatchEx
@@ -12,30 +12,6 @@ import string
 from math import ceil
 from shutil import copyfile
 from threading import Thread
-
-import multiprocessing as mp
-import traceback
-
-class Process_with_Error_Support(mp.Process):
-    def __init__(self, *args, **kwargs):
-        mp.Process.__init__(self, *args, **kwargs)
-        self._pconn, self._cconn = mp.Pipe()
-        self._exception = None
-
-    def run(self):
-        try:
-            mp.Process.run(self)
-            self._cconn.send(None)
-        except Exception as e:
-            tb = traceback.format_exc()
-            self._cconn.send((e, tb))
-            # raise e  # You can still rise this exception if you need to
-
-    @property
-    def exception(self):
-        if self._pconn.poll():
-            self._exception = self._pconn.recv()
-        return self._exception
 
 
 class Simulation(object):
@@ -64,11 +40,10 @@ class Simulation(object):
     
     def __init__(self, sims_completed, tot_sim, simulation_vars, output_file, directory, 
                  aspen_files, excel_solver_file,abort, vars_to_change, output_value_cells,
-                 output_columns, dispatch, weights, save_bkps, warning_keywords, save_freq=2, 
-                 num_processes=1):
-        print('hhhllllo')
+                 output_columns, dispatch, weights, save_bkps, warning_keywords, bkp_ref,
+                 save_freq=2, num_processes=1):
         self.manager = Manager()
-        print('hlsls')
+        print('hhlll')
         self.num_processes = min(num_processes, tot_sim) #don't need more processors than trials
         self.tot_sim = tot_sim
         self.sims_completed = sims_completed
@@ -99,6 +74,7 @@ class Simulation(object):
         self.weights = self.manager.list(weights)
         self.save_bkps = self.manager.Value('b',save_bkps)
         self.warning_keywords = self.manager.list(list(warning_keywords))
+        self.bkp_ref = self.manager.Value('s',bkp_ref)
           
     
     def run_simulation(self):
@@ -134,16 +110,6 @@ class Simulation(object):
         save_data(self.output_file, self.results, self.directory, self.weights)
         save_graphs(self.output_file, self.results, self.directory, self.weights)        
         self.abort.value = False    
-        
-        
-    def check_mp_errors(self):
-        for p in self.processes:
-            if p.exception:
-                error, traceback = p.exception
-                print(traceback)
-        sleep(4)
-        if not self.abort.value and any(p.is_alive() for p in self.processes):
-            self.check_mp_errors()
         
         
     def save_copy_of_input_variables(self):
@@ -194,8 +160,8 @@ class Simulation(object):
                             self.trial_counter, self.save_freq,self.output_file, self.vars_to_change, 
                             self.output_columns, self.simulation_vars, self.sims_completed, 
                             self.lock_to_signal_finish, self.tot_sim, self.dispatch, self.weights,
-                            self.warning_keywords)
-            self.processes.append(Process_with_Error_Support(target=multiprocessing_worker, args=process_args))
+                            self.warning_keywords, self.bkp_ref)
+            self.processes.append(Process(target=multiprocessing_worker, args=process_args))
             
         for p in self.processes:
             p.start()
@@ -341,7 +307,7 @@ def multiprocessing_worker(current_COMS_pids, pids_to_ignore, aspenlock, excello
            excelfilename, task_queue, abort, results_lock, results, directory, output_columns, 
            output_value_cells, sim_counter, save_freq, outputfilename, vars_to_change, columns, 
            simulation_vars, sims_completed,lock_to_signal_finish, tot_sim, dispatch, weights, 
-           warning_keywords):
+           warning_keywords, bkp_ref):
     '''
     The function that hosts the multiprocessing running of simulations. Each
     multiprocessing process is running this function when simulations are being
@@ -415,7 +381,7 @@ def multiprocessing_worker(current_COMS_pids, pids_to_ignore, aspenlock, excello
         if save_bkps.value:
             full_bkp_name = path.join(aspen_temp_dir, 'Trial_' + str(trial_num + 1) + '.bkp')
         aspencom.SaveAs(full_bkp_name)
-        book.Sheets('Set-up').Evaluate('B1').Value = full_bkp_name
+        book.Sheets('Set-up').Evaluate(bkp_ref.value).Value = full_bkp_name
         
         # run the Excel Calculator
         result = excel_run(excel, book, aspencom, aspen_tree, case_values, columns, run_summary, 
@@ -576,21 +542,21 @@ def format_run_summary(summary):
                 i += 1
                 if len(summary[i]) > 0:
                     summary_formatted[len(summary_formatted)-1] = summary_formatted[len(
-                            summary_formatted)-1] + summary[i]
-                    error_count += (summary[i].count(' ') + 1)
+                            summary_formatted)-1] + ' ' + summary[i]
+                    error_count += (summary[i].count('  ') + 1)
                 else:
                     i -= 1
                     scan_errors = False                    
         elif "warning" in summary[i].lower():
             summary_formatted[len(summary_formatted)-1] = summary_formatted[len(
-                    summary_formatted)-1] + summary[i]
+                    summary_formatted)-1] + ' ' + summary[i]
             scan_warnings = True
             while scan_warnings:
                 i += 1
                 if len(summary[i]) > 0:
                     summary_formatted[len(summary_formatted)-1] = summary_formatted[len(
                             summary_formatted)-1] + summary[i]
-                    warning_count += (summary[i].count(' ') + 1)
+                    warning_count += (summary[i].count('  ') + 1)
                 else:
                     i -= 1
                     scan_warnings = False   
@@ -600,6 +566,8 @@ def format_run_summary(summary):
         i += 1
 
     return [error_count, warning_count, summary_formatted]
+
+
 
 
 #def find_errors_warnings(aspencom, warning_keywords):
