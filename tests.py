@@ -14,12 +14,13 @@ from winreg import EnumKey, CreateKey, EnumValue, HKEY_CLASSES_ROOT
 from queue import Queue
 from re import search, findall
 from random import choices
-import untitled0
+#import untitled0
 
 class Test():
     def __init__(self):
+        import untitled0
         print('1')
-        self.man = Value('i',30)
+        self.man = Manager()
         print('2')
 
 
